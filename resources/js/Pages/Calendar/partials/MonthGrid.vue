@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { format, parseISO, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from 'date-fns';
+import { format, parseISO, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { appointmentTypes } from '@/lib/appointment-types';
+import { localDateString } from '@/lib/date-utils';
+import { useTrans } from '@/lib/use-trans';
 import type { Appointment } from '@/types';
+
+const { t } = useTrans();
 
 const props = defineProps<{
     appointments: Appointment[];
@@ -49,7 +53,7 @@ const weeks = computed(() => {
 const appointmentsByDay = computed(() => {
     const byDay: Record<string, Appointment[]> = {};
     for (const appt of props.appointments) {
-        const dayKey = appt.start_at.substring(0, 10);
+        const dayKey = localDateString(appt.start_at);
         if (!byDay[dayKey]) byDay[dayKey] = [];
         byDay[dayKey].push(appt);
     }
@@ -120,7 +124,7 @@ function getTimeLabel(appt: Appointment): string {
                             v-if="(appointmentsByDay[day.date]?.length || 0) > 3"
                             class="text-[10px] text-muted-foreground pl-1"
                         >
-                            +{{ appointmentsByDay[day.date].length - 3 }} weitere
+                            +{{ appointmentsByDay[day.date].length - 3 }} {{ t('more') }}
                         </div>
                     </div>
                 </div>

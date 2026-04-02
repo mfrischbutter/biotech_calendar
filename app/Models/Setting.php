@@ -10,9 +10,9 @@ class Setting extends Model
 
     public static function get(string $key, mixed $default = null): mixed
     {
-        $setting = static::where('key', $key)->first();
-
-        return $setting ? $setting->value : $default;
+        return cache()->rememberForever("setting.{$key}", function () use ($key, $default) {
+            return static::where('key', $key)->value('value') ?? $default;
+        });
     }
 
     public static function set(string $key, mixed $value): void
@@ -21,5 +21,7 @@ class Setting extends Model
             ['key' => $key],
             ['value' => $value],
         );
+
+        cache()->forget("setting.{$key}");
     }
 }

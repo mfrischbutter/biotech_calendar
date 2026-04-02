@@ -5,7 +5,6 @@ import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
 import { Textarea } from '@/Components/ui/textarea';
-import { Checkbox } from '@/Components/ui/checkbox';
 import {
     Select,
     SelectContent,
@@ -35,8 +34,12 @@ import {
     DialogTitle,
 } from '@/Components/ui/dialog';
 import { appointmentTypes } from '@/lib/appointment-types';
-import { localToISO, isoToLocalParts } from '@/lib/use-calendar-drag';
+import { localToISO, isoToLocalParts } from '@/lib/date-utils';
+import { useTrans } from '@/lib/use-trans';
 import type { Appointment, AppointmentType } from '@/types';
+import RecurrenceFields from './RecurrenceFields.vue';
+
+const { t } = useTrans();
 
 const props = defineProps<{
     clients: { id: number; name: string }[];
@@ -121,13 +124,6 @@ watch(open, (value) => {
     }
 });
 
-const recurrenceLabels: Record<string, string> = {
-    weekly: 'Wöchentlich',
-    biweekly: 'Alle 2 Wochen',
-    monthly: 'Monatlich',
-    custom: 'Benutzerdefiniert',
-};
-
 function submit() {
     const payload: Record<string, unknown> = {
         title: form.title,
@@ -163,15 +159,15 @@ function submit() {
     <Dialog v-model:open="open">
         <DialogContent class="sm:max-w-[520px]" @pointer-down-outside="handlePointerDownOutside">
             <DialogHeader>
-                <DialogTitle>{{ isEditing ? 'Termin bearbeiten' : 'Neuer Termin' }}</DialogTitle>
+                <DialogTitle>{{ isEditing ? t('Edit Appointment') : t('New Appointment') }}</DialogTitle>
                 <DialogDescription>
-                    {{ isEditing ? 'Termindetails aktualisieren.' : 'Neuen Termin anlegen.' }}
+                    {{ isEditing ? t('Update appointment details.') : t('Create a new appointment.') }}
                 </DialogDescription>
             </DialogHeader>
 
             <form @submit.prevent="submit" class="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
                 <div class="space-y-2">
-                    <Label for="appt-title">Titel *</Label>
+                    <Label for="appt-title">{{ t('Title') }} *</Label>
                     <Input
                         id="appt-title"
                         v-model="form.title"
@@ -184,7 +180,7 @@ function submit() {
 
                 <!-- Client combobox -->
                 <div class="space-y-2">
-                    <Label>Kunde</Label>
+                    <Label>{{ t('Client') }}</Label>
                     <Popover v-model:open="clientPopoverOpen">
                         <PopoverTrigger as-child>
                             <Button variant="outline" role="combobox" class="w-full justify-between font-normal">
@@ -218,7 +214,7 @@ function submit() {
 
                 <!-- Employee -->
                 <div class="space-y-2">
-                    <Label>Mitarbeiter</Label>
+                    <Label>{{ t('Employee') }}</Label>
                     <Select v-model="form.employee_id">
                         <SelectTrigger>
                             <SelectValue placeholder="Mitarbeiter auswählen..." />
@@ -239,19 +235,19 @@ function submit() {
                 <!-- Date/Time -->
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-2">
-                        <Label for="appt-start-date">Startdatum *</Label>
+                        <Label for="appt-start-date">{{ t('Start Date') }} *</Label>
                         <Input id="appt-start-date" v-model="form.start_date" type="date" required />
                     </div>
                     <div class="space-y-2">
-                        <Label for="appt-start-time">Startzeit *</Label>
+                        <Label for="appt-start-time">{{ t('Start Time') }} *</Label>
                         <Input id="appt-start-time" v-model="form.start_time" type="time" required />
                     </div>
                     <div class="space-y-2">
-                        <Label for="appt-end-date">Enddatum *</Label>
+                        <Label for="appt-end-date">{{ t('End Date') }} *</Label>
                         <Input id="appt-end-date" v-model="form.end_date" type="date" required />
                     </div>
                     <div class="space-y-2">
-                        <Label for="appt-end-time">Endzeit *</Label>
+                        <Label for="appt-end-time">{{ t('End Time') }} *</Label>
                         <Input id="appt-end-time" v-model="form.end_time" type="time" required />
                     </div>
                 </div>
@@ -260,7 +256,7 @@ function submit() {
 
                 <!-- Type -->
                 <div class="space-y-2">
-                    <Label>Typ *</Label>
+                    <Label>{{ t('Type') }} *</Label>
                     <Select v-model="form.type">
                         <SelectTrigger>
                             <SelectValue />
@@ -281,55 +277,17 @@ function submit() {
                 </div>
 
                 <!-- Recurrence (only for create) -->
-                <div v-if="!isEditing" class="space-y-3">
-                    <label class="flex items-center gap-2 text-sm cursor-pointer">
-                        <Checkbox
-                            :checked="form.is_recurring"
-                            @update:checked="(val: boolean) => form.is_recurring = val"
-                        />
-                        Serientermin
-                    </label>
-
-                    <div v-if="form.is_recurring" class="space-y-3 rounded-md border p-3">
-                        <div class="space-y-2">
-                            <Label>Intervall</Label>
-                            <Select v-model="form.recurrence_type">
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem
-                                        v-for="(label, key) in recurrenceLabels"
-                                        :key="key"
-                                        :value="key"
-                                    >
-                                        {{ label }}
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div v-if="form.recurrence_type === 'custom'" class="space-y-2">
-                            <Label for="appt-interval">Alle X Wochen</Label>
-                            <Input
-                                id="appt-interval"
-                                v-model.number="form.recurrence_interval"
-                                type="number"
-                                min="1"
-                                max="52"
-                            />
-                        </div>
-
-                        <div class="space-y-2">
-                            <Label for="appt-recurrence-end">Enddatum Serie *</Label>
-                            <Input id="appt-recurrence-end" v-model="form.recurrence_end" type="date" required />
-                        </div>
-                    </div>
-                </div>
+                <RecurrenceFields
+                    v-if="!isEditing"
+                    v-model:is-recurring="form.is_recurring"
+                    v-model:recurrence-type="form.recurrence_type"
+                    v-model:recurrence-interval="form.recurrence_interval"
+                    v-model:recurrence-end="form.recurrence_end"
+                />
 
                 <!-- Notes -->
                 <div class="space-y-2">
-                    <Label for="appt-notes">Notizen</Label>
+                    <Label for="appt-notes">{{ t('Notes') }}</Label>
                     <Textarea
                         id="appt-notes"
                         v-model="form.notes"
@@ -340,7 +298,7 @@ function submit() {
 
                 <DialogFooter>
                     <Button type="submit" :disabled="form.processing">
-                        {{ form.processing ? 'Speichern...' : (isEditing ? 'Aktualisieren' : 'Erstellen') }}
+                        {{ form.processing ? t('Saving...') : (isEditing ? t('Update') : t('Create')) }}
                     </Button>
                 </DialogFooter>
             </form>

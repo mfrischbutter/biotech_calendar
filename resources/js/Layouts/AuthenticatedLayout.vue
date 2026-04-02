@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 import { useTrans } from '@/lib/use-trans';
+import { initials } from '@/lib/utils';
 import { Button } from '@/Components/ui/button';
 import { Avatar, AvatarFallback } from '@/Components/ui/avatar';
 import { Separator } from '@/Components/ui/separator';
@@ -30,15 +31,6 @@ const navItems = [
 function isActive(href: string | null): boolean {
     if (!href) return false;
     return route().current(href);
-}
-
-function initials(name: string): string {
-    return name
-        .split(' ')
-        .map((n) => n[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
 }
 </script>
 

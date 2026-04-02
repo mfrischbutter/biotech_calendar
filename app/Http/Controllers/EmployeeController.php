@@ -12,7 +12,7 @@ class EmployeeController extends Controller
 {
     public function index()
     {
-        $employees = User::where('role', 'employee')
+        $employees = User::where('role', User::ROLE_EMPLOYEE)
             ->with('permissions')
             ->get()
             ->map(fn (User $user) => [
@@ -35,26 +35,17 @@ class EmployeeController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', Password::defaults()],
             'permissions' => ['present', 'array'],
-            'permissions.*' => ['string', 'in:' . implode(',', array_keys(Permission::ALL))],
+            'permissions.*' => ['string', 'in:'.implode(',', array_keys(Permission::ALL))],
         ]);
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => $validated['password'],
-            'role' => 'employee',
+            'role' => User::ROLE_EMPLOYEE,
         ]);
 
-        $rows = collect($validated['permissions'])->map(fn (string $perm) => [
-            'user_id' => $user->id,
-            'permission' => $perm,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ])->toArray();
-
-        if (! empty($rows)) {
-            Permission::insert($rows);
-        }
+        $user->syncPermissions($validated['permissions']);
 
         return back();
     }
@@ -63,25 +54,14 @@ class EmployeeController extends Controller
     {
         $validated = $request->validate([
             'permissions' => ['present', 'array'],
-            'permissions.*' => ['string', 'in:' . implode(',', array_keys(Permission::ALL))],
+            'permissions.*' => ['string', 'in:'.implode(',', array_keys(Permission::ALL))],
         ]);
 
         if ($user->isOwner()) {
             abort(403, 'Cannot modify owner permissions.');
         }
 
-        $user->permissions()->delete();
-
-        $rows = collect($validated['permissions'])->map(fn (string $perm) => [
-            'user_id' => $user->id,
-            'permission' => $perm,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ])->toArray();
-
-        if (! empty($rows)) {
-            Permission::insert($rows);
-        }
+        $user->syncPermissions($validated['permissions']);
 
         return back();
     }

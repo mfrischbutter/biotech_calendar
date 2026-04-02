@@ -10,6 +10,12 @@ class ClientController extends Controller
 {
     public function index(Request $request)
     {
+        abort_unless($request->user()->hasPermission('clients.view'), 403);
+
+        $request->validate([
+            'search' => ['nullable', 'string', 'max:255'],
+        ]);
+
         $query = Client::query();
 
         if ($search = $request->input('search')) {
@@ -31,6 +37,8 @@ class ClientController extends Controller
 
     public function store(Request $request)
     {
+        abort_unless($request->user()->hasPermission('clients.create'), 403);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'billing_name' => ['nullable', 'string', 'max:255'],
@@ -52,6 +60,8 @@ class ClientController extends Controller
 
     public function update(Request $request, Client $client)
     {
+        abort_unless($request->user()->hasPermission('clients.edit'), 403);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'billing_name' => ['nullable', 'string', 'max:255'],
@@ -68,8 +78,10 @@ class ClientController extends Controller
         return back();
     }
 
-    public function destroy(Client $client)
+    public function destroy(Request $request, Client $client)
     {
+        abort_unless($request->user()->hasPermission('clients.delete'), 403);
+
         $client->delete();
 
         return back();

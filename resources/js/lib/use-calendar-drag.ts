@@ -1,5 +1,9 @@
 import { ref, computed, type Ref } from 'vue';
 import type { Appointment } from '@/types';
+import { localMinutes } from '@/lib/date-utils';
+
+// Re-export date utilities for backwards compatibility
+export { localMinutes, localToISO, isoToLocalParts } from '@/lib/date-utils';
 
 export interface DragState {
     active: boolean;
@@ -12,7 +16,7 @@ export interface DragState {
     originalEndMinutes: number;
     /** Track total mouse movement to distinguish click from drag */
     totalMovement: number;
-    /** The mouse‑grab offset from the appointment top (move only) */
+    /** The mouse-grab offset from the appointment top (move only) */
     grabOffset: number;
 }
 
@@ -38,7 +42,9 @@ export function useCalendarDrag(
         grabOffset: 0,
     });
 
-    /** Convert a viewport‑Y coordinate to minutes‑of‑day, snapped to 15 min */
+    let lastClientY = 0;
+
+    /** Convert a viewport-Y coordinate to minutes-of-day, snapped to 15 min */
     function minutesFromY(y: number, containerTop: number): number {
         const relativeY = y - containerTop;
         const totalMinutes = (relativeY / hHeight.value) * 60 + sHour.value * 60;
@@ -54,7 +60,7 @@ export function useCalendarDrag(
             mode: 'create',
             dayDate,
             startMinutes: minutes,
-            currentMinutes: minutes + 30, // default 30‑min block
+            currentMinutes: minutes + 30,
             appointment: null,
             originalStartMinutes: 0,
             originalEndMinutes: 0,
@@ -100,8 +106,6 @@ export function useCalendarDrag(
         };
     }
 
-    let lastClientY = 0;
-
     function onMouseMove(y: number, containerTop: number, dayDate?: string) {
         if (!drag.value.active) return;
 
@@ -115,7 +119,6 @@ export function useCalendarDrag(
         } else if (drag.value.mode === 'resize') {
             drag.value.currentMinutes = Math.max(minutes, drag.value.startMinutes + 15);
         } else if (drag.value.mode === 'move') {
-            // Keep the appointment anchored at the grab offset
             const newStart = minutes - drag.value.grabOffset;
             drag.value.startMinutes = newStart;
             drag.value.currentMinutes = minutes;
@@ -158,7 +161,6 @@ export function useCalendarDrag(
             result.endMinutes = drag.value.startMinutes + duration;
         }
 
-        // Reset state
         drag.value = {
             active: false,
             mode: null,
@@ -172,7 +174,6 @@ export function useCalendarDrag(
             grabOffset: 0,
         };
 
-        // Only emit a result if the user actually dragged
         if (!wasDrag) return null;
 
         return result;
@@ -211,7 +212,6 @@ export function useCalendarDrag(
         };
     }
 
-    /** Returns the current start/end time labels for the drag preview */
     function getDragTimeLabel(): { start: string; end: string } | null {
         if (!drag.value.active || drag.value.totalMovement < MIN_DRAG_DISTANCE) return null;
 
@@ -244,35 +244,4 @@ export function useCalendarDrag(
         getDragPreviewStyle,
         getDragTimeLabel,
     };
-}
-
-// ---------------------------------------------------------------------------
-// Timezone‑safe helpers
-// ---------------------------------------------------------------------------
-
-/** Extract hours*60+minutes in **local** time from a datetime string. */
-export function localMinutes(dateStr: string): number {
-    const d = new Date(dateStr);
-    return d.getHours() * 60 + d.getMinutes();
-}
-
-/**
- * Build a UTC ISO string from a local date + time.
- * E.g. localToISO("2026-04-02", "14:00") in Berlin (UTC+2) → "2026-04-02T12:00:00.000Z"
- */
-export function localToISO(date: string, time: string): string {
-    return new Date(`${date}T${time}:00`).toISOString();
-}
-
-/**
- * Format a UTC datetime string into local "yyyy-MM-dd" and "HH:mm".
- */
-export function isoToLocalParts(dateStr: string): { date: string; time: string } {
-    const d = new Date(dateStr);
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    const hh = String(d.getHours()).padStart(2, '0');
-    const min = String(d.getMinutes()).padStart(2, '0');
-    return { date: `${yyyy}-${mm}-${dd}`, time: `${hh}:${min}` };
 }

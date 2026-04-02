@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue';
+import { ref, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -15,6 +15,7 @@ import {
     DialogTrigger,
 } from '@/Components/ui/dialog';
 import { useTrans } from '@/lib/use-trans';
+import { usePermissionGroups, permissionGroupLabels } from '@/lib/use-permission-groups';
 
 const { t } = useTrans();
 
@@ -31,24 +32,7 @@ const form = useForm({
     permissions: [] as string[],
 });
 
-const groupLabels: Record<string, string> = {
-    dashboard: 'Dashboard Access',
-    clients: 'Clients',
-    appointments: 'Appointments',
-    treatments: 'Treatments & Protocols',
-    invoices: 'Invoicing & Payments',
-    reports: 'Reports',
-};
-
-const permissionGroups = computed(() => {
-    const groups: Record<string, { key: string; label: string }[]> = {};
-    for (const [key, label] of Object.entries(props.availablePermissions)) {
-        const group = key.split('.')[0];
-        if (!groups[group]) groups[group] = [];
-        groups[group].push({ key, label });
-    }
-    return groups;
-});
+const { permissionGroups } = usePermissionGroups(() => props.availablePermissions);
 
 watch(open, (value) => {
     if (!value) {
@@ -136,7 +120,7 @@ function submit() {
                     <div class="max-h-[240px] overflow-y-auto rounded-md border p-3 space-y-3">
                         <div v-for="(perms, groupKey) in permissionGroups" :key="groupKey">
                             <p class="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-                                {{ t(groupLabels[groupKey] ?? groupKey) }}
+                                {{ t(permissionGroupLabels[groupKey] ?? groupKey) }}
                             </p>
                             <div class="space-y-1.5">
                                 <label

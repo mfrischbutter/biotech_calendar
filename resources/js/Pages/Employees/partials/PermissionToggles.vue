@@ -2,9 +2,10 @@
 import { router } from '@inertiajs/vue3';
 import { Switch } from '@/Components/ui/switch';
 import { Badge } from '@/Components/ui/badge';
-import { ref, computed, watch } from 'vue';
+import { ref, watch } from 'vue';
 import type { Employee } from '@/types';
 import { useTrans } from '@/lib/use-trans';
+import { usePermissionGroups, permissionGroupLabels } from '@/lib/use-permission-groups';
 
 const { t } = useTrans();
 
@@ -25,24 +26,7 @@ watch(
     },
 );
 
-const groupLabels: Record<string, string> = {
-    dashboard: 'Dashboard Access',
-    clients: 'Clients',
-    appointments: 'Appointments',
-    treatments: 'Treatments & Protocols',
-    invoices: 'Invoicing & Payments',
-    reports: 'Reports',
-};
-
-const permissionGroups = computed(() => {
-    const groups: Record<string, { key: string; label: string }[]> = {};
-    for (const [key, label] of Object.entries(props.availablePermissions)) {
-        const group = key.split('.')[0];
-        if (!groups[group]) groups[group] = [];
-        groups[group].push({ key, label });
-    }
-    return groups;
-});
+const { permissionGroups } = usePermissionGroups(() => props.availablePermissions);
 
 function hasPermission(permission: string): boolean {
     return localPermissions.value.includes(permission);
@@ -98,7 +82,7 @@ function groupEnabledCount(perms: { key: string }[]): number {
             <div class="flex items-center justify-between mb-3">
                 <div class="flex items-center gap-2">
                     <h4 class="text-sm font-semibold text-foreground">
-                        {{ t(groupLabels[groupKey] ?? groupKey) }}
+                        {{ t(permissionGroupLabels[groupKey] ?? groupKey) }}
                     </h4>
                     <Badge variant="outline" class="text-xs font-normal">
                         {{ groupEnabledCount(perms) }} / {{ perms.length }}

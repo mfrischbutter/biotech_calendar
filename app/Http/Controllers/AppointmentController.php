@@ -8,12 +8,23 @@ use App\Models\Setting;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class AppointmentController extends Controller
 {
+    private const MAX_OCCURRENCES = 500;
+
     public function index(Request $request)
     {
+        $request->validate([
+            'date' => ['nullable', 'date'],
+            'view' => ['nullable', 'in:day,week,month'],
+        ]);
+
+        $user = $request->user();
+        abort_unless($user->hasPermission('appointments.view'), 403);
+
         $view = $request->input('view', 'week');
         $date = $request->input('date')
             ? Carbon::parse($request->input('date'))
@@ -37,13 +48,19 @@ class AppointmentController extends Controller
         };
 
         $appointments = Appointment::with(['client:id,name', 'employee:id,name'])
-            ->where('start_at', '>=', $rangeStart)
-            ->where('start_at', '<=', $rangeEnd)
+            ->where(function ($q) use ($rangeStart, $rangeEnd) {
+                $q->whereBetween('start_at', [$rangeStart, $rangeEnd])
+                    ->orWhereBetween('end_at', [$rangeStart, $rangeEnd])
+                    ->orWhere(function ($q) use ($rangeStart, $rangeEnd) {
+                        $q->where('start_at', '<', $rangeStart)
+                            ->where('end_at', '>', $rangeEnd);
+                    });
+            })
             ->orderBy('start_at')
             ->get();
 
         $clients = Client::orderBy('name')->get(['id', 'name']);
-        $employees = User::orderBy('name')->get(['id', 'name']);
+        $employees = User::orderBy('name')->get(['id', 'name', 'role']);
 
         return Inertia::render('Calendar/Index', [
             'appointments' => $appointments,
@@ -57,16 +74,20 @@ class AppointmentController extends Controller
 
     public function store(Request $request)
     {
+        abort_unless($request->user()->hasPermission('appointments.create'), 403);
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'client_id' => ['nullable', 'exists:clients,id'],
             'employee_id' => ['nullable', 'exists:users,id'],
             'start_at' => ['required', 'date'],
             'end_at' => ['required', 'date', 'after:start_at'],
-            'type' => ['required', 'string', 'in:' . implode(',', array_keys(Appointment::TYPES))],
+            'type' => ['required', 'string', 'in:'.implode(',', array_keys(Appointment::TYPES))],
             'notes' => ['nullable', 'string'],
-            'recurrence_type' => ['nullable', 'string', 'in:' . implode(',', Appointment::RECURRENCE_TYPES)],
-            'recurrence_interval' => ['nullable', 'integer', 'min:1'],
+            'recurrence_type' => ['nullable', 'string', 'in:'.implode(',', Appointment::RECURRENCE_TYPES)],
+            'recurrence_interval' => [
+                Rule::when($request->input('recurrence_type') === 'custom', ['required', 'integer', 'min:1'], ['nullable', 'integer', 'min:1']),
+            ],
             'recurrence_end' => ['nullable', 'date', 'after:start_at'],
         ]);
 
@@ -99,13 +120,15 @@ class AppointmentController extends Controller
 
     public function update(Request $request, Appointment $appointment)
     {
+        abort_unless($request->user()->hasPermission('appointments.edit'), 403);
+
         $validated = $request->validate([
             'title' => ['sometimes', 'required', 'string', 'max:255'],
             'client_id' => ['nullable', 'exists:clients,id'],
             'employee_id' => ['nullable', 'exists:users,id'],
             'start_at' => ['sometimes', 'required', 'date'],
             'end_at' => ['sometimes', 'required', 'date', 'after:start_at'],
-            'type' => ['sometimes', 'required', 'string', 'in:' . implode(',', array_keys(Appointment::TYPES))],
+            'type' => ['sometimes', 'required', 'string', 'in:'.implode(',', array_keys(Appointment::TYPES))],
             'notes' => ['nullable', 'string'],
         ]);
 
@@ -116,6 +139,12 @@ class AppointmentController extends Controller
 
     public function destroy(Request $request, Appointment $appointment)
     {
+        abort_unless($request->user()->hasPermission('appointments.delete'), 403);
+
+        $request->validate([
+            'delete_series' => ['boolean'],
+        ]);
+
         if ($request->boolean('delete_series') && $appointment->isParent()) {
             $appointment->occurrences()->delete();
             $appointment->delete();
@@ -140,8 +169,9 @@ class AppointmentController extends Controller
         $recurrenceEnd = Carbon::parse($validated['recurrence_end']);
 
         $current = $startAt->copy();
+        $count = 0;
 
-        while (true) {
+        while ($count < self::MAX_OCCURRENCES) {
             if ($validated['recurrence_type'] === 'monthly') {
                 $current->addMonth();
             } else {
@@ -164,6 +194,8 @@ class AppointmentController extends Controller
                 'end_at' => $current->copy()->addMinutes($duration),
                 'parent_id' => $parent->id,
             ]);
+
+            $count++;
         }
     }
 }

@@ -9,8 +9,8 @@ import { useTrans } from '@/lib/use-trans';
 const { t } = useTrans();
 
 defineProps<{
-    mustVerifyEmail?: Boolean;
-    status?: String;
+    mustVerifyEmail?: boolean;
+    status?: string;
 }>();
 
 const user = usePage().props.auth.user;

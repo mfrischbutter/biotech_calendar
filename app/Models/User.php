@@ -18,6 +18,12 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
+    public const ROLE_OWNER = 'owner';
+
+    public const ROLE_EMPLOYEE = 'employee';
+
+    public const ROLES = [self::ROLE_OWNER, self::ROLE_EMPLOYEE];
+
     protected function casts(): array
     {
         return [
@@ -28,12 +34,12 @@ class User extends Authenticatable
 
     public function isOwner(): bool
     {
-        return $this->role === 'owner';
+        return $this->role === self::ROLE_OWNER;
     }
 
     public function isEmployee(): bool
     {
-        return $this->role === 'employee';
+        return $this->role === self::ROLE_EMPLOYEE;
     }
 
     public function permissions(): HasMany
@@ -57,6 +63,26 @@ class User extends Authenticatable
             return true;
         }
 
-        return $this->permissions()->where('permission', $permission)->exists();
+        return $this->permissions->contains('permission', $permission);
+    }
+
+    public function syncPermissions(array $permissions): void
+    {
+        $this->permissions()->delete();
+
+        if (! empty($permissions)) {
+            $this->permissions()->createMany(
+                array_map(fn (string $p) => ['permission' => $p], $permissions)
+            );
+        }
+    }
+
+    public function getOwner(): self
+    {
+        if ($this->isOwner()) {
+            return $this;
+        }
+
+        return self::where('role', self::ROLE_OWNER)->firstOrFail();
     }
 }

@@ -14,7 +14,7 @@ const props = withDefaults(
     },
 );
 
-const emit = defineEmits(['close']);
+const emit = defineEmits<{ close: [] }>();
 const dialog = ref();
 const showSlot = ref(props.show);
 

@@ -29,6 +29,7 @@ import type { Employee } from '@/types';
 import AddEmployeeDialog from './partials/AddEmployeeDialog.vue';
 import PermissionToggles from './partials/PermissionToggles.vue';
 import { useTrans } from '@/lib/use-trans';
+import { initials } from '@/lib/utils';
 
 const { t } = useTrans();
 
@@ -51,15 +52,6 @@ function deleteEmployee(employee: Employee) {
     router.delete(route('employees.destroy', employee.id), {
         preserveScroll: true,
     });
-}
-
-function initials(name: string): string {
-    return name
-        .split(' ')
-        .map((n) => n[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
 }
 </script>
 

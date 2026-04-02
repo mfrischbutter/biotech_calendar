@@ -2,15 +2,18 @@
 import { ref, computed, watch } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
-import { format, parseISO, addWeeks, subWeeks, addDays, subDays, addMonths, subMonths, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
+import { format, parseISO, addWeeks, subWeeks, addDays, subDays, addMonths, subMonths, startOfWeek } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { Button } from '@/Components/ui/button';
 import { appointmentTypes } from '@/lib/appointment-types';
-import { localToISO } from '@/lib/use-calendar-drag';
+import { localToISO } from '@/lib/date-utils';
+import { useTrans } from '@/lib/use-trans';
 import type { Appointment } from '@/types';
 import TimeGrid from './partials/TimeGrid.vue';
 import MonthGrid from './partials/MonthGrid.vue';
 import AppointmentFormDialog from './partials/AppointmentFormDialog.vue';
+
+const { t } = useTrans();
 
 type CalendarView = 'day' | 'week' | 'month';
 
@@ -158,14 +161,14 @@ function handleResizeAppointment(appointment: Appointment, endTime: string) {
 }
 
 const viewLabels: Record<CalendarView, string> = {
-    day: 'Tag',
-    week: 'Woche',
-    month: 'Monat',
+    day: t('Day'),
+    week: t('Week'),
+    month: t('Month'),
 };
 </script>
 
 <template>
-    <Head title="Kalender" />
+    <Head :title="t('Calendar')" />
 
     <AuthenticatedLayout>
         <template #header>
@@ -180,7 +183,7 @@ const viewLabels: Record<CalendarView, string> = {
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
                         </Button>
                     </div>
-                    <Button variant="outline" size="sm" @click="goToToday">Heute</Button>
+                    <Button variant="outline" size="sm" @click="goToToday">{{ t('Today') }}</Button>
                     <h2 class="text-lg font-semibold text-foreground">
                         {{ headerTitle }}
                     </h2>
@@ -204,7 +207,7 @@ const viewLabels: Record<CalendarView, string> = {
 
                     <Button @click="openCreateDialog()">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        Neuer Termin
+                        {{ t('New Appointment') }}
                     </Button>
                 </div>
             </div>

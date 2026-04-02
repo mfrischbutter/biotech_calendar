@@ -2,9 +2,13 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { format, parseISO } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { useCalendarDrag, localMinutes } from '@/lib/use-calendar-drag';
+import { useCalendarDrag } from '@/lib/use-calendar-drag';
+import { localMinutes } from '@/lib/date-utils';
 import { appointmentTypes } from '@/lib/appointment-types';
+import { useTrans } from '@/lib/use-trans';
 import type { Appointment } from '@/types';
+
+const { t } = useTrans();
 
 const props = defineProps<{
     appointments: Appointment[];
@@ -104,8 +108,14 @@ onMounted(() => {
             scrollContainer.value.scrollTop = (8 - START_HOUR) * HOUR_HEIGHT - 20;
         }
     });
+    document.addEventListener('mousemove', handleGlobalMouseMove);
+    document.addEventListener('mouseup', handleGlobalMouseUp);
 });
-onUnmounted(() => { clearInterval(timeInterval); });
+onUnmounted(() => {
+    clearInterval(timeInterval);
+    document.removeEventListener('mousemove', handleGlobalMouseMove);
+    document.removeEventListener('mouseup', handleGlobalMouseUp);
+});
 
 const currentTimeStyle = computed(() => {
     const totalMin = now.value.getHours() * 60 + now.value.getMinutes();
@@ -221,15 +231,6 @@ function handleAppointmentClick(e: MouseEvent, appt: Appointment) {
     if (suppressClick.value) return;
     emit('appointmentClick', appt);
 }
-
-onMounted(() => {
-    document.addEventListener('mousemove', handleGlobalMouseMove);
-    document.addEventListener('mouseup', handleGlobalMouseUp);
-});
-onUnmounted(() => {
-    document.removeEventListener('mousemove', handleGlobalMouseMove);
-    document.removeEventListener('mouseup', handleGlobalMouseUp);
-});
 
 function isDragTarget(appt: Appointment) {
     return drag.value.active && drag.value.totalMovement >= 4 && (drag.value.mode === 'move' || drag.value.mode === 'resize') && drag.value.appointment?.id === appt.id;
@@ -352,7 +353,7 @@ function isDragTarget(appt: Appointment) {
                             </div>
                             <div v-if="!isShort(appt) && appt.parent_id !== null" class="text-[10px] text-muted-foreground flex items-center gap-0.5">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-                                Serie
+                                {{ t('Series') }}
                             </div>
                         </div>
                         <!-- Resize handle -->
