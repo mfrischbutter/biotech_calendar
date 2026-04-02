@@ -61,7 +61,7 @@ const initEnd = props.appointment ? isoToLocalParts(props.appointment.end_at) : 
 const form = useForm({
     title: props.appointment?.title ?? '',
     client_id: props.appointment?.client?.id?.toString() ?? '',
-    employee_id: props.appointment?.employee?.id?.toString() ?? '',
+    employee_id: props.appointment?.employee?.id?.toString() ?? 'none',
     start_date: initStart?.date ?? (props.defaultDate ?? ''),
     start_time: initStart?.time ?? (props.defaultStartTime ?? '09:00'),
     end_date: initEnd?.date ?? (props.defaultDate ?? ''),
@@ -128,7 +128,7 @@ function submit() {
     const payload: Record<string, unknown> = {
         title: form.title,
         client_id: form.client_id ? parseInt(form.client_id) : null,
-        employee_id: form.employee_id ? parseInt(form.employee_id) : null,
+        employee_id: form.employee_id && form.employee_id !== 'none' ? parseInt(form.employee_id) : null,
         start_at: localToISO(form.start_date, form.start_time),
         end_at: localToISO(form.end_date, form.end_time),
         type: form.type,
@@ -220,7 +220,7 @@ function submit() {
                             <SelectValue placeholder="Mitarbeiter auswählen..." />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="">Keiner</SelectItem>
+                            <SelectItem value="none">Keiner</SelectItem>
                             <SelectItem
                                 v-for="emp in employees"
                                 :key="emp.id"
