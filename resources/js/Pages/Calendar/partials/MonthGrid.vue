@@ -1,0 +1,130 @@
+<script setup lang="ts">
+import { computed } from 'vue';
+import { format, parseISO, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay } from 'date-fns';
+import { de } from 'date-fns/locale';
+import { appointmentTypes } from '@/lib/appointment-types';
+import type { Appointment } from '@/types';
+
+const props = defineProps<{
+    appointments: Appointment[];
+    currentDate: string;
+}>();
+
+const emit = defineEmits<{
+    appointmentClick: [appointment: Appointment];
+    dayClick: [date: string];
+}>();
+
+const today = format(new Date(), 'yyyy-MM-dd');
+const currentMonth = computed(() => parseISO(props.currentDate));
+
+const dayHeaders = ['MO', 'DI', 'MI', 'DO', 'FR', 'SA', 'SO'];
+
+const weeks = computed(() => {
+    const monthStart = startOfMonth(currentMonth.value);
+    const monthEnd = endOfMonth(currentMonth.value);
+    const calStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+    const calEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+
+    const result: { date: string; dayNum: string; isCurrentMonth: boolean; isToday: boolean }[][] = [];
+    let current = calStart;
+
+    while (current <= calEnd) {
+        const week: typeof result[0] = [];
+        for (let i = 0; i < 7; i++) {
+            const dateStr = format(current, 'yyyy-MM-dd');
+            week.push({
+                date: dateStr,
+                dayNum: format(current, 'd'),
+                isCurrentMonth: isSameMonth(current, currentMonth.value),
+                isToday: dateStr === today,
+            });
+            current = addDays(current, 1);
+        }
+        result.push(week);
+    }
+    return result;
+});
+
+const appointmentsByDay = computed(() => {
+    const byDay: Record<string, Appointment[]> = {};
+    for (const appt of props.appointments) {
+        const dayKey = appt.start_at.substring(0, 10);
+        if (!byDay[dayKey]) byDay[dayKey] = [];
+        byDay[dayKey].push(appt);
+    }
+    return byDay;
+});
+
+function getTimeLabel(appt: Appointment): string {
+    return format(new Date(appt.start_at), 'HH:mm');
+}
+</script>
+
+<template>
+    <div class="rounded-lg border bg-background overflow-hidden flex flex-col h-full">
+        <!-- Day headers -->
+        <div class="grid grid-cols-7 border-b bg-background shrink-0">
+            <div
+                v-for="day in dayHeaders"
+                :key="day"
+                class="py-2 text-center text-[11px] font-medium text-muted-foreground tracking-wide border-r last:border-r-0"
+            >
+                {{ day }}
+            </div>
+        </div>
+
+        <!-- Week rows -->
+        <div class="flex-1 grid" :style="{ gridTemplateRows: `repeat(${weeks.length}, 1fr)` }">
+            <div
+                v-for="(week, wi) in weeks"
+                :key="wi"
+                class="grid grid-cols-7 border-b last:border-b-0 min-h-[100px]"
+            >
+                <div
+                    v-for="day in week"
+                    :key="day.date"
+                    class="border-r last:border-r-0 p-1 overflow-hidden cursor-pointer hover:bg-muted/30 transition-colors"
+                    :class="!day.isCurrentMonth ? 'bg-muted/10' : ''"
+                    @click="emit('dayClick', day.date)"
+                >
+                    <div class="flex justify-end mb-0.5">
+                        <span
+                            class="text-sm leading-none inline-flex items-center justify-center"
+                            :class="day.isToday
+                                ? 'bg-primary text-primary-foreground rounded-full w-[26px] h-[26px] font-medium'
+                                : day.isCurrentMonth
+                                    ? 'text-foreground w-[26px] h-[26px]'
+                                    : 'text-muted-foreground/50 w-[26px] h-[26px]'"
+                        >
+                            {{ day.dayNum }}
+                        </span>
+                    </div>
+
+                    <!-- Appointments for this day -->
+                    <div class="space-y-0.5">
+                        <div
+                            v-for="appt in (appointmentsByDay[day.date] || []).slice(0, 3)"
+                            :key="appt.id"
+                            class="flex items-center gap-1 rounded px-1 py-0.5 text-[11px] leading-tight cursor-pointer hover:opacity-80 truncate"
+                            :class="appointmentTypes[appt.type].bgColor"
+                            @click.stop="emit('appointmentClick', appt)"
+                        >
+                            <span class="w-1.5 h-1.5 rounded-full shrink-0" :class="appointmentTypes[appt.type].dotColor" />
+                            <span class="text-muted-foreground shrink-0">{{ getTimeLabel(appt) }}</span>
+                            <span class="truncate" :class="appointmentTypes[appt.type].color">
+                                {{ appt.client?.name || appt.title }}
+                            </span>
+                        </div>
+                        <div
+                            v-if="(appointmentsByDay[day.date]?.length || 0) > 3"
+                            class="text-[10px] text-muted-foreground pl-1"
+                        >
+                            +{{ appointmentsByDay[day.date].length - 3 }} weitere
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
