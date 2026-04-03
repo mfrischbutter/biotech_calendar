@@ -35,6 +35,12 @@ php artisan view:cache
 echo "Running migrations..."
 php artisan migrate --force
 
+# Seed if database is empty (first deploy)
+if [ "$(php artisan tinker --execute="echo App\Models\User::count();" 2>/dev/null)" = "0" ]; then
+    echo "Seeding database..."
+    php artisan db:seed --force
+fi
+
 echo "Application ready."
 
 exec "$@"
