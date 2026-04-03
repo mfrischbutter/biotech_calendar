@@ -20,7 +20,7 @@ class AppointmentController extends Controller
     {
         $request->validate([
             'date' => ['nullable', 'date'],
-            'view' => ['nullable', 'in:day,week,month'],
+            'view' => ['nullable', 'in:day,week,month,team-day,team-week'],
         ]);
 
         $user = $request->user();
@@ -36,7 +36,7 @@ class AppointmentController extends Controller
         $endHour = (int) Setting::get('end_hour', '24');
 
         [$rangeStart, $rangeEnd] = match ($view) {
-            'day' => [
+            'day', 'team-day' => [
                 $date->copy()->startOfDay(),
                 $date->copy()->endOfDay(),
             ],
@@ -50,7 +50,7 @@ class AppointmentController extends Controller
             ],
         };
 
-        $appointments = Appointment::with(['client:id,name', 'employee:id,name', 'tag:id,name,color'])
+        $appointments = Appointment::with(['client:id,first_name,last_name,company_name', 'employee:id,first_name,last_name', 'tag:id,name,color'])
             ->where(function ($q) use ($rangeStart, $rangeEnd) {
                 $q->whereBetween('start_at', [$rangeStart, $rangeEnd])
                     ->orWhereBetween('end_at', [$rangeStart, $rangeEnd])
@@ -62,10 +62,10 @@ class AppointmentController extends Controller
             ->orderBy('start_at')
             ->get();
 
-        $clients = Client::orderBy('name')->get(['id', 'name']);
+        $clients = Client::orderBy('last_name')->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'company_name']);
         $employees = User::where('company_id', $user->company_id)
-            ->orderBy('name')
-            ->get(['id', 'name', 'role']);
+            ->orderBy('last_name')->orderBy('first_name')
+            ->get(['id', 'first_name', 'last_name', 'role']);
 
         $tags = Tag::orderBy('sort_order')->get(['id', 'name', 'color']);
 

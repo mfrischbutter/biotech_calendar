@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import type { FormDataConvertible } from '@inertiajs/core';
@@ -12,16 +12,17 @@ import { useTrans } from '@/lib/use-trans';
 import type { Appointment, Tag } from '@/types';
 import TimeGrid from './partials/TimeGrid.vue';
 import MonthGrid from './partials/MonthGrid.vue';
+import TeamGrid from './partials/TeamGrid.vue';
 import AppointmentFormDialog from './partials/AppointmentFormDialog.vue';
 
 const { t } = useTrans();
 
-type CalendarView = 'day' | 'week' | 'month';
+type CalendarView = 'day' | 'week' | 'month' | 'team-day' | 'team-week';
 
 const props = defineProps<{
     appointments: Appointment[];
-    clients: { id: number; name: string }[];
-    employees: { id: number; name: string }[];
+    clients: { id: number; first_name: string; last_name: string; company_name: string | null; name: string }[];
+    employees: { id: number; first_name: string; last_name: string; name: string }[];
     tags: Tag[];
     currentDate: string;
     view: CalendarView;
@@ -48,7 +49,7 @@ watch(editDialogOpen, (val) => {
 const currentDateObj = computed(() => parseISO(props.currentDate));
 
 const gridDates = computed(() => {
-    if (props.view === 'day') {
+    if (props.view === 'day' || props.view === 'team-day') {
         return [props.currentDate];
     }
     const monday = startOfWeek(currentDateObj.value, { weekStartsOn: 1 });
@@ -58,7 +59,7 @@ const gridDates = computed(() => {
 
 const headerTitle = computed(() => {
     const d = currentDateObj.value;
-    if (props.view === 'day') {
+    if (props.view === 'day' || props.view === 'team-day') {
         return format(d, 'EEEE, d. MMMM yyyy', { locale: de });
     }
     if (props.view === 'month') {
@@ -74,7 +75,7 @@ const headerTitle = computed(() => {
 function navigate(direction: number) {
     const d = currentDateObj.value;
     let newDate: Date;
-    if (props.view === 'day') {
+    if (props.view === 'day' || props.view === 'team-day') {
         newDate = direction > 0 ? addDays(d, 1) : subDays(d, 1);
     } else if (props.view === 'month') {
         newDate = direction > 0 ? addMonths(d, 1) : subMonths(d, 1);
@@ -93,12 +94,29 @@ function goToToday() {
     }, { preserveState: true, preserveScroll: true });
 }
 
+const STORAGE_KEY = 'biotech-calendar-view';
+
 function switchView(view: CalendarView) {
+    localStorage.setItem(STORAGE_KEY, view);
     router.get(route('calendar.index'), {
         view,
         date: props.currentDate,
     }, { preserveState: true, preserveScroll: true });
 }
+
+onMounted(() => {
+    // Restore saved view on initial load (no explicit ?view= in URL)
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('view')) {
+        const saved = localStorage.getItem(STORAGE_KEY) as CalendarView | null;
+        if (saved && saved !== props.view) {
+            router.get(route('calendar.index'), {
+                view: saved,
+                date: props.currentDate,
+            }, { preserveState: true, preserveScroll: true, replace: true });
+        }
+    }
+});
 
 function handleDayClick(date: string) {
     router.get(route('calendar.index'), {
@@ -121,7 +139,10 @@ function openEditDialog(appointment: Appointment) {
     editDialogOpen.value = true;
 }
 
-function handleCreateAppointment(date: string, startTime: string, endTime: string) {
+const defaultEmployeeId = ref<number | null>(null);
+
+function handleCreateAppointment(date: string, startTime: string, endTime: string, employeeId?: number | null) {
+    defaultEmployeeId.value = employeeId ?? null;
     openCreateDialog(date, startTime, endTime);
 }
 
@@ -153,11 +174,30 @@ function handleResizeAppointment(appointment: Appointment, endTime: string) {
     }), { preserveScroll: true });
 }
 
-const viewLabels: Record<CalendarView, string> = {
-    day: t('Day'),
-    week: t('Week'),
-    month: t('Month'),
-};
+function handleTeamMoveAppointment(appointment: Appointment, date: string, startTime: string, endTime: string, employeeId: number | null) {
+    router.put(route('appointments.update', appointment.id), buildAppointmentPayload(appointment, {
+        start_at: localToISO(date, startTime),
+        end_at: localToISO(date, endTime),
+        employee_id: employeeId,
+    }), { preserveScroll: true });
+}
+
+const isTeamView = computed(() => props.view === 'team-day' || props.view === 'team-week');
+const teamSubView = computed(() => props.view === 'team-day' ? 'day' : 'week');
+
+const mainViews: { key: CalendarView; label: string }[] = [
+    { key: 'day', label: t('Day') },
+    { key: 'week', label: t('Week') },
+    { key: 'month', label: t('Month') },
+];
+
+function switchToTeam() {
+    switchView(isTeamView.value ? 'week' : 'team-week');
+}
+
+function switchTeamSub(sub: 'day' | 'week') {
+    switchView(sub === 'day' ? 'team-day' : 'team-week');
+}
 </script>
 
 <template>
@@ -186,15 +226,44 @@ const viewLabels: Record<CalendarView, string> = {
                     <!-- View switcher -->
                     <div class="flex rounded-md border overflow-hidden">
                         <button
-                            v-for="v in (['day', 'week', 'month'] as CalendarView[])"
-                            :key="v"
+                            v-for="v in mainViews"
+                            :key="v.key"
                             class="px-3 py-1.5 text-sm font-medium transition-colors"
-                            :class="view === v
+                            :class="view === v.key
                                 ? 'bg-primary text-primary-foreground'
                                 : 'text-muted-foreground hover:bg-muted'"
-                            @click="switchView(v)"
+                            @click="switchView(v.key)"
                         >
-                            {{ viewLabels[v] }}
+                            {{ v.label }}
+                        </button>
+                    </div>
+
+                    <!-- Team view toggle -->
+                    <button
+                        class="rounded-md border px-3 py-1.5 text-sm font-medium transition-colors"
+                        :class="isTeamView
+                            ? 'bg-primary text-primary-foreground'
+                            : 'text-muted-foreground hover:bg-muted'"
+                        @click="switchToTeam"
+                    >
+                        {{ t('Team') }}
+                    </button>
+
+                    <!-- Team sub-toggle (day/week) -->
+                    <div v-if="isTeamView" class="flex rounded-md border overflow-hidden">
+                        <button
+                            class="px-2.5 py-1.5 text-xs font-medium transition-colors"
+                            :class="teamSubView === 'day' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'"
+                            @click="switchTeamSub('day')"
+                        >
+                            {{ t('Day') }}
+                        </button>
+                        <button
+                            class="px-2.5 py-1.5 text-xs font-medium transition-colors"
+                            :class="teamSubView === 'week' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'"
+                            @click="switchTeamSub('week')"
+                        >
+                            {{ t('Week') }}
                         </button>
                     </div>
 
@@ -206,7 +275,7 @@ const viewLabels: Record<CalendarView, string> = {
             </div>
         </template>
 
-        <!-- Legend (only on time grid views) -->
+        <!-- Legend (only on time grid / team views) -->
         <div v-if="view !== 'month' && tags.length > 0" class="mb-3 flex flex-wrap items-center gap-4">
             <div
                 v-for="tag in tags"
@@ -220,9 +289,23 @@ const viewLabels: Record<CalendarView, string> = {
 
         <!-- Calendar content -->
         <div class="h-[calc(100vh-200px)]">
+            <!-- Team view -->
+            <TeamGrid
+                v-if="isTeamView"
+                :appointments="appointments"
+                :employees="employees"
+                :dates="gridDates"
+                :view="view as 'team-day' | 'team-week'"
+                :start-hour="startHour"
+                :end-hour="endHour"
+                @appointment-click="openEditDialog"
+                @create-appointment="handleCreateAppointment"
+                @move-appointment="handleTeamMoveAppointment"
+            />
+
             <!-- Day / Week view -->
             <TimeGrid
-                v-if="view === 'day' || view === 'week'"
+                v-else-if="view === 'day' || view === 'week'"
                 :appointments="appointments"
                 :dates="gridDates"
                 :show-day-header="view === 'week' || view === 'day'"
@@ -253,6 +336,7 @@ const viewLabels: Record<CalendarView, string> = {
             :default-date="defaultDate"
             :default-start-time="defaultStartTime"
             :default-end-time="defaultEndTime"
+            :default-employee-id="defaultEmployeeId"
         />
 
         <!-- Edit dialog -->

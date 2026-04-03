@@ -30,13 +30,14 @@ import ChecklistEditor from './ChecklistEditor.vue';
 const { t } = useTrans();
 
 const props = defineProps<{
-    clients: { id: number; name: string }[];
-    employees: { id: number; name: string }[];
+    clients: { id: number; first_name: string; last_name: string; company_name: string | null; name: string }[];
+    employees: { id: number; first_name: string; last_name: string; name: string }[];
     tags: Tag[];
     appointment?: Appointment;
     defaultDate?: string;
     defaultStartTime?: string;
     defaultEndTime?: string;
+    defaultEmployeeId?: number | null;
 }>();
 
 const open = defineModel<boolean>('open', { default: false });
@@ -48,7 +49,7 @@ const initEnd = props.appointment ? isoToLocalParts(props.appointment.end_at) : 
 const form = useForm({
     title: props.appointment?.title ?? '',
     client_id: props.appointment?.client?.id?.toString() ?? '',
-    employee_id: props.appointment?.employee?.id?.toString() ?? 'none',
+    employee_id: props.appointment?.employee?.id?.toString() ?? (props.defaultEmployeeId ? props.defaultEmployeeId.toString() : 'none'),
     start_date: initStart?.date ?? (props.defaultDate ?? ''),
     start_time: initStart?.time ?? (props.defaultStartTime ?? '09:00'),
     end_date: initEnd?.date ?? (props.defaultDate ?? ''),
@@ -121,42 +122,49 @@ function handleOpenChange(value: boolean) {
     }
 }
 
+function populateFromAppointment() {
+    const s = props.appointment ? isoToLocalParts(props.appointment.start_at) : null;
+    const e = props.appointment ? isoToLocalParts(props.appointment.end_at) : null;
+    form.title = props.appointment?.title ?? '';
+    form.client_id = props.appointment?.client?.id?.toString() ?? '';
+    form.employee_id = props.appointment?.employee?.id?.toString() ?? 'none';
+    form.start_date = s?.date ?? '';
+    form.start_time = s?.time ?? '09:00';
+    form.end_date = e?.date ?? '';
+    form.end_time = e?.time ?? '10:00';
+    form.tag_id = props.appointment?.tag?.id?.toString() ?? 'none';
+    form.notes = props.appointment?.notes ?? '';
+    form.checklist = (props.appointment?.checklist ?? []) as ChecklistItem[];
+}
+
 watch(open, (value) => {
     if (value) {
-        nextTick(() => {
-            if (!isEditing.value) {
-                form.start_date = props.defaultDate ?? '';
-                form.start_time = props.defaultStartTime ?? '09:00';
-                form.end_date = props.defaultDate ?? '';
-                form.end_time = props.defaultEndTime ?? '10:00';
-            }
+        if (isEditing.value) {
+            // Re-populate from current appointment (may have changed via v-if remount or prop change)
+            populateFromAppointment();
+            initialSnapshot.value = takeSnapshot();
+            nextTick(() => autoResize());
+        } else {
+            form.start_date = props.defaultDate ?? '';
+            form.start_time = props.defaultStartTime ?? '09:00';
+            form.end_date = props.defaultDate ?? '';
+            form.end_time = props.defaultEndTime ?? '10:00';
+            form.employee_id = props.defaultEmployeeId ? props.defaultEmployeeId.toString() : 'none';
             nextTick(() => {
                 initialSnapshot.value = takeSnapshot();
                 autoResize();
             });
-        });
+        }
     }
-    if (!value) {
+    if (!value && initialSnapshot.value) {
         form.clearErrors();
         if (isEditing.value) {
-            // Reset to original appointment data
-            const s = props.appointment ? isoToLocalParts(props.appointment.start_at) : null;
-            const e = props.appointment ? isoToLocalParts(props.appointment.end_at) : null;
-            form.title = props.appointment?.title ?? '';
-            form.client_id = props.appointment?.client?.id?.toString() ?? '';
-            form.employee_id = props.appointment?.employee?.id?.toString() ?? 'none';
-            form.start_date = s?.date ?? '';
-            form.start_time = s?.time ?? '09:00';
-            form.end_date = e?.date ?? '';
-            form.end_time = e?.time ?? '10:00';
-            form.tag_id = props.appointment?.tag?.id?.toString() ?? 'none';
-            form.notes = props.appointment?.notes ?? '';
-            form.checklist = (props.appointment?.checklist ?? []) as ChecklistItem[];
+            populateFromAppointment();
         } else {
             form.reset();
         }
     }
-});
+}, { immediate: true });
 
 function submit() {
     const payload: Record<string, unknown> = {
