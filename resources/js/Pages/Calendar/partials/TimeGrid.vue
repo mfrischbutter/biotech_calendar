@@ -5,8 +5,10 @@ import { de } from 'date-fns/locale';
 import { useCalendarDrag } from '@/lib/use-calendar-drag';
 import { localMinutes } from '@/lib/date-utils';
 import { getTagStyle } from '@/lib/tag-colors';
+import { computeOverlapLayout } from '@/lib/overlap-layout';
 import { useTrans } from '@/lib/use-trans';
 import type { Appointment } from '@/types';
+import type { DayLayout } from '@/lib/overlap-layout';
 
 const { t } = useTrans();
 
@@ -91,6 +93,21 @@ const appointmentsByDay = computed(() => {
     return byDay;
 });
 
+const layoutByDay = computed(() => {
+    const result: Record<string, DayLayout> = {};
+    const optPositions = new Map<number, { startMinutes: number; endMinutes: number }>();
+    for (const [id, ov] of optimistic.value) {
+        optPositions.set(id, { startMinutes: ov.startMinutes, endMinutes: ov.endMinutes });
+    }
+    for (const date of props.dates) {
+        result[date] = computeOverlapLayout(
+            appointmentsByDay.value[date] || [],
+            optPositions,
+        );
+    }
+    return result;
+});
+
 // ---------------------------------------------------------------------------
 // Current time indicator
 // ---------------------------------------------------------------------------
@@ -126,7 +143,7 @@ const currentTimeVisible = computed(() => {
 // ---------------------------------------------------------------------------
 // Appointment positioning
 // ---------------------------------------------------------------------------
-function getAppointmentStyle(appt: Appointment) {
+function getAppointmentStyle(appt: Appointment, dayDate: string) {
     const ov = optimistic.value.get(appt.id);
     let startMin: number, endMin: number;
     if (ov) {
@@ -139,7 +156,21 @@ function getAppointmentStyle(appt: Appointment) {
     const duration = endMin - startMin;
     const top = ((startMin - START_HOUR.value * 60) / 60) * HOUR_HEIGHT;
     const height = Math.max((duration / 60) * HOUR_HEIGHT, 22);
-    return { top: `${top}px`, height: `${height}px` };
+
+    const layout = layoutByDay.value[dayDate]?.slots.get(appt.id);
+    if (layout && layout.totalColumns > 1) {
+        const colWidth = 100 / layout.totalColumns;
+        const left = layout.column * colWidth;
+        const width = layout.columnSpan * colWidth;
+        return {
+            top: `${top}px`,
+            height: `${height}px`,
+            left: `calc(${left}% + 4px)`,
+            right: `calc(${100 - left - width}% + 4px)`,
+            zIndex: `${10 + layout.column}`,
+        };
+    }
+    return { top: `${top}px`, height: `${height}px`, left: '4px', right: '4px' };
 }
 
 function isShort(appt: Appointment): boolean {
@@ -154,10 +185,10 @@ function getTimeLabel(appt: Appointment): string {
     return `${format(new Date(appt.start_at), 'HH:mm')} – ${format(new Date(appt.end_at), 'HH:mm')}`;
 }
 
-function apptCardStyle(appt: Appointment) {
+function apptCardStyle(appt: Appointment, dayDate: string) {
     const tagStyle = getTagStyle(appt.tag?.color ?? null);
     return {
-        ...getAppointmentStyle(appt),
+        ...getAppointmentStyle(appt, dayDate),
         backgroundColor: tagStyle.backgroundColor,
         borderLeftColor: tagStyle.borderColor,
     };
@@ -248,8 +279,8 @@ function isDragTarget(appt: Appointment) {
 function dragPreviewStyle() {
     const base = getDragPreviewStyle();
     if (!base) return null;
-    if (drag.value.mode !== 'create' && drag.value.appointment?.tag) {
-        const tagStyle = getTagStyle(drag.value.appointment.tag.color);
+    if (drag.value.mode !== 'create' && drag.value.appointment) {
+        const tagStyle = getTagStyle(drag.value.appointment.tag?.color ?? null);
         return { ...base, backgroundColor: tagStyle.backgroundColor, borderLeftColor: tagStyle.borderColor, opacity: '0.8' };
     }
     return base;
@@ -348,9 +379,12 @@ function dragPreviewStyle() {
                         v-for="appt in appointmentsByDay[day.date]"
                         :key="appt.id"
                         :data-appointment-id="appt.id"
-                        class="absolute left-1 right-1 rounded-md cursor-pointer overflow-hidden transition-shadow hover:shadow-md border-l-[4px]"
-                        :class="isDragTarget(appt) ? 'opacity-0 z-0' : 'z-10'"
-                        :style="apptCardStyle(appt)"
+                        class="absolute rounded-md overflow-hidden border-l-[4px]"
+                        :class="[
+                            isDragTarget(appt) ? 'opacity-0 !z-0' : '',
+                            drag.active && drag.totalMovement >= 4 ? 'pointer-events-none' : 'cursor-pointer transition-shadow hover:shadow-md',
+                        ]"
+                        :style="apptCardStyle(appt, day.date)"
                         @mousedown.stop="handleAppointmentMouseDown($event, appt, day.date)"
                         @click.stop="handleAppointmentClick($event, appt)"
                     >
@@ -359,7 +393,7 @@ function dragPreviewStyle() {
                                 class="font-medium text-xs truncate"
                                 :style="{ color: apptTitleColor(appt) }"
                             >
-                                {{ appt.client?.name || appt.title }}
+                                {{ appt.client?.company_name || appt.client?.name || appt.title }}
                             </div>
                             <div v-if="!isShort(appt)" class="text-[11px] text-muted-foreground truncate">
                                 {{ getTimeLabel(appt) }}
@@ -382,13 +416,13 @@ function dragPreviewStyle() {
                     <!-- Drag preview ghost -->
                     <div
                         v-if="drag.active && drag.dayDate === day.date && dragPreviewStyle()"
-                        class="absolute left-1 right-1 rounded-md z-30 pointer-events-none border-l-[4px]"
+                        class="absolute rounded-md z-30 pointer-events-none border-l-[4px] shadow-lg"
                         :class="drag.mode === 'create' ? 'bg-primary/15 border-primary' : ''"
-                        :style="dragPreviewStyle()!"
+                        :style="{ ...dragPreviewStyle()!, left: '4px', right: '4px' }"
                     >
                         <div class="px-2 py-1 text-xs">
                             <div v-if="drag.appointment" class="font-medium truncate" :style="{ color: apptTitleColor(drag.appointment) }">
-                                {{ drag.appointment.client?.name || drag.appointment.title }}
+                                {{ drag.appointment.client?.company_name || drag.appointment.client?.name || drag.appointment.title }}
                             </div>
                             <div class="font-medium" :class="drag.mode === 'create' ? 'text-primary' : 'text-muted-foreground'">
                                 {{ getDragTimeLabel()?.start }} – {{ getDragTimeLabel()?.end }}
