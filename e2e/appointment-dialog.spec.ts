@@ -398,6 +398,33 @@ test.describe('Appointment Dialog - Edit discard resets form', () => {
         await expect(notesTextarea).toHaveValue(originalNotes);
     });
 
+    test('edit dialog after create close does not show discard when clean', async ({ page }) => {
+        // Open and immediately close create dialog
+        const dialog = await openCreateDialog(page);
+        await page.keyboard.press('Escape');
+        await expect(dialog).not.toBeVisible({ timeout: 5000 });
+
+        // Now open an existing appointment for editing
+        await page.waitForLoadState('networkidle');
+        const apptCard = page.locator('[data-appointment-id]').first();
+        if (await apptCard.count() === 0) {
+            test.skip(true, 'No appointments visible on calendar');
+            return;
+        }
+
+        await apptCard.click();
+        const editDialog = page.locator('[role="dialog"]');
+        await expect(editDialog).toBeVisible({ timeout: 5000 });
+
+        // Close without making changes — should NOT show discard confirm
+        await page.keyboard.press('Escape');
+
+        const alert = page.locator('[role="alertdialog"]');
+        // The alert should not appear; the dialog should just close
+        await expect(editDialog).not.toBeVisible({ timeout: 5000 });
+        await expect(alert).not.toBeVisible();
+    });
+
     test('create dialog resets after discard and reopen', async ({ page }) => {
         const dialog = await openCreateDialog(page);
 
@@ -429,5 +456,287 @@ test.describe('Appointment Dialog - Edit discard resets form', () => {
         await expect(notesTextarea).toHaveValue('');
         const checklistItems = dialog.locator('input[data-checklist-item-input]');
         await expect(checklistItems).toHaveCount(0);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Helper: create an appointment via the UI and return its title
+// ---------------------------------------------------------------------------
+async function createAppointment(
+    page: import('@playwright/test').Page,
+    title: string,
+    description?: string,
+) {
+    const btn = page.locator('button').filter({ hasText: /New Appointment|Neuer Termin/ });
+    await btn.click();
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+
+    await dialog.locator('input[type="text"]').first().fill(title);
+    if (description) {
+        await dialog.locator('textarea').fill(description);
+    }
+
+    await dialog.locator('button[type="submit"]').click();
+    await expect(dialog).not.toBeVisible({ timeout: 10000 });
+    await page.waitForLoadState('networkidle');
+}
+
+// ---------------------------------------------------------------------------
+// Helper: open edit dialog for an appointment by its data-appointment-id index
+// ---------------------------------------------------------------------------
+async function openEditByIndex(page: import('@playwright/test').Page, index: number) {
+    const card = page.locator('[data-appointment-id]').nth(index);
+    // Use force:true because overlapping appointments can intercept pointer events
+    await card.click({ force: true });
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+    return dialog;
+}
+
+async function openEditById(page: import('@playwright/test').Page, id: string) {
+    const card = page.locator(`[data-appointment-id="${id}"]`);
+    await card.click({ force: true });
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+    return dialog;
+}
+
+function getAppointmentId(page: import('@playwright/test').Page, index: number) {
+    return page.locator('[data-appointment-id]').nth(index).getAttribute('data-appointment-id');
+}
+
+test.describe('Appointment Dialog - Multi-appointment edit scenarios', () => {
+    test.beforeEach(async ({ page }) => {
+        await login(page);
+        await page.goto('/calendar');
+        await page.waitForLoadState('networkidle');
+
+        // Ensure at least 2 appointments exist
+        const count = await page.locator('[data-appointment-id]').count();
+        if (count < 2) {
+            for (let i = count; i < 2; i++) {
+                await createAppointment(page, `Test Appointment ${i + 1}`, `Description ${i + 1}`);
+            }
+        }
+    });
+
+    test('opening different appointments shows correct data for each', async ({ page }) => {
+        const id0 = await getAppointmentId(page, 0);
+        const id1 = await getAppointmentId(page, 1);
+
+        // Open first appointment and read its data
+        const dialog1 = await openEditById(page, id0!);
+        const title1 = await dialog1.locator('input[type="text"]').first().inputValue();
+        const notes1 = await dialog1.locator('textarea').inputValue();
+        expect(title1.length).toBeGreaterThan(0);
+
+        // Close cleanly
+        await page.keyboard.press('Escape');
+        await expect(dialog1).not.toBeVisible({ timeout: 5000 });
+
+        // Open second appointment and read its data
+        const dialog2 = await openEditById(page, id1!);
+        const title2 = await dialog2.locator('input[type="text"]').first().inputValue();
+        expect(title2.length).toBeGreaterThan(0);
+
+        // Close cleanly
+        await page.keyboard.press('Escape');
+        await expect(dialog2).not.toBeVisible({ timeout: 5000 });
+
+        // Re-open first appointment — should still show original data
+        const dialog1b = await openEditById(page, id0!);
+        await expect(dialog1b.locator('input[type="text"]').first()).toHaveValue(title1);
+        await expect(dialog1b.locator('textarea')).toHaveValue(notes1);
+
+        await page.keyboard.press('Escape');
+        await expect(dialog1b).not.toBeVisible({ timeout: 5000 });
+    });
+
+    test('edit first, discard, then open second — no stale discard prompt', async ({ page }) => {
+        // Open first appointment
+        const dialog = await openEditByIndex(page, 0);
+        const titleInput = dialog.locator('input[type="text"]').first();
+
+        // Modify title
+        await titleInput.fill('MODIFIED FIRST');
+
+        // Close → discard prompt appears
+        await page.keyboard.press('Escape');
+        const alert = page.locator('[role="alertdialog"]');
+        await expect(alert).toBeVisible({ timeout: 5000 });
+
+        // Discard
+        await alert.locator('button').filter({ hasText: /Discard|Verwerfen/ }).click();
+        await expect(dialog).not.toBeVisible({ timeout: 5000 });
+
+        // Open second appointment — should close cleanly without discard prompt
+        const dialog2 = await openEditByIndex(page, 1);
+        await page.keyboard.press('Escape');
+
+        await expect(dialog2).not.toBeVisible({ timeout: 5000 });
+        await expect(alert).not.toBeVisible();
+    });
+
+    test('edit first, cancel discard, continue editing, then submit', async ({ page }) => {
+        const id0 = await getAppointmentId(page, 0);
+        const dialog = await openEditById(page, id0!);
+        const titleInput = dialog.locator('input[type="text"]').first();
+        const originalTitle = await titleInput.inputValue();
+
+        // Use a unique title that definitely differs from the original
+        const uniqueTitle = `E2E-${Date.now()}`;
+        await titleInput.fill(uniqueTitle);
+        await expect(titleInput).toHaveValue(uniqueTitle);
+
+        // Try to close → discard prompt
+        await page.keyboard.press('Escape');
+        const alert = page.locator('[role="alertdialog"]');
+        await expect(alert).toBeVisible({ timeout: 5000 });
+
+        // Cancel — go back to editing
+        await alert.locator('button').filter({ hasText: /Cancel|Abbrechen/ }).click();
+        await expect(alert).not.toBeVisible({ timeout: 5000 });
+        await expect(dialog).toBeVisible();
+
+        // Title should still be modified
+        await expect(titleInput).toHaveValue(uniqueTitle);
+
+        // Submit
+        await dialog.locator('button[type="submit"]').click();
+        await expect(dialog).not.toBeVisible({ timeout: 10000 });
+
+        // Re-open — should show saved title (wait for close guard + Inertia re-render)
+        await page.waitForLoadState('networkidle');
+        await page.waitForTimeout(500);
+        const dialog2 = await openEditById(page, id0!);
+        await expect(dialog2.locator('input[type="text"]').first()).toHaveValue(uniqueTitle);
+
+        // Restore original title for other tests
+        await dialog2.locator('input[type="text"]').first().fill(originalTitle);
+        await expect(dialog2.locator('input[type="text"]').first()).toHaveValue(originalTitle);
+        await dialog2.locator('button[type="submit"]').click();
+        await expect(dialog2).not.toBeVisible({ timeout: 10000 });
+    });
+
+    test('open edit, close clean, open create, close clean — no cross-contamination', async ({ page }) => {
+        // Open edit dialog
+        const editDialog = await openEditByIndex(page, 0);
+        const editTitle = await editDialog.locator('input[type="text"]').first().inputValue();
+
+        // Close cleanly (no changes)
+        await page.keyboard.press('Escape');
+        await expect(editDialog).not.toBeVisible({ timeout: 5000 });
+
+        // Open create dialog
+        const createBtn = page.locator('button').filter({ hasText: /New Appointment|Neuer Termin/ });
+        await createBtn.click();
+        const createDialog = page.locator('[role="dialog"]');
+        await expect(createDialog).toBeVisible({ timeout: 5000 });
+
+        // Create dialog should have empty title (not the edit appointment's title)
+        await expect(createDialog.locator('input[type="text"]').first()).toHaveValue('');
+
+        // Close cleanly
+        await page.keyboard.press('Escape');
+        await expect(createDialog).not.toBeVisible({ timeout: 5000 });
+
+        // Open edit dialog again — should show original data
+        const editDialog2 = await openEditByIndex(page, 0);
+        await expect(editDialog2.locator('input[type="text"]').first()).toHaveValue(editTitle);
+
+        await page.keyboard.press('Escape');
+        await expect(editDialog2).not.toBeVisible({ timeout: 5000 });
+    });
+
+    test('modify description, discard, reopen — description is original', async ({ page }) => {
+        const dialog = await openEditByIndex(page, 0);
+        const textarea = dialog.locator('textarea');
+        const originalNotes = await textarea.inputValue();
+
+        await textarea.fill('Temporary notes that will be discarded');
+
+        // Close → discard
+        await page.keyboard.press('Escape');
+        const alert = page.locator('[role="alertdialog"]');
+        await expect(alert).toBeVisible({ timeout: 5000 });
+        await alert.locator('button').filter({ hasText: /Discard|Verwerfen/ }).click();
+        await expect(dialog).not.toBeVisible({ timeout: 5000 });
+
+        // Reopen
+        const dialog2 = await openEditByIndex(page, 0);
+        await expect(dialog2.locator('textarea')).toHaveValue(originalNotes);
+
+        await page.keyboard.press('Escape');
+        await expect(dialog2).not.toBeVisible({ timeout: 5000 });
+    });
+
+    test('open and close multiple appointments in sequence without changes', async ({ page }) => {
+        const alert = page.locator('[role="alertdialog"]');
+
+        // Open/close first
+        const d1 = await openEditByIndex(page, 0);
+        await page.keyboard.press('Escape');
+        await expect(d1).not.toBeVisible({ timeout: 5000 });
+        await expect(alert).not.toBeVisible();
+
+        // Open/close second
+        const d2 = await openEditByIndex(page, 1);
+        await page.keyboard.press('Escape');
+        await expect(d2).not.toBeVisible({ timeout: 5000 });
+        await expect(alert).not.toBeVisible();
+
+        // Open/close first again
+        const d3 = await openEditByIndex(page, 0);
+        await page.keyboard.press('Escape');
+        await expect(d3).not.toBeVisible({ timeout: 5000 });
+        await expect(alert).not.toBeVisible();
+
+        // Open/close second again
+        const d4 = await openEditByIndex(page, 1);
+        await page.keyboard.press('Escape');
+        await expect(d4).not.toBeVisible({ timeout: 5000 });
+        await expect(alert).not.toBeVisible();
+    });
+
+    test('create then immediately edit — create form clean, edit form shows data', async ({ page }) => {
+        // Open create dialog and close immediately
+        const createBtn = page.locator('button').filter({ hasText: /New Appointment|Neuer Termin/ });
+        await createBtn.click();
+        const dialog = page.locator('[role="dialog"]');
+        await expect(dialog).toBeVisible({ timeout: 5000 });
+        await page.keyboard.press('Escape');
+        await expect(dialog).not.toBeVisible({ timeout: 5000 });
+
+        // Open edit — should show data and close without discard
+        const editDialog = await openEditByIndex(page, 0);
+        const title = await editDialog.locator('input[type="text"]').first().inputValue();
+        expect(title.length).toBeGreaterThan(0);
+
+        await page.keyboard.press('Escape');
+        await expect(editDialog).not.toBeVisible({ timeout: 5000 });
+        await expect(page.locator('[role="alertdialog"]')).not.toBeVisible();
+    });
+
+    test('modify edit, discard, open different appointment — shows correct data', async ({ page }) => {
+        // Open first and modify
+        const dialog = await openEditByIndex(page, 0);
+        await dialog.locator('input[type="text"]').first().fill('WRONG TITLE');
+
+        // Discard
+        await page.keyboard.press('Escape');
+        const alert = page.locator('[role="alertdialog"]');
+        await expect(alert).toBeVisible({ timeout: 5000 });
+        await alert.locator('button').filter({ hasText: /Discard|Verwerfen/ }).click();
+        await expect(dialog).not.toBeVisible({ timeout: 5000 });
+
+        // Open second appointment — should show ITS title, not "WRONG TITLE"
+        const dialog2 = await openEditByIndex(page, 1);
+        const secondTitle = await dialog2.locator('input[type="text"]').first().inputValue();
+        expect(secondTitle).not.toBe('WRONG TITLE');
+        expect(secondTitle.length).toBeGreaterThan(0);
+
+        await page.keyboard.press('Escape');
+        await expect(dialog2).not.toBeVisible({ timeout: 5000 });
     });
 });

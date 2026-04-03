@@ -20,6 +20,8 @@ class EmployeeController extends Controller
             ->get()
             ->map(fn (User $user) => [
                 'id' => $user->id,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
                 'name' => $user->name,
                 'email' => $user->email,
                 'permissions' => $user->permissions->pluck('permission')->toArray(),
@@ -34,7 +36,8 @@ class EmployeeController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', Password::defaults()],
             'permissions' => ['present', 'array'],
@@ -42,7 +45,8 @@ class EmployeeController extends Controller
         ]);
 
         $user = User::create([
-            'name' => $validated['name'],
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
             'email' => $validated['email'],
             'password' => $validated['password'],
             'role' => User::ROLE_EMPLOYEE,

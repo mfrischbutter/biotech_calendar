@@ -6,6 +6,13 @@ import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
 import { Textarea } from '@/Components/ui/textarea';
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/Components/ui/select';
+import {
     Dialog,
     DialogContent,
     DialogDescription,
@@ -26,7 +33,10 @@ const props = defineProps<{
 const open = ref(false);
 
 const form = useForm({
-    name: props.client?.name ?? '',
+    salutation: props.client?.salutation ?? 'none',
+    first_name: props.client?.first_name ?? '',
+    last_name: props.client?.last_name ?? '',
+    company_name: props.client?.company_name ?? '',
     billing_name: props.client?.billing_name ?? '',
     street: props.client?.street ?? '',
     zip: props.client?.zip ?? '',
@@ -48,15 +58,20 @@ watch(open, (value) => {
 });
 
 function submit() {
+    const payload = {
+        ...form.data(),
+        salutation: form.salutation && form.salutation !== 'none' ? form.salutation : null,
+    };
+
     if (isEditing) {
-        form.put(route('clients.update', props.client!.id), {
+        form.transform(() => payload).put(route('clients.update', props.client!.id), {
             preserveScroll: true,
             onSuccess: () => {
                 open.value = false;
             },
         });
     } else {
-        form.post(route('clients.store'), {
+        form.transform(() => payload).post(route('clients.store'), {
             preserveScroll: true,
             onSuccess: () => {
                 open.value = false;
@@ -81,17 +96,59 @@ function submit() {
 
             <form @submit.prevent="submit" class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
-                    <div class="space-y-2 col-span-2">
-                        <Label for="client-name">{{ t('Name') }} *</Label>
+                    <div class="space-y-2">
+                        <Label for="client-salutation">{{ t('Salutation') }}</Label>
+                        <Select v-model="form.salutation">
+                            <SelectTrigger id="client-salutation">
+                                <SelectValue :placeholder="t('Select...')" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">{{ t('No selection') }}</SelectItem>
+                                <SelectItem value="Herr">{{ t('Mr') }}</SelectItem>
+                                <SelectItem value="Frau">{{ t('Mrs') }}</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div />
+
+                    <div class="space-y-2">
+                        <Label for="client-first-name">{{ t('First name') }} *</Label>
                         <Input
-                            id="client-name"
-                            v-model="form.name"
+                            id="client-first-name"
+                            v-model="form.first_name"
                             type="text"
-                            :placeholder="t('Client name')"
+                            :placeholder="t('First name')"
                             required
                         />
-                        <p v-if="form.errors.name" class="text-sm text-destructive">
-                            {{ form.errors.name }}
+                        <p v-if="form.errors.first_name" class="text-sm text-destructive">
+                            {{ form.errors.first_name }}
+                        </p>
+                    </div>
+
+                    <div class="space-y-2">
+                        <Label for="client-last-name">{{ t('Last name') }} *</Label>
+                        <Input
+                            id="client-last-name"
+                            v-model="form.last_name"
+                            type="text"
+                            :placeholder="t('Last name')"
+                            required
+                        />
+                        <p v-if="form.errors.last_name" class="text-sm text-destructive">
+                            {{ form.errors.last_name }}
+                        </p>
+                    </div>
+
+                    <div class="space-y-2 col-span-2">
+                        <Label for="client-company-name">{{ t('Company name') }}</Label>
+                        <Input
+                            id="client-company-name"
+                            v-model="form.company_name"
+                            type="text"
+                            :placeholder="t('Company name')"
+                        />
+                        <p v-if="form.errors.company_name" class="text-sm text-destructive">
+                            {{ form.errors.company_name }}
                         </p>
                     </div>
 

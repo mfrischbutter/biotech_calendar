@@ -26,7 +26,8 @@ const props = defineProps<{
 const open = ref(false);
 
 const form = useForm({
-    name: '',
+    first_name: '',
+    last_name: '',
     email: '',
     password: '',
     permissions: [] as string[],
@@ -73,18 +74,33 @@ function submit() {
             </DialogHeader>
 
             <form @submit.prevent="submit" class="space-y-4">
-                <div class="space-y-2">
-                    <Label for="name">{{ t('Name') }}</Label>
-                    <Input
-                        id="name"
-                        v-model="form.name"
-                        type="text"
-                        :placeholder="t('Full name')"
-                        required
-                    />
-                    <p v-if="form.errors.name" class="text-sm text-destructive">
-                        {{ form.errors.name }}
-                    </p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-2">
+                        <Label for="first_name">{{ t('First name') }}</Label>
+                        <Input
+                            id="first_name"
+                            v-model="form.first_name"
+                            type="text"
+                            :placeholder="t('First name')"
+                            required
+                        />
+                        <p v-if="form.errors.first_name" class="text-sm text-destructive">
+                            {{ form.errors.first_name }}
+                        </p>
+                    </div>
+                    <div class="space-y-2">
+                        <Label for="last_name">{{ t('Last name') }}</Label>
+                        <Input
+                            id="last_name"
+                            v-model="form.last_name"
+                            type="text"
+                            :placeholder="t('Last name')"
+                            required
+                        />
+                        <p v-if="form.errors.last_name" class="text-sm text-destructive">
+                            {{ form.errors.last_name }}
+                        </p>
+                    </div>
                 </div>
 
                 <div class="space-y-2">

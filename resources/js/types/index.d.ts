@@ -1,5 +1,7 @@
 export interface User {
     id: number;
+    first_name: string;
+    last_name: string;
     name: string;
     email: string;
     email_verified_at?: string;
@@ -10,6 +12,8 @@ export interface User {
 
 export interface Employee {
     id: number;
+    first_name: string;
+    last_name: string;
     name: string;
     email: string;
     permissions: string[];
@@ -43,6 +47,10 @@ export type RecurrenceType = 'weekly' | 'biweekly' | 'monthly' | 'custom';
 
 export interface Client {
     id: number;
+    salutation: string | null;
+    first_name: string;
+    last_name: string;
+    company_name: string | null;
     name: string;
     billing_name: string | null;
     street: string | null;
@@ -61,8 +69,8 @@ export interface ChecklistItem {
 export interface Appointment {
     id: number;
     title: string;
-    client: { id: number; name: string; company_name?: string } | null;
-    employee: { id: number; name: string } | null;
+    client: { id: number; first_name: string; last_name: string; company_name: string | null; name: string } | null;
+    employee: { id: number; first_name: string; last_name: string; name: string } | null;
     start_at: string;
     end_at: string;
     tag: { id: number; name: string; color: string } | null;

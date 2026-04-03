@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Client;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class ClientController extends Controller
@@ -20,14 +21,15 @@ class ClientController extends Controller
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
+                $q->where('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
                     ->orWhere('city', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
                     ->orWhere('phone', 'like', "%{$search}%");
             });
         }
 
-        $clients = $query->orderBy('name')->get();
+        $clients = $query->orderBy('last_name')->orderBy('first_name')->get();
 
         return Inertia::render('Clients/Index', [
             'clients' => $clients,
@@ -40,7 +42,10 @@ class ClientController extends Controller
         abort_unless($request->user()->hasPermission('clients.create'), 403);
 
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
+            'salutation' => ['nullable', 'string', Rule::in(Client::SALUTATIONS)],
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
+            'company_name' => ['nullable', 'string', 'max:255'],
             'billing_name' => ['nullable', 'string', 'max:255'],
             'street' => ['nullable', 'string', 'max:255'],
             'zip' => ['nullable', 'string', 'max:20'],
@@ -63,7 +68,10 @@ class ClientController extends Controller
         abort_unless($request->user()->hasPermission('clients.edit'), 403);
 
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
+            'salutation' => ['nullable', 'string', Rule::in(Client::SALUTATIONS)],
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
+            'company_name' => ['nullable', 'string', 'max:255'],
             'billing_name' => ['nullable', 'string', 'max:255'],
             'street' => ['nullable', 'string', 'max:255'],
             'zip' => ['nullable', 'string', 'max:20'],
