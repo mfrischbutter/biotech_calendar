@@ -4,6 +4,7 @@ export interface User {
     last_name: string;
     name: string;
     email: string;
+    locale: 'de' | 'en';
     email_verified_at?: string;
     role: 'owner' | 'employee';
     company_id: number;
