@@ -160,16 +160,29 @@ class AppointmentController extends Controller
 
         $request->validate([
             'delete_series' => ['boolean'],
+            'delete_future' => ['boolean'],
         ]);
 
-        if ($request->boolean('delete_series') && $appointment->isParent()) {
-            $appointment->occurrences()->delete();
-            $appointment->delete();
-        } elseif ($request->boolean('delete_series') && $appointment->parent_id) {
-            $parent = $appointment->parent;
-            if ($parent) {
-                $parent->occurrences()->delete();
-                $parent->delete();
+        if ($request->boolean('delete_series')) {
+            if ($appointment->isParent()) {
+                $appointment->occurrences()->delete();
+                $appointment->delete();
+            } elseif ($appointment->parent_id) {
+                $parent = $appointment->parent;
+                if ($parent) {
+                    $parent->occurrences()->delete();
+                    $parent->delete();
+                }
+            } else {
+                $appointment->delete();
+            }
+        } elseif ($request->boolean('delete_future')) {
+            $parentId = $appointment->parent_id ?? $appointment->id;
+            Appointment::where('parent_id', $parentId)
+                ->where('start_at', '>=', $appointment->start_at)
+                ->delete();
+            if ($appointment->isParent()) {
+                $appointment->delete();
             }
         } else {
             $appointment->delete();

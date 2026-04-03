@@ -31,8 +31,8 @@ import DateTimePickerPopover from './DateTimePickerPopover.vue';
 const { t } = useTrans();
 
 const props = defineProps<{
-    clients: { id: number; name: string }[];
-    employees: { id: number; name: string }[];
+    clients: { id: number; first_name: string; last_name: string; company_name: string | null; name: string }[];
+    employees: { id: number; first_name: string; last_name: string; name: string }[];
     tags: Tag[];
     clientId: string;
     employeeId: string;
@@ -248,8 +248,8 @@ function handlePointerDownOutside(e: Event) {
             @update:end-time="(v) => emit('update:endTime', v)"
         />
 
-        <!-- Recurrence (create only) -->
-        <Popover v-if="!isEditing" v-model:open="recurrencePopoverOpen">
+        <!-- Recurrence -->
+        <Popover v-model:open="recurrencePopoverOpen">
             <PopoverTrigger as-child>
                 <Button
                     type="button"

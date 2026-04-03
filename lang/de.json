@@ -185,5 +185,12 @@
     "Discard": "Verwerfen",
 
     "Team": "Team",
-    "Unassigned": "Nicht zugewiesen"
+    "Unassigned": "Nicht zugewiesen",
+
+    "Delete Appointment": "Termin löschen",
+    "This appointment will be permanently deleted. This action cannot be undone.": "Dieser Termin wird dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "This appointment is part of a series. How would you like to proceed?": "Dieser Termin gehört zu einer Serie. Wie möchten Sie fortfahren?",
+    "Delete This Only": "Nur diesen Termin löschen",
+    "Delete All Future Appointments": "Diesen und alle zukünftigen löschen",
+    "Delete Entire Series": "Gesamte Serie löschen"
 }

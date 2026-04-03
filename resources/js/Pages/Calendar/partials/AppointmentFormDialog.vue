@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, computed, nextTick } from 'vue';
-import { useForm } from '@inertiajs/vue3';
+import { useForm, router } from '@inertiajs/vue3';
 import { Button } from '@/Components/ui/button';
 import { Separator } from '@/Components/ui/separator';
 import {
@@ -57,15 +57,32 @@ const form = useForm({
     tag_id: props.appointment?.tag?.id?.toString() ?? 'none',
     notes: props.appointment?.notes ?? '',
     checklist: (props.appointment?.checklist ?? []) as ChecklistItem[],
-    is_recurring: false,
-    recurrence_type: 'weekly',
-    recurrence_interval: 1,
-    recurrence_end: '',
+    is_recurring: !!props.appointment?.recurrence_type || !!props.appointment?.parent_id,
+    recurrence_type: props.appointment?.recurrence_type ?? 'weekly',
+    recurrence_interval: props.appointment?.recurrence_interval ?? 1,
+    recurrence_end: props.appointment?.recurrence_end ?? '',
 });
 
 const notesRef = ref<HTMLTextAreaElement>();
 const confirmDiscardOpen = ref(false);
+const confirmDeleteOpen = ref(false);
 const initialSnapshot = ref('');
+
+const isRecurringSeries = computed(() =>
+    !!props.appointment && (!!props.appointment.recurrence_type || !!props.appointment.parent_id),
+);
+
+function deleteAppointment(mode: 'single' | 'future' | 'series') {
+    if (!props.appointment) return;
+    router.delete(route('appointments.destroy', props.appointment.id), {
+        data: {
+            delete_series: mode === 'series',
+            delete_future: mode === 'future',
+        },
+        preserveScroll: true,
+        onSuccess: () => { open.value = false; },
+    });
+}
 
 function takeSnapshot(): string {
     return JSON.stringify({
@@ -98,8 +115,10 @@ function autoResize() {
 }
 
 function handlePointerDownOutside(e: Event) {
-    e.preventDefault();
-    requestClose();
+    if (isDirty()) {
+        e.preventDefault();
+        confirmDiscardOpen.value = true;
+    }
 }
 
 function requestClose() {
@@ -135,6 +154,10 @@ function populateFromAppointment() {
     form.tag_id = props.appointment?.tag?.id?.toString() ?? 'none';
     form.notes = props.appointment?.notes ?? '';
     form.checklist = (props.appointment?.checklist ?? []) as ChecklistItem[];
+    form.is_recurring = !!props.appointment?.recurrence_type || !!props.appointment?.parent_id;
+    form.recurrence_type = props.appointment?.recurrence_type ?? 'weekly';
+    form.recurrence_interval = props.appointment?.recurrence_interval ?? 1;
+    form.recurrence_end = props.appointment?.recurrence_end ?? '';
 }
 
 watch(open, (value) => {
@@ -254,7 +277,19 @@ function submit() {
                     :errors="(form.errors as Record<string, string>)"
                 />
 
-                <DialogFooter>
+                <DialogFooter class="flex !justify-between">
+                    <Button
+                        v-if="isEditing"
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        class="h-8 w-8 rounded-full border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        data-testid="delete-appointment"
+                        @click="confirmDeleteOpen = true"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                    </Button>
+                    <div v-else />
                     <Button type="submit" :disabled="form.processing">
                         {{ form.processing ? t('Saving...') : (isEditing ? t('Update') : t('Create appointment')) }}
                     </Button>
@@ -274,6 +309,50 @@ function submit() {
             <AlertDialogFooter>
                 <AlertDialogCancel>{{ t('Cancel') }}</AlertDialogCancel>
                 <AlertDialogAction @click="forceClose">{{ t('Discard') }}</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog v-model:open="confirmDeleteOpen">
+        <AlertDialogContent @pointer-down-outside="confirmDeleteOpen = false">
+            <AlertDialogHeader>
+                <AlertDialogTitle>{{ t('Delete Appointment') }}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    {{ isRecurringSeries
+                        ? t('This appointment is part of a series. How would you like to proceed?')
+                        : t('This appointment will be permanently deleted. This action cannot be undone.')
+                    }}
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter class="flex-col sm:flex-col gap-2">
+                <div v-if="isRecurringSeries" class="flex flex-col gap-2 w-full">
+                    <AlertDialogAction
+                        class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        @click="deleteAppointment('single')"
+                    >
+                        {{ t('Delete This Only') }}
+                    </AlertDialogAction>
+                    <AlertDialogAction
+                        class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        @click="deleteAppointment('future')"
+                    >
+                        {{ t('Delete All Future Appointments') }}
+                    </AlertDialogAction>
+                    <AlertDialogAction
+                        class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        @click="deleteAppointment('series')"
+                    >
+                        {{ t('Delete Entire Series') }}
+                    </AlertDialogAction>
+                </div>
+                <AlertDialogAction
+                    v-else
+                    class="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full"
+                    @click="deleteAppointment('single')"
+                >
+                    {{ t('Delete') }}
+                </AlertDialogAction>
+                <AlertDialogCancel class="w-full">{{ t('Cancel') }}</AlertDialogCancel>
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
