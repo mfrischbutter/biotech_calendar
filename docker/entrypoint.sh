@@ -7,11 +7,18 @@ echo "Starting application..."
 if [ ! -f /data/database.sqlite ]; then
     echo "Creating SQLite database..."
     touch /data/database.sqlite
-    chown www-data:www-data /data/database.sqlite
 fi
+
+# Ensure www-data can write to the database and its directory (needed for SQLite WAL)
+chown www-data:www-data /data
+chown www-data:www-data /data/database.sqlite
+chmod 664 /data/database.sqlite
 
 # Symlink database to expected location
 ln -sf /data/database.sqlite /var/www/html/database/database.sqlite
+
+# Ensure storage is writable
+chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
 # Generate app key if not set
 if [ -z "$APP_KEY" ]; then
