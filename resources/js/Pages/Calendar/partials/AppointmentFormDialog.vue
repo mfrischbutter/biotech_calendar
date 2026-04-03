@@ -1,30 +1,8 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, nextTick } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { Button } from '@/Components/ui/button';
-import { Input } from '@/Components/ui/input';
-import { Label } from '@/Components/ui/label';
-import { Textarea } from '@/Components/ui/textarea';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/Components/ui/select';
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from '@/Components/ui/popover';
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from '@/Components/ui/command';
+import { Separator } from '@/Components/ui/separator';
 import {
     Dialog,
     DialogContent,
@@ -33,11 +11,21 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/Components/ui/dialog';
-import { getTagDotStyle } from '@/lib/tag-colors';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/Components/ui/alert-dialog';
 import { localToISO, isoToLocalParts } from '@/lib/date-utils';
 import { useTrans } from '@/lib/use-trans';
-import type { Appointment, Tag } from '@/types';
-import RecurrenceFields from './RecurrenceFields.vue';
+import type { Appointment, ChecklistItem, Tag } from '@/types';
+import AppointmentToolbar from './AppointmentToolbar.vue';
+import ChecklistEditor from './ChecklistEditor.vue';
 
 const { t } = useTrans();
 
@@ -52,7 +40,6 @@ const props = defineProps<{
 }>();
 
 const open = defineModel<boolean>('open', { default: false });
-
 const isEditing = computed(() => !!props.appointment);
 
 const initStart = props.appointment ? isoToLocalParts(props.appointment.start_at) : null;
@@ -68,47 +55,86 @@ const form = useForm({
     end_time: initEnd?.time ?? (props.defaultEndTime ?? '10:00'),
     tag_id: props.appointment?.tag?.id?.toString() ?? 'none',
     notes: props.appointment?.notes ?? '',
+    checklist: (props.appointment?.checklist ?? []) as ChecklistItem[],
     is_recurring: false,
     recurrence_type: 'weekly',
     recurrence_interval: 1,
     recurrence_end: '',
 });
 
-function handlePointerDownOutside() {
-    const stop = (e: Event) => { e.stopPropagation(); e.preventDefault(); };
-    document.addEventListener('click', stop, { capture: true, once: true });
-    document.addEventListener('mousedown', stop, { capture: true, once: true });
-    setTimeout(() => {
-        document.removeEventListener('click', stop, { capture: true });
-        document.removeEventListener('mousedown', stop, { capture: true });
-    }, 300);
+const notesRef = ref<HTMLTextAreaElement>();
+const confirmDiscardOpen = ref(false);
+const initialSnapshot = ref('');
+
+function takeSnapshot(): string {
+    return JSON.stringify({
+        title: form.title,
+        client_id: form.client_id,
+        employee_id: form.employee_id,
+        start_date: form.start_date,
+        start_time: form.start_time,
+        end_date: form.end_date,
+        end_time: form.end_time,
+        tag_id: form.tag_id,
+        notes: form.notes,
+        checklist: form.checklist,
+        is_recurring: form.is_recurring,
+        recurrence_type: form.recurrence_type,
+        recurrence_interval: form.recurrence_interval,
+        recurrence_end: form.recurrence_end,
+    });
 }
 
-const clientPopoverOpen = ref(false);
-const clientSearch = ref('');
+function isDirty(): boolean {
+    return takeSnapshot() !== initialSnapshot.value;
+}
 
-const filteredClients = computed(() => {
-    if (!clientSearch.value) return props.clients;
-    const q = clientSearch.value.toLowerCase();
-    return props.clients.filter((c) => c.name.toLowerCase().includes(q));
-});
+function autoResize() {
+    const el = notesRef.value;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+}
 
-const selectedClientName = computed(() => {
-    if (!form.client_id) return '';
-    return props.clients.find((c) => c.id.toString() === form.client_id)?.name ?? '';
-});
+function handlePointerDownOutside(e: Event) {
+    e.preventDefault();
+    requestClose();
+}
 
-function selectClient(clientId: string) {
-    form.client_id = clientId;
-    clientPopoverOpen.value = false;
+function requestClose() {
+    if (isDirty()) {
+        confirmDiscardOpen.value = true;
+    } else {
+        forceClose();
+    }
+}
+
+function forceClose() {
+    open.value = false;
+}
+
+function handleOpenChange(value: boolean) {
+    if (value) {
+        open.value = true;
+    } else {
+        requestClose();
+    }
 }
 
 watch(open, (value) => {
-    if (value && !isEditing.value) {
-        form.start_date = props.defaultDate ?? '';
-        form.start_time = props.defaultStartTime ?? '09:00';
-        form.end_date = props.defaultDate ?? '';
-        form.end_time = props.defaultEndTime ?? '10:00';
+    if (value) {
+        nextTick(() => {
+            if (!isEditing.value) {
+                form.start_date = props.defaultDate ?? '';
+                form.start_time = props.defaultStartTime ?? '09:00';
+                form.end_date = props.defaultDate ?? '';
+                form.end_time = props.defaultEndTime ?? '10:00';
+            }
+            nextTick(() => {
+                initialSnapshot.value = takeSnapshot();
+                autoResize();
+            });
+        });
     }
     if (!value) {
         form.clearErrors();
@@ -127,6 +153,7 @@ function submit() {
         end_at: localToISO(form.end_date, form.end_time),
         tag_id: form.tag_id && form.tag_id !== 'none' ? parseInt(form.tag_id) : null,
         notes: form.notes || null,
+        checklist: form.checklist.length > 0 ? form.checklist : null,
     };
 
     if (form.is_recurring && !isEditing.value) {
@@ -150,155 +177,82 @@ function submit() {
 </script>
 
 <template>
-    <Dialog v-model:open="open">
-        <DialogContent class="sm:max-w-[520px]" @pointer-down-outside="handlePointerDownOutside">
+    <Dialog :open="open" @update:open="handleOpenChange">
+        <DialogContent
+            class="sm:max-w-[624px] pt-4"
+            @pointer-down-outside="handlePointerDownOutside"
+            @escape-key-down.prevent="requestClose"
+        >
             <DialogHeader>
                 <DialogTitle>{{ isEditing ? t('Edit Appointment') : t('New Appointment') }}</DialogTitle>
-                <DialogDescription>
+                <DialogDescription class="sr-only">
                     {{ isEditing ? t('Update appointment details.') : t('Create a new appointment.') }}
                 </DialogDescription>
             </DialogHeader>
 
-            <form @submit.prevent="submit" class="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
-                <div class="space-y-2">
-                    <Label for="appt-title">{{ t('Title') }} *</Label>
-                    <Input
-                        id="appt-title"
-                        v-model="form.title"
-                        type="text"
-                        :placeholder="t('Appointment name')"
-                        required
-                    />
-                    <p v-if="form.errors.title" class="text-sm text-destructive">{{ form.errors.title }}</p>
-                </div>
+            <form @submit.prevent="submit" class="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
+                <input
+                    v-model="form.title"
+                    type="text"
+                    :placeholder="t('Appointment title')"
+                    required
+                    class="w-full bg-transparent text-lg font-medium border-0 outline-none ring-0 focus:outline-none focus:ring-0 p-0 text-foreground placeholder:text-muted-foreground"
+                />
+                <p v-if="form.errors.title" class="text-xs text-destructive">{{ form.errors.title }}</p>
 
-                <!-- Client combobox -->
-                <div class="space-y-2">
-                    <Label>{{ t('Client') }}</Label>
-                    <Popover v-model:open="clientPopoverOpen">
-                        <PopoverTrigger as-child>
-                            <Button variant="outline" role="combobox" class="w-full justify-between font-normal">
-                                {{ selectedClientName || t('Select client...') }}
-                                <svg xmlns="http://www.w3.org/2000/svg" class="ml-2 h-4 w-4 shrink-0 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent class="w-[--reka-popover-trigger-width] p-0">
-                            <Command>
-                                <CommandInput v-model="clientSearch" :placeholder="t('Search clients...')" />
-                                <CommandList>
-                                    <CommandEmpty>{{ t('No client found.') }}</CommandEmpty>
-                                    <CommandGroup>
-                                        <CommandItem value="" @select="selectClient('')">
-                                            <span class="text-muted-foreground">{{ t('None') }}</span>
-                                        </CommandItem>
-                                        <CommandItem
-                                            v-for="client in filteredClients"
-                                            :key="client.id"
-                                            :value="client.name"
-                                            @select="selectClient(client.id.toString())"
-                                        >
-                                            {{ client.name }}
-                                        </CommandItem>
-                                    </CommandGroup>
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
-                    </Popover>
-                </div>
+                <textarea
+                    ref="notesRef"
+                    v-model="form.notes"
+                    @input="autoResize"
+                    :placeholder="t('Add a description...')"
+                    rows="3"
+                    class="w-full bg-transparent text-sm border-0 outline-none ring-0 focus:outline-none focus:ring-0 p-0 text-foreground placeholder:text-muted-foreground resize-none overflow-hidden"
+                />
 
-                <!-- Employee -->
-                <div class="space-y-2">
-                    <Label>{{ t('Employee') }}</Label>
-                    <Select v-model="form.employee_id">
-                        <SelectTrigger>
-                            <SelectValue :placeholder="t('Select employee...')" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="none">{{ t('None') }}</SelectItem>
-                            <SelectItem
-                                v-for="emp in employees"
-                                :key="emp.id"
-                                :value="emp.id.toString()"
-                            >
-                                {{ emp.name }}
-                            </SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
+                <ChecklistEditor v-model="form.checklist" />
 
-                <!-- Date/Time -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="space-y-2">
-                        <Label for="appt-start-date">{{ t('Start Date') }} *</Label>
-                        <Input id="appt-start-date" v-model="form.start_date" type="date" required />
-                    </div>
-                    <div class="space-y-2">
-                        <Label for="appt-start-time">{{ t('Start Time') }} *</Label>
-                        <Input id="appt-start-time" v-model="form.start_time" type="time" required />
-                    </div>
-                    <div class="space-y-2">
-                        <Label for="appt-end-date">{{ t('End Date') }} *</Label>
-                        <Input id="appt-end-date" v-model="form.end_date" type="date" required />
-                    </div>
-                    <div class="space-y-2">
-                        <Label for="appt-end-time">{{ t('End Time') }} *</Label>
-                        <Input id="appt-end-time" v-model="form.end_time" type="time" required />
-                    </div>
-                </div>
-                <p v-if="(form.errors as Record<string, string>).start_at" class="text-sm text-destructive">{{ (form.errors as Record<string, string>).start_at }}</p>
-                <p v-if="(form.errors as Record<string, string>).end_at" class="text-sm text-destructive">{{ (form.errors as Record<string, string>).end_at }}</p>
+                <Separator />
 
-                <!-- Tag -->
-                <div class="space-y-2">
-                    <Label>{{ t('Tag') }}</Label>
-                    <Select v-model="form.tag_id">
-                        <SelectTrigger>
-                            <SelectValue :placeholder="t('Select tag...')" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="none">
-                                <span class="text-muted-foreground">{{ t('None') }}</span>
-                            </SelectItem>
-                            <SelectItem
-                                v-for="tag in tags"
-                                :key="tag.id"
-                                :value="tag.id.toString()"
-                            >
-                                <div class="flex items-center gap-2">
-                                    <span class="h-2.5 w-2.5 rounded-full shrink-0" :style="getTagDotStyle(tag.color)" />
-                                    {{ tag.name }}
-                                </div>
-                            </SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                <!-- Recurrence (only for create) -->
-                <RecurrenceFields
-                    v-if="!isEditing"
+                <AppointmentToolbar
+                    :clients="clients"
+                    :employees="employees"
+                    :tags="tags"
+                    :is-editing="isEditing"
+                    v-model:client-id="form.client_id"
+                    v-model:employee-id="form.employee_id"
+                    v-model:tag-id="form.tag_id"
+                    v-model:start-date="form.start_date"
+                    v-model:start-time="form.start_time"
+                    v-model:end-date="form.end_date"
+                    v-model:end-time="form.end_time"
                     v-model:is-recurring="form.is_recurring"
                     v-model:recurrence-type="form.recurrence_type"
                     v-model:recurrence-interval="form.recurrence_interval"
                     v-model:recurrence-end="form.recurrence_end"
+                    :errors="(form.errors as Record<string, string>)"
                 />
-
-                <!-- Notes -->
-                <div class="space-y-2">
-                    <Label for="appt-notes">{{ t('Notes') }}</Label>
-                    <Textarea
-                        id="appt-notes"
-                        v-model="form.notes"
-                        :placeholder="t('Additional information...')"
-                        rows="3"
-                    />
-                </div>
 
                 <DialogFooter>
                     <Button type="submit" :disabled="form.processing">
-                        {{ form.processing ? t('Saving...') : (isEditing ? t('Update') : t('Create')) }}
+                        {{ form.processing ? t('Saving...') : (isEditing ? t('Update') : t('Create appointment')) }}
                     </Button>
                 </DialogFooter>
             </form>
         </DialogContent>
     </Dialog>
+
+    <AlertDialog v-model:open="confirmDiscardOpen">
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>{{ t('Discard changes?') }}</AlertDialogTitle>
+                <AlertDialogDescription>
+                    {{ t('You have unsaved changes. Are you sure you want to discard them?') }}
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>{{ t('Cancel') }}</AlertDialogCancel>
+                <AlertDialogAction @click="forceClose">{{ t('Discard') }}</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
 </template>

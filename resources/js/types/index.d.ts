@@ -53,6 +53,11 @@ export interface Client {
     notes: string | null;
 }
 
+export interface ChecklistItem {
+    text: string;
+    checked: boolean;
+}
+
 export interface Appointment {
     id: number;
     title: string;
@@ -62,6 +67,7 @@ export interface Appointment {
     end_at: string;
     tag: { id: number; name: string; color: string } | null;
     notes: string | null;
+    checklist: ChecklistItem[] | null;
     recurrence_type: RecurrenceType | null;
     recurrence_interval: number | null;
     recurrence_end: string | null;

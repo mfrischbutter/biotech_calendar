@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
+import type { FormDataConvertible } from '@inertiajs/core';
 import { format, parseISO, addWeeks, subWeeks, addDays, subDays, addMonths, subMonths, startOfWeek } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { Button } from '@/Components/ui/button';
@@ -124,30 +125,32 @@ function handleCreateAppointment(date: string, startTime: string, endTime: strin
     openCreateDialog(date, startTime, endTime);
 }
 
-function handleMoveAppointment(appointment: Appointment, date: string, startTime: string, endTime: string) {
-    router.put(route('appointments.update', appointment.id), {
+function buildAppointmentPayload(appointment: Appointment, overrides: Record<string, unknown>) {
+    return {
         title: appointment.title,
         client_id: appointment.client?.id ?? null,
         employee_id: appointment.employee?.id ?? null,
-        start_at: localToISO(date, startTime),
-        end_at: localToISO(date, endTime),
         tag_id: appointment.tag?.id ?? null,
         notes: appointment.notes,
-    }, { preserveScroll: true });
+        checklist: appointment.checklist,
+        ...overrides,
+    } as Record<string, FormDataConvertible>;
+}
+
+function handleMoveAppointment(appointment: Appointment, date: string, startTime: string, endTime: string) {
+    router.put(route('appointments.update', appointment.id), buildAppointmentPayload(appointment, {
+        start_at: localToISO(date, startTime),
+        end_at: localToISO(date, endTime),
+    }), { preserveScroll: true });
 }
 
 function handleResizeAppointment(appointment: Appointment, endTime: string) {
     const date = new Date(appointment.start_at);
     const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    router.put(route('appointments.update', appointment.id), {
-        title: appointment.title,
-        client_id: appointment.client?.id ?? null,
-        employee_id: appointment.employee?.id ?? null,
+    router.put(route('appointments.update', appointment.id), buildAppointmentPayload(appointment, {
         start_at: appointment.start_at,
         end_at: localToISO(dateStr, endTime),
-        tag_id: appointment.tag?.id ?? null,
-        notes: appointment.notes,
-    }, { preserveScroll: true });
+    }), { preserveScroll: true });
 }
 
 const viewLabels: Record<CalendarView, string> = {

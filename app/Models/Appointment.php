@@ -20,6 +20,7 @@ class Appointment extends Model
         'end_at',
         'tag_id',
         'notes',
+        'checklist',
         'created_by',
         'recurrence_type',
         'recurrence_interval',
@@ -32,6 +33,7 @@ class Appointment extends Model
         return [
             'start_at' => 'datetime',
             'end_at' => 'datetime',
+            'checklist' => 'array',
             'recurrence_end' => 'date',
         ];
     }

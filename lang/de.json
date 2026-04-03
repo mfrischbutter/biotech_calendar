@@ -161,5 +161,18 @@
     "Client name": "Kundenname",
     "If different": "Falls abweichend",
     "Street and house number": "Straße und Hausnummer",
-    "Phone number": "Telefonnummer"
+    "Phone number": "Telefonnummer",
+
+    "Appointment title": "Terminbezeichnung",
+    "Add a description...": "Beschreibung hinzufügen...",
+    "Create appointment": "Termin erstellen",
+    "Add checklist item...": "Checklistenpunkt hinzufügen...",
+    "Date & Time": "Datum & Zeit",
+    "Start": "Start",
+    "End": "Ende",
+    "More options": "Weitere Optionen",
+    "Remove": "Entfernen",
+    "Discard changes?": "Änderungen verwerfen?",
+    "You have unsaved changes. Are you sure you want to discard them?": "Sie haben ungespeicherte Änderungen. Möchten Sie diese wirklich verwerfen?",
+    "Discard": "Verwerfen"
 }

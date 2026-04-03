@@ -94,6 +94,9 @@ class AppointmentController extends Controller
             'end_at' => ['required', 'date', 'after:start_at'],
             'tag_id' => ['nullable', 'exists:tags,id'],
             'notes' => ['nullable', 'string'],
+            'checklist' => ['nullable', 'array', 'max:50'],
+            'checklist.*.text' => ['required', 'string', 'max:500'],
+            'checklist.*.checked' => ['required', 'boolean'],
             'recurrence_type' => ['nullable', 'string', 'in:'.implode(',', Appointment::RECURRENCE_TYPES)],
             'recurrence_interval' => [
                 Rule::when($request->input('recurrence_type') === 'custom', ['required', 'integer', 'min:1'], ['nullable', 'integer', 'min:1']),
@@ -109,6 +112,7 @@ class AppointmentController extends Controller
             'end_at' => $validated['end_at'],
             'tag_id' => $validated['tag_id'] ?? null,
             'notes' => $validated['notes'] ?? null,
+            'checklist' => $validated['checklist'] ?? null,
             'created_by' => $request->user()->id,
         ];
 
@@ -140,6 +144,9 @@ class AppointmentController extends Controller
             'end_at' => ['sometimes', 'required', 'date', 'after:start_at'],
             'tag_id' => ['nullable', 'exists:tags,id'],
             'notes' => ['nullable', 'string'],
+            'checklist' => ['nullable', 'array', 'max:50'],
+            'checklist.*.text' => ['required', 'string', 'max:500'],
+            'checklist.*.checked' => ['required', 'boolean'],
         ]);
 
         $appointment->update($validated);
