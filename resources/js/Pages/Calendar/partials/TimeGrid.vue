@@ -347,6 +347,7 @@ function dragPreviewStyle() {
                     <div
                         v-for="appt in appointmentsByDay[day.date]"
                         :key="appt.id"
+                        :data-appointment-id="appt.id"
                         class="absolute left-1 right-1 rounded-md cursor-pointer overflow-hidden transition-shadow hover:shadow-md border-l-[4px]"
                         :class="isDragTarget(appt) ? 'opacity-0 z-0' : 'z-10'"
                         :style="apptCardStyle(appt)"

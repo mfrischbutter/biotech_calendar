@@ -138,7 +138,21 @@ watch(open, (value) => {
     }
     if (!value) {
         form.clearErrors();
-        if (!isEditing.value) {
+        if (isEditing.value) {
+            // Reset to original appointment data
+            const s = props.appointment ? isoToLocalParts(props.appointment.start_at) : null;
+            const e = props.appointment ? isoToLocalParts(props.appointment.end_at) : null;
+            form.title = props.appointment?.title ?? '';
+            form.client_id = props.appointment?.client?.id?.toString() ?? '';
+            form.employee_id = props.appointment?.employee?.id?.toString() ?? 'none';
+            form.start_date = s?.date ?? '';
+            form.start_time = s?.time ?? '09:00';
+            form.end_date = e?.date ?? '';
+            form.end_time = e?.time ?? '10:00';
+            form.tag_id = props.appointment?.tag?.id?.toString() ?? 'none';
+            form.notes = props.appointment?.notes ?? '';
+            form.checklist = (props.appointment?.checklist ?? []) as ChecklistItem[];
+        } else {
             form.reset();
         }
     }

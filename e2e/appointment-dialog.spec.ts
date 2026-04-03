@@ -301,3 +301,133 @@ test.describe('Appointment Dialog - Cancel discard (keep editing)', () => {
         await expect(dialog).not.toBeVisible({ timeout: 10000 });
     });
 });
+
+test.describe('Appointment Dialog - Edit discard resets form', () => {
+    test.beforeEach(async ({ page }) => {
+        await login(page);
+    });
+
+    test('edit dialog resets to original data after discard', async ({ page }) => {
+        await page.goto('/calendar');
+        await page.waitForLoadState('networkidle');
+
+        // Find and click an existing appointment to open edit dialog
+        const appointment = page.locator('[data-appointment-id]').first();
+        const hasAppointment = await appointment.count();
+        if (hasAppointment === 0) {
+            // Create an appointment first
+            const newBtn = page.locator('button').filter({ hasText: /New Appointment|Neuer Termin/ });
+            await newBtn.click();
+            const createDialog = page.locator('[role="dialog"]');
+            await expect(createDialog).toBeVisible({ timeout: 5000 });
+            await createDialog.locator('input[type="text"]').first().fill('Reset Test Appointment');
+            await createDialog.locator('button[type="submit"]').click();
+            await expect(createDialog).not.toBeVisible({ timeout: 10000 });
+            await page.waitForLoadState('networkidle');
+        }
+
+        // Click the first appointment on the calendar to open edit
+        const apptCard = page.locator('[data-appointment-id]').first();
+        if (await apptCard.count() === 0) {
+            test.skip(true, 'No appointments visible on calendar');
+            return;
+        }
+
+        await apptCard.click();
+        const editDialog = page.locator('[role="dialog"]');
+        await expect(editDialog).toBeVisible({ timeout: 5000 });
+
+        // Read the original title
+        const titleInput = editDialog.locator('input[type="text"]').first();
+        const originalTitle = await titleInput.inputValue();
+
+        // Change the title
+        await titleInput.fill('MODIFIED TITLE');
+        await expect(titleInput).toHaveValue('MODIFIED TITLE');
+
+        // Close via Escape → confirm dialog appears
+        await page.keyboard.press('Escape');
+        const alert = page.locator('[role="alertdialog"]');
+        await expect(alert).toBeVisible({ timeout: 5000 });
+
+        // Click Discard
+        await alert.locator('button').filter({ hasText: /Discard|Verwerfen/ }).click();
+        await expect(editDialog).not.toBeVisible({ timeout: 5000 });
+
+        // Reopen the same appointment
+        await apptCard.click();
+        await expect(editDialog).toBeVisible({ timeout: 5000 });
+
+        // Title should be the original, not "MODIFIED TITLE"
+        await expect(titleInput).toHaveValue(originalTitle);
+    });
+
+    test('edit dialog resets description after discard', async ({ page }) => {
+        await page.goto('/calendar');
+        await page.waitForLoadState('networkidle');
+
+        const apptCard = page.locator('[data-appointment-id]').first();
+        if (await apptCard.count() === 0) {
+            test.skip(true, 'No appointments visible on calendar');
+            return;
+        }
+
+        await apptCard.click();
+        const editDialog = page.locator('[role="dialog"]');
+        await expect(editDialog).toBeVisible({ timeout: 5000 });
+
+        // Read original description
+        const notesTextarea = editDialog.locator('textarea');
+        const originalNotes = await notesTextarea.inputValue();
+
+        // Change description
+        await notesTextarea.fill('MODIFIED DESCRIPTION');
+
+        // Close and discard
+        await page.keyboard.press('Escape');
+        const alert = page.locator('[role="alertdialog"]');
+        await expect(alert).toBeVisible({ timeout: 5000 });
+        await alert.locator('button').filter({ hasText: /Discard|Verwerfen/ }).click();
+        await expect(editDialog).not.toBeVisible({ timeout: 5000 });
+
+        // Reopen
+        await apptCard.click();
+        await expect(editDialog).toBeVisible({ timeout: 5000 });
+
+        // Description should be original
+        await expect(notesTextarea).toHaveValue(originalNotes);
+    });
+
+    test('create dialog resets after discard and reopen', async ({ page }) => {
+        const dialog = await openCreateDialog(page);
+
+        const titleInput = dialog.locator('input[type="text"]').first();
+        const notesTextarea = dialog.locator('textarea');
+
+        await titleInput.fill('Will be discarded');
+        await notesTextarea.fill('These notes will be gone');
+
+        // Add a checklist item
+        const addInput = dialog.locator('input[data-checklist-new-input]');
+        await addInput.fill('Checklist item');
+        await addInput.press('Enter');
+
+        // Close and discard
+        await page.keyboard.press('Escape');
+        const alert = page.locator('[role="alertdialog"]');
+        await expect(alert).toBeVisible({ timeout: 5000 });
+        await alert.locator('button').filter({ hasText: /Discard|Verwerfen/ }).click();
+        await expect(dialog).not.toBeVisible({ timeout: 5000 });
+
+        // Reopen create dialog
+        const btn = page.locator('button').filter({ hasText: /New Appointment|Neuer Termin/ });
+        await btn.click();
+        await expect(dialog).toBeVisible({ timeout: 5000 });
+
+        // Everything should be empty
+        await expect(titleInput).toHaveValue('');
+        await expect(notesTextarea).toHaveValue('');
+        const checklistItems = dialog.locator('input[data-checklist-item-input]');
+        await expect(checklistItems).toHaveCount(0);
+    });
+});
