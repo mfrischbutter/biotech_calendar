@@ -6,6 +6,14 @@ import { Badge } from '@/Components/ui/badge';
 import { Avatar, AvatarFallback } from '@/Components/ui/avatar';
 import { Button } from '@/Components/ui/button';
 import {
+    Empty,
+    EmptyContent,
+    EmptyDescription,
+    EmptyHeader,
+    EmptyMedia,
+    EmptyTitle,
+} from '@/Components/ui/empty';
+import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -75,9 +83,25 @@ function deleteEmployee(employee: Employee) {
             </div>
         </template>
 
-        <div v-if="employees.length === 0" class="text-center py-12 text-muted-foreground">
-            {{ t('No employees yet. Click "Add Employee" to get started.') }}
-        </div>
+        <Empty v-if="employees.length === 0" class="py-12">
+            <EmptyHeader>
+                <EmptyMedia variant="icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="8.5" cy="7" r="4" /><polyline points="17 11 19 13 23 9" /></svg>
+                </EmptyMedia>
+                <EmptyTitle>{{ t('Employees') }}</EmptyTitle>
+                <EmptyDescription>
+                    {{ t('No employees yet. Click "Add Employee" to get started.') }}
+                </EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+                <AddEmployeeDialog :available-permissions="availablePermissions">
+                    <Button size="sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        {{ t('Add Employee') }}
+                    </Button>
+                </AddEmployeeDialog>
+            </EmptyContent>
+        </Empty>
 
         <Card v-else>
             <Table>

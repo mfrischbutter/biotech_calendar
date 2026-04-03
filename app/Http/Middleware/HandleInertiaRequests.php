@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Permission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Inertia\Middleware;
@@ -39,12 +40,18 @@ class HandleInertiaRequests extends Middleware
                 : [];
         });
 
+        $user = $request->user();
+
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user() ? [
-                    ...$request->user()->toArray(),
-                    'role' => $request->user()->role,
+                'user' => $user ? [
+                    ...$user->toArray(),
+                    'role' => $user->role,
+                    'company_id' => $user->company_id,
+                    'permissions' => $user->isOwner()
+                        ? array_keys(Permission::ALL)
+                        : $user->permissions->pluck('permission')->toArray(),
                 ] : null,
             ],
             'locale' => $locale,

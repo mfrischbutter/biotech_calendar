@@ -33,10 +33,10 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/Components/ui/dialog';
-import { appointmentTypes } from '@/lib/appointment-types';
+import { getTagDotStyle } from '@/lib/tag-colors';
 import { localToISO, isoToLocalParts } from '@/lib/date-utils';
 import { useTrans } from '@/lib/use-trans';
-import type { Appointment, AppointmentType } from '@/types';
+import type { Appointment, Tag } from '@/types';
 import RecurrenceFields from './RecurrenceFields.vue';
 
 const { t } = useTrans();
@@ -44,6 +44,7 @@ const { t } = useTrans();
 const props = defineProps<{
     clients: { id: number; name: string }[];
     employees: { id: number; name: string }[];
+    tags: Tag[];
     appointment?: Appointment;
     defaultDate?: string;
     defaultStartTime?: string;
@@ -54,7 +55,6 @@ const open = defineModel<boolean>('open', { default: false });
 
 const isEditing = computed(() => !!props.appointment);
 
-// Parse appointment dates in local time (not raw UTC substring)
 const initStart = props.appointment ? isoToLocalParts(props.appointment.start_at) : null;
 const initEnd = props.appointment ? isoToLocalParts(props.appointment.end_at) : null;
 
@@ -66,7 +66,7 @@ const form = useForm({
     start_time: initStart?.time ?? (props.defaultStartTime ?? '09:00'),
     end_date: initEnd?.date ?? (props.defaultDate ?? ''),
     end_time: initEnd?.time ?? (props.defaultEndTime ?? '10:00'),
-    type: props.appointment?.type ?? ('service' as AppointmentType),
+    tag_id: props.appointment?.tag?.id?.toString() ?? 'none',
     notes: props.appointment?.notes ?? '',
     is_recurring: false,
     recurrence_type: 'weekly',
@@ -74,15 +74,10 @@ const form = useForm({
     recurrence_end: '',
 });
 
-// When the dialog overlay is clicked to dismiss, the overlay unmounts before
-// the browser fires the "click" event.  That click then falls through to the
-// calendar grid/appointment card underneath and immediately reopens the dialog.
-// Fix: capture & discard the very next click at the document root.
 function handlePointerDownOutside() {
     const stop = (e: Event) => { e.stopPropagation(); e.preventDefault(); };
     document.addEventListener('click', stop, { capture: true, once: true });
     document.addEventListener('mousedown', stop, { capture: true, once: true });
-    // Safety cleanup in case the events never fire
     setTimeout(() => {
         document.removeEventListener('click', stop, { capture: true });
         document.removeEventListener('mousedown', stop, { capture: true });
@@ -110,7 +105,6 @@ function selectClient(clientId: string) {
 
 watch(open, (value) => {
     if (value && !isEditing.value) {
-        // Re-populate defaults when dialog opens for creation
         form.start_date = props.defaultDate ?? '';
         form.start_time = props.defaultStartTime ?? '09:00';
         form.end_date = props.defaultDate ?? '';
@@ -131,7 +125,7 @@ function submit() {
         employee_id: form.employee_id && form.employee_id !== 'none' ? parseInt(form.employee_id) : null,
         start_at: localToISO(form.start_date, form.start_time),
         end_at: localToISO(form.end_date, form.end_time),
-        type: form.type,
+        tag_id: form.tag_id && form.tag_id !== 'none' ? parseInt(form.tag_id) : null,
         notes: form.notes || null,
     };
 
@@ -172,7 +166,7 @@ function submit() {
                         id="appt-title"
                         v-model="form.title"
                         type="text"
-                        placeholder="Terminbezeichnung"
+                        :placeholder="t('Appointment name')"
                         required
                     />
                     <p v-if="form.errors.title" class="text-sm text-destructive">{{ form.errors.title }}</p>
@@ -184,18 +178,18 @@ function submit() {
                     <Popover v-model:open="clientPopoverOpen">
                         <PopoverTrigger as-child>
                             <Button variant="outline" role="combobox" class="w-full justify-between font-normal">
-                                {{ selectedClientName || 'Kunde auswählen...' }}
+                                {{ selectedClientName || t('Select client...') }}
                                 <svg xmlns="http://www.w3.org/2000/svg" class="ml-2 h-4 w-4 shrink-0 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent class="w-[--reka-popover-trigger-width] p-0">
                             <Command>
-                                <CommandInput v-model="clientSearch" placeholder="Kunde suchen..." />
+                                <CommandInput v-model="clientSearch" :placeholder="t('Search clients...')" />
                                 <CommandList>
-                                    <CommandEmpty>Kein Kunde gefunden.</CommandEmpty>
+                                    <CommandEmpty>{{ t('No client found.') }}</CommandEmpty>
                                     <CommandGroup>
                                         <CommandItem value="" @select="selectClient('')">
-                                            <span class="text-muted-foreground">Keiner</span>
+                                            <span class="text-muted-foreground">{{ t('None') }}</span>
                                         </CommandItem>
                                         <CommandItem
                                             v-for="client in filteredClients"
@@ -217,10 +211,10 @@ function submit() {
                     <Label>{{ t('Employee') }}</Label>
                     <Select v-model="form.employee_id">
                         <SelectTrigger>
-                            <SelectValue placeholder="Mitarbeiter auswählen..." />
+                            <SelectValue :placeholder="t('Select employee...')" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="none">Keiner</SelectItem>
+                            <SelectItem value="none">{{ t('None') }}</SelectItem>
                             <SelectItem
                                 v-for="emp in employees"
                                 :key="emp.id"
@@ -254,22 +248,25 @@ function submit() {
                 <p v-if="(form.errors as Record<string, string>).start_at" class="text-sm text-destructive">{{ (form.errors as Record<string, string>).start_at }}</p>
                 <p v-if="(form.errors as Record<string, string>).end_at" class="text-sm text-destructive">{{ (form.errors as Record<string, string>).end_at }}</p>
 
-                <!-- Type -->
+                <!-- Tag -->
                 <div class="space-y-2">
-                    <Label>{{ t('Type') }} *</Label>
-                    <Select v-model="form.type">
+                    <Label>{{ t('Tag') }}</Label>
+                    <Select v-model="form.tag_id">
                         <SelectTrigger>
-                            <SelectValue />
+                            <SelectValue :placeholder="t('Select tag...')" />
                         </SelectTrigger>
                         <SelectContent>
+                            <SelectItem value="none">
+                                <span class="text-muted-foreground">{{ t('None') }}</span>
+                            </SelectItem>
                             <SelectItem
-                                v-for="(config, key) in appointmentTypes"
-                                :key="key"
-                                :value="key"
+                                v-for="tag in tags"
+                                :key="tag.id"
+                                :value="tag.id.toString()"
                             >
                                 <div class="flex items-center gap-2">
-                                    <span class="h-2.5 w-2.5 rounded-full" :class="config.dotColor" />
-                                    {{ config.label }}
+                                    <span class="h-2.5 w-2.5 rounded-full shrink-0" :style="getTagDotStyle(tag.color)" />
+                                    {{ tag.name }}
                                 </div>
                             </SelectItem>
                         </SelectContent>
@@ -291,7 +288,7 @@ function submit() {
                     <Textarea
                         id="appt-notes"
                         v-model="form.notes"
-                        placeholder="Zusätzliche Informationen..."
+                        :placeholder="t('Additional information...')"
                         rows="3"
                     />
                 </div>

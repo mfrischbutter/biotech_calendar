@@ -103,10 +103,12 @@ npx vue-tsc --noEmit                 # TypeScript type checking (no output)
    - Controllers: validation, authorization, data fetching, business rules
    - Models: relationships, scopes, computed attributes, constants
 
-4. **NEVER hardcode user-facing strings in Vue** without using the translation system
-   - WRONG: `<Button>Save</Button>`
-   - RIGHT: `<Button>{{ t('Save') }}</Button>`
-   - Exception: shadcn-vue `placeholder` attributes for internal UI
+4. **NEVER hardcode user-facing strings in Vue** — every visible string MUST use the translation system
+   - WRONG: `<Button>Save</Button>` or `placeholder="Kundenname"`
+   - RIGHT: `<Button>{{ t('Save') }}</Button>` or `:placeholder="t('Client name')"`
+   - This includes: button labels, headings, descriptions, placeholders, select options, empty states, error messages
+   - For every new `t('key')` call, add the corresponding German translation to `lang/de.json`
+   - The ONLY exception: `email@example.com` style format hints that are language-neutral
 
 5. **NEVER create files over 300 lines** — split into smaller components/partials
    - Extract large template sections into partial components in `partials/` subdirectory

@@ -4,7 +4,7 @@ import { format, parseISO } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { useCalendarDrag } from '@/lib/use-calendar-drag';
 import { localMinutes } from '@/lib/date-utils';
-import { appointmentTypes } from '@/lib/appointment-types';
+import { getTagStyle } from '@/lib/tag-colors';
 import { useTrans } from '@/lib/use-trans';
 import type { Appointment } from '@/types';
 
@@ -14,6 +14,8 @@ const props = defineProps<{
     appointments: Appointment[];
     dates: string[];
     showDayHeader?: boolean;
+    startHour?: number;
+    endHour?: number;
 }>();
 
 const emit = defineEmits<{
@@ -24,9 +26,9 @@ const emit = defineEmits<{
 }>();
 
 const HOUR_HEIGHT = 60;
-const START_HOUR = 0;
-const END_HOUR = 24;
-const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
+const START_HOUR = computed(() => props.startHour ?? 0);
+const END_HOUR = computed(() => props.endHour ?? 24);
+const hours = computed(() => Array.from({ length: END_HOUR.value - START_HOUR.value }, (_, i) => START_HOUR.value + i));
 
 const { drag, startCreate, startMove, startResize, onMouseMove, endDrag, formatMinutes, getDragPreviewStyle, getDragTimeLabel } = useCalendarDrag(HOUR_HEIGHT, START_HOUR);
 
@@ -52,8 +54,7 @@ const days = computed(() =>
 );
 
 // ---------------------------------------------------------------------------
-// Optimistic overrides — instantly move appointment to new position on drop,
-// before the server responds. Cleared when props.appointments changes.
+// Optimistic overrides
 // ---------------------------------------------------------------------------
 interface OptimisticPosition {
     dayDate: string;
@@ -62,7 +63,6 @@ interface OptimisticPosition {
 }
 const optimistic = ref<Map<number, OptimisticPosition>>(new Map());
 
-// Clear overrides when server data arrives (props change)
 watch(() => props.appointments, () => {
     optimistic.value.clear();
 });
@@ -70,7 +70,6 @@ watch(() => props.appointments, () => {
 function getOptimisticDay(appt: Appointment): string {
     const ov = optimistic.value.get(appt.id);
     if (ov) return ov.dayDate;
-    // Extract local date from the appointment
     const d = new Date(appt.start_at);
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -78,9 +77,6 @@ function getOptimisticDay(appt: Appointment): string {
     return `${yyyy}-${mm}-${dd}`;
 }
 
-// ---------------------------------------------------------------------------
-// Build appointment lists per day, respecting optimistic overrides
-// ---------------------------------------------------------------------------
 const appointmentsByDay = computed(() => {
     const byDay: Record<string, Appointment[]> = {};
     for (const d of props.dates) {
@@ -105,7 +101,8 @@ onMounted(() => {
     timeInterval = setInterval(() => { now.value = new Date(); }, 60000);
     nextTick(() => {
         if (scrollContainer.value) {
-            scrollContainer.value.scrollTop = (8 - START_HOUR) * HOUR_HEIGHT - 20;
+            const scrollTo = Math.max(0, (START_HOUR.value) * HOUR_HEIGHT - 20);
+            scrollContainer.value.scrollTop = scrollTo;
         }
     });
     document.addEventListener('mousemove', handleGlobalMouseMove);
@@ -119,11 +116,11 @@ onUnmounted(() => {
 
 const currentTimeStyle = computed(() => {
     const totalMin = now.value.getHours() * 60 + now.value.getMinutes();
-    return { top: `${((totalMin - START_HOUR * 60) / 60) * HOUR_HEIGHT}px` };
+    return { top: `${((totalMin - START_HOUR.value * 60) / 60) * HOUR_HEIGHT}px` };
 });
 const currentTimeVisible = computed(() => {
     const h = now.value.getHours();
-    return h >= START_HOUR && h < END_HOUR;
+    return h >= START_HOUR.value && h < END_HOUR.value;
 });
 
 // ---------------------------------------------------------------------------
@@ -140,7 +137,7 @@ function getAppointmentStyle(appt: Appointment) {
         endMin = localMinutes(appt.end_at);
     }
     const duration = endMin - startMin;
-    const top = ((startMin - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+    const top = ((startMin - START_HOUR.value * 60) / 60) * HOUR_HEIGHT;
     const height = Math.max((duration / 60) * HOUR_HEIGHT, 22);
     return { top: `${top}px`, height: `${height}px` };
 }
@@ -155,6 +152,19 @@ function getTimeLabel(appt: Appointment): string {
     const ov = optimistic.value.get(appt.id);
     if (ov) return `${formatMinutes(ov.startMinutes)} – ${formatMinutes(ov.endMinutes)}`;
     return `${format(new Date(appt.start_at), 'HH:mm')} – ${format(new Date(appt.end_at), 'HH:mm')}`;
+}
+
+function apptCardStyle(appt: Appointment) {
+    const tagStyle = getTagStyle(appt.tag?.color ?? null);
+    return {
+        ...getAppointmentStyle(appt),
+        backgroundColor: tagStyle.backgroundColor,
+        borderLeftColor: tagStyle.borderColor,
+    };
+}
+
+function apptTitleColor(appt: Appointment): string {
+    return appt.tag?.color ?? 'hsl(var(--muted-foreground))';
 }
 
 // ---------------------------------------------------------------------------
@@ -209,7 +219,6 @@ function handleGlobalMouseUp() {
     if (result.mode === 'create') {
         emit('createAppointment', result.dayDate, formatMinutes(result.startMinutes), formatMinutes(result.endMinutes));
     } else if (result.mode === 'move' && result.appointment) {
-        // Apply optimistic position immediately — no flicker
         optimistic.value.set(result.appointment.id, {
             dayDate: result.dayDate,
             startMinutes: result.startMinutes,
@@ -234,6 +243,16 @@ function handleAppointmentClick(e: MouseEvent, appt: Appointment) {
 
 function isDragTarget(appt: Appointment) {
     return drag.value.active && drag.value.totalMovement >= 4 && (drag.value.mode === 'move' || drag.value.mode === 'resize') && drag.value.appointment?.id === appt.id;
+}
+
+function dragPreviewStyle() {
+    const base = getDragPreviewStyle();
+    if (!base) return null;
+    if (drag.value.mode !== 'create' && drag.value.appointment?.tag) {
+        const tagStyle = getTagStyle(drag.value.appointment.tag.color);
+        return { ...base, backgroundColor: tagStyle.backgroundColor, borderLeftColor: tagStyle.borderColor, opacity: '0.8' };
+    }
+    return base;
 }
 </script>
 
@@ -329,19 +348,15 @@ function isDragTarget(appt: Appointment) {
                         v-for="appt in appointmentsByDay[day.date]"
                         :key="appt.id"
                         class="absolute left-1 right-1 rounded-md cursor-pointer overflow-hidden transition-shadow hover:shadow-md border-l-[4px]"
-                        :class="[
-                            appointmentTypes[appt.type].bgColor,
-                            appointmentTypes[appt.type].borderColor,
-                            isDragTarget(appt) ? 'opacity-0 z-0' : 'z-10',
-                        ]"
-                        :style="getAppointmentStyle(appt)"
+                        :class="isDragTarget(appt) ? 'opacity-0 z-0' : 'z-10'"
+                        :style="apptCardStyle(appt)"
                         @mousedown.stop="handleAppointmentMouseDown($event, appt, day.date)"
                         @click.stop="handleAppointmentClick($event, appt)"
                     >
                         <div class="px-2 py-1 h-full" :class="isShort(appt) ? 'flex items-center gap-2' : ''">
                             <div
                                 class="font-medium text-xs truncate"
-                                :class="appointmentTypes[appt.type].color"
+                                :style="{ color: apptTitleColor(appt) }"
                             >
                                 {{ appt.client?.name || appt.title }}
                             </div>
@@ -365,17 +380,13 @@ function isDragTarget(appt: Appointment) {
 
                     <!-- Drag preview ghost -->
                     <div
-                        v-if="drag.active && drag.dayDate === day.date && getDragPreviewStyle()"
+                        v-if="drag.active && drag.dayDate === day.date && dragPreviewStyle()"
                         class="absolute left-1 right-1 rounded-md z-30 pointer-events-none border-l-[4px]"
-                        :class="drag.mode === 'create'
-                            ? 'bg-primary/15 border-primary'
-                            : drag.appointment
-                                ? [appointmentTypes[drag.appointment.type].bgColor, appointmentTypes[drag.appointment.type].borderColor, 'opacity-80']
-                                : 'bg-primary/15 border-primary'"
-                        :style="getDragPreviewStyle()!"
+                        :class="drag.mode === 'create' ? 'bg-primary/15 border-primary' : ''"
+                        :style="dragPreviewStyle()!"
                     >
                         <div class="px-2 py-1 text-xs">
-                            <div v-if="drag.appointment" class="font-medium truncate" :class="appointmentTypes[drag.appointment.type].color">
+                            <div v-if="drag.appointment" class="font-medium truncate" :style="{ color: apptTitleColor(drag.appointment) }">
                                 {{ drag.appointment.client?.name || drag.appointment.title }}
                             </div>
                             <div class="font-medium" :class="drag.mode === 'create' ? 'text-primary' : 'text-muted-foreground'">

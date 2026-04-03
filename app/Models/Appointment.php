@@ -2,19 +2,23 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Appointment extends Model
 {
+    use BelongsToCompany;
+
     protected $fillable = [
+        'company_id',
         'client_id',
         'employee_id',
         'title',
         'start_at',
         'end_at',
-        'type',
+        'tag_id',
         'notes',
         'created_by',
         'recurrence_type',
@@ -32,15 +36,6 @@ class Appointment extends Model
         ];
     }
 
-    public const TYPES = [
-        'service' => 'Servicetermin',
-        'initial_visit' => 'Erstbegehung',
-        'completed' => 'Abgeschlossen',
-        'follow_up' => 'Nachkontrolle',
-        'consultation' => 'Beratung',
-        'documentation' => 'Dokumentation',
-    ];
-
     public const RECURRENCE_TYPES = ['weekly', 'biweekly', 'monthly', 'custom'];
 
     public function client(): BelongsTo
@@ -56,6 +51,11 @@ class Appointment extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function tag(): BelongsTo
+    {
+        return $this->belongsTo(Tag::class);
     }
 
     public function parent(): BelongsTo

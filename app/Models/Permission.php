@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Permission extends Model
 {
-    protected $fillable = ['user_id', 'permission'];
+    use BelongsToCompany;
+
+    protected $fillable = ['company_id', 'user_id', 'permission'];
 
     public function user(): BelongsTo
     {
@@ -42,5 +45,9 @@ class Permission extends Model
         // Reports
         'reports.view' => 'View reports',
         'reports.export' => 'Export reports',
+
+        // Settings
+        'settings.view' => 'View settings',
+        'settings.edit' => 'Edit settings',
     ];
 }

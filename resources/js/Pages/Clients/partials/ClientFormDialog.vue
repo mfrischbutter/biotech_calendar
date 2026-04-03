@@ -87,7 +87,7 @@ function submit() {
                             id="client-name"
                             v-model="form.name"
                             type="text"
-                            placeholder="Kundenname"
+                            :placeholder="t('Client name')"
                             required
                         />
                         <p v-if="form.errors.name" class="text-sm text-destructive">
@@ -101,7 +101,7 @@ function submit() {
                             id="client-billing-name"
                             v-model="form.billing_name"
                             type="text"
-                            placeholder="Falls abweichend"
+                            :placeholder="t('If different')"
                         />
                         <p v-if="form.errors.billing_name" class="text-sm text-destructive">
                             {{ form.errors.billing_name }}
@@ -114,7 +114,7 @@ function submit() {
                             id="client-street"
                             v-model="form.street"
                             type="text"
-                            placeholder="Straße und Hausnummer"
+                            :placeholder="t('Street and house number')"
                         />
                     </div>
 
@@ -124,7 +124,7 @@ function submit() {
                             id="client-zip"
                             v-model="form.zip"
                             type="text"
-                            placeholder="PLZ"
+                            :placeholder="t('ZIP')"
                         />
                     </div>
 
@@ -134,7 +134,7 @@ function submit() {
                             id="client-city"
                             v-model="form.city"
                             type="text"
-                            placeholder="Ort"
+                            :placeholder="t('City')"
                         />
                     </div>
 
@@ -144,7 +144,7 @@ function submit() {
                             id="client-phone"
                             v-model="form.phone"
                             type="tel"
-                            placeholder="Telefonnummer"
+                            :placeholder="t('Phone number')"
                         />
                     </div>
 
@@ -154,7 +154,7 @@ function submit() {
                             id="client-email"
                             v-model="form.email"
                             type="email"
-                            placeholder="email@beispiel.de"
+                            placeholder="email@example.com"
                         />
                         <p v-if="form.errors.email" class="text-sm text-destructive">
                             {{ form.errors.email }}
@@ -166,7 +166,7 @@ function submit() {
                         <Textarea
                             id="client-notes"
                             v-model="form.notes"
-                            placeholder="Zusätzliche Informationen..."
+                            :placeholder="t('Additional information...')"
                             rows="3"
                         />
                     </div>

@@ -3,25 +3,45 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Setting extends Model
 {
-    protected $fillable = ['key', 'value'];
+    protected $fillable = ['company_id', 'key', 'value'];
 
-    public static function get(string $key, mixed $default = null): mixed
+    public function company(): BelongsTo
     {
-        return cache()->rememberForever("setting.{$key}", function () use ($key, $default) {
-            return static::where('key', $key)->value('value') ?? $default;
+        return $this->belongsTo(Company::class);
+    }
+
+    public static function get(string $key, mixed $default = null, ?int $companyId = null): mixed
+    {
+        $companyId = $companyId ?? auth()->user()?->company_id;
+
+        if (! $companyId) {
+            return $default;
+        }
+
+        return cache()->rememberForever("setting.{$companyId}.{$key}", function () use ($key, $default, $companyId) {
+            return static::where('company_id', $companyId)
+                ->where('key', $key)
+                ->value('value') ?? $default;
         });
     }
 
-    public static function set(string $key, mixed $value): void
+    public static function set(string $key, mixed $value, ?int $companyId = null): void
     {
+        $companyId = $companyId ?? auth()->user()?->company_id;
+
+        if (! $companyId) {
+            return;
+        }
+
         static::updateOrCreate(
-            ['key' => $key],
+            ['company_id' => $companyId, 'key' => $key],
             ['value' => $value],
         );
 
-        cache()->forget("setting.{$key}");
+        cache()->forget("setting.{$companyId}.{$key}");
     }
 }

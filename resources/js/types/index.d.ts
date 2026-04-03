@@ -4,6 +4,8 @@ export interface User {
     email: string;
     email_verified_at?: string;
     role: 'owner' | 'employee';
+    company_id: number;
+    permissions: string[];
 }
 
 export interface Employee {
@@ -13,7 +15,30 @@ export interface Employee {
     permissions: string[];
 }
 
-export type AppointmentType = 'service' | 'initial_visit' | 'completed' | 'follow_up' | 'consultation' | 'documentation';
+export interface Tag {
+    id: number;
+    name: string;
+    color: string;
+    sort_order: number;
+}
+
+export interface Company {
+    id: number;
+    name: string;
+    street: string | null;
+    zip: string | null;
+    city: string | null;
+    phone: string | null;
+    email: string | null;
+    logo_path: string | null;
+}
+
+export interface CalendarSettings {
+    show_weekends: boolean;
+    start_hour: number;
+    end_hour: number;
+}
+
 export type RecurrenceType = 'weekly' | 'biweekly' | 'monthly' | 'custom';
 
 export interface Client {
@@ -35,7 +60,7 @@ export interface Appointment {
     employee: { id: number; name: string } | null;
     start_at: string;
     end_at: string;
-    type: AppointmentType;
+    tag: { id: number; name: string; color: string } | null;
     notes: string | null;
     recurrence_type: RecurrenceType | null;
     recurrence_interval: number | null;

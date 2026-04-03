@@ -10,9 +10,12 @@ use Inertia\Inertia;
 
 class EmployeeController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $companyId = $request->user()->company_id;
+
         $employees = User::where('role', User::ROLE_EMPLOYEE)
+            ->where('company_id', $companyId)
             ->with('permissions')
             ->get()
             ->map(fn (User $user) => [
@@ -43,6 +46,7 @@ class EmployeeController extends Controller
             'email' => $validated['email'],
             'password' => $validated['password'],
             'role' => User::ROLE_EMPLOYEE,
+            'company_id' => $request->user()->company_id,
         ]);
 
         $user->syncPermissions($validated['permissions']);

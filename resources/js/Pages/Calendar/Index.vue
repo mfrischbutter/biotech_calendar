@@ -5,10 +5,10 @@ import { Head, router } from '@inertiajs/vue3';
 import { format, parseISO, addWeeks, subWeeks, addDays, subDays, addMonths, subMonths, startOfWeek } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { Button } from '@/Components/ui/button';
-import { appointmentTypes } from '@/lib/appointment-types';
+import { getTagDotStyle } from '@/lib/tag-colors';
 import { localToISO } from '@/lib/date-utils';
 import { useTrans } from '@/lib/use-trans';
-import type { Appointment } from '@/types';
+import type { Appointment, Tag } from '@/types';
 import TimeGrid from './partials/TimeGrid.vue';
 import MonthGrid from './partials/MonthGrid.vue';
 import AppointmentFormDialog from './partials/AppointmentFormDialog.vue';
@@ -21,9 +21,12 @@ const props = defineProps<{
     appointments: Appointment[];
     clients: { id: number; name: string }[];
     employees: { id: number; name: string }[];
+    tags: Tag[];
     currentDate: string;
     view: CalendarView;
     showWeekends: boolean;
+    startHour: number;
+    endHour: number;
 }>();
 
 const createDialogOpen = ref(false);
@@ -33,9 +36,6 @@ const defaultDate = ref('');
 const defaultStartTime = ref('');
 const defaultEndTime = ref('');
 
-// Guard against click-through: when dialog overlay is clicked to close,
-// the click can pass through to the appointment card underneath and reopen it.
-// flush:'sync' ensures the guard is set immediately, before the click event fires.
 let dialogCloseGuard = false;
 watch(editDialogOpen, (val) => {
     if (!val) {
@@ -46,18 +46,15 @@ watch(editDialogOpen, (val) => {
 
 const currentDateObj = computed(() => parseISO(props.currentDate));
 
-// View-dependent dates for the time grid
 const gridDates = computed(() => {
     if (props.view === 'day') {
         return [props.currentDate];
     }
-    // week
     const monday = startOfWeek(currentDateObj.value, { weekStartsOn: 1 });
     const count = props.showWeekends ? 7 : 5;
     return Array.from({ length: count }, (_, i) => format(addDays(monday, i), 'yyyy-MM-dd'));
 });
 
-// Header title
 const headerTitle = computed(() => {
     const d = currentDateObj.value;
     if (props.view === 'day') {
@@ -66,7 +63,6 @@ const headerTitle = computed(() => {
     if (props.view === 'month') {
         return format(d, 'MMMM yyyy', { locale: de });
     }
-    // week
     const weekStart = startOfWeek(d, { weekStartsOn: 1 });
     const weekEnd = addDays(weekStart, props.showWeekends ? 6 : 4);
     const startStr = format(weekStart, 'd. MMM', { locale: de });
@@ -74,7 +70,6 @@ const headerTitle = computed(() => {
     return `${startStr} – ${endStr}`;
 });
 
-// Navigation
 function navigate(direction: number) {
     const d = currentDateObj.value;
     let newDate: Date;
@@ -104,7 +99,6 @@ function switchView(view: CalendarView) {
     }, { preserveState: true, preserveScroll: true });
 }
 
-// Month grid → day click switches to day view
 function handleDayClick(date: string) {
     router.get(route('calendar.index'), {
         view: 'day',
@@ -112,7 +106,6 @@ function handleDayClick(date: string) {
     }, { preserveState: true, preserveScroll: true });
 }
 
-// Create / Edit
 function openCreateDialog(date?: string, startTime?: string, endTime?: string) {
     defaultDate.value = date || props.currentDate;
     defaultStartTime.value = startTime || '09:00';
@@ -127,12 +120,10 @@ function openEditDialog(appointment: Appointment) {
     editDialogOpen.value = true;
 }
 
-// Drag-to-create
 function handleCreateAppointment(date: string, startTime: string, endTime: string) {
     openCreateDialog(date, startTime, endTime);
 }
 
-// Drag-to-move — convert local times to UTC ISO before sending
 function handleMoveAppointment(appointment: Appointment, date: string, startTime: string, endTime: string) {
     router.put(route('appointments.update', appointment.id), {
         title: appointment.title,
@@ -140,12 +131,11 @@ function handleMoveAppointment(appointment: Appointment, date: string, startTime
         employee_id: appointment.employee?.id ?? null,
         start_at: localToISO(date, startTime),
         end_at: localToISO(date, endTime),
-        type: appointment.type,
+        tag_id: appointment.tag?.id ?? null,
         notes: appointment.notes,
     }, { preserveScroll: true });
 }
 
-// Drag-to-resize — convert local end time to UTC ISO
 function handleResizeAppointment(appointment: Appointment, endTime: string) {
     const date = new Date(appointment.start_at);
     const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -155,7 +145,7 @@ function handleResizeAppointment(appointment: Appointment, endTime: string) {
         employee_id: appointment.employee?.id ?? null,
         start_at: appointment.start_at,
         end_at: localToISO(dateStr, endTime),
-        type: appointment.type,
+        tag_id: appointment.tag?.id ?? null,
         notes: appointment.notes,
     }, { preserveScroll: true });
 }
@@ -214,14 +204,14 @@ const viewLabels: Record<CalendarView, string> = {
         </template>
 
         <!-- Legend (only on time grid views) -->
-        <div v-if="view !== 'month'" class="mb-3 flex flex-wrap items-center gap-4">
+        <div v-if="view !== 'month' && tags.length > 0" class="mb-3 flex flex-wrap items-center gap-4">
             <div
-                v-for="(config, key) in appointmentTypes"
-                :key="key"
+                v-for="tag in tags"
+                :key="tag.id"
                 class="flex items-center gap-1.5 text-xs text-muted-foreground"
             >
-                <span class="h-2 w-2 rounded-full" :class="config.dotColor" />
-                {{ config.label }}
+                <span class="h-2 w-2 rounded-full" :style="getTagDotStyle(tag.color)" />
+                {{ tag.name }}
             </div>
         </div>
 
@@ -233,6 +223,8 @@ const viewLabels: Record<CalendarView, string> = {
                 :appointments="appointments"
                 :dates="gridDates"
                 :show-day-header="view === 'week' || view === 'day'"
+                :start-hour="startHour"
+                :end-hour="endHour"
                 @appointment-click="openEditDialog"
                 @create-appointment="handleCreateAppointment"
                 @move-appointment="handleMoveAppointment"
@@ -254,6 +246,7 @@ const viewLabels: Record<CalendarView, string> = {
             v-model:open="createDialogOpen"
             :clients="clients"
             :employees="employees"
+            :tags="tags"
             :default-date="defaultDate"
             :default-start-time="defaultStartTime"
             :default-end-time="defaultEndTime"
@@ -265,6 +258,7 @@ const viewLabels: Record<CalendarView, string> = {
             v-model:open="editDialogOpen"
             :clients="clients"
             :employees="employees"
+            :tags="tags"
             :appointment="selectedAppointment"
         />
     </AuthenticatedLayout>

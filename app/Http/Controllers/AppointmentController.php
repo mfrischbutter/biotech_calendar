@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Appointment;
 use App\Models\Client;
 use App\Models\Setting;
+use App\Models\Tag;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -31,6 +32,8 @@ class AppointmentController extends Controller
             : Carbon::now();
 
         $showWeekends = Setting::get('show_weekends', 'false') === 'true';
+        $startHour = (int) Setting::get('start_hour', '0');
+        $endHour = (int) Setting::get('end_hour', '24');
 
         [$rangeStart, $rangeEnd] = match ($view) {
             'day' => [
@@ -47,7 +50,7 @@ class AppointmentController extends Controller
             ],
         };
 
-        $appointments = Appointment::with(['client:id,name', 'employee:id,name'])
+        $appointments = Appointment::with(['client:id,name', 'employee:id,name', 'tag:id,name,color'])
             ->where(function ($q) use ($rangeStart, $rangeEnd) {
                 $q->whereBetween('start_at', [$rangeStart, $rangeEnd])
                     ->orWhereBetween('end_at', [$rangeStart, $rangeEnd])
@@ -60,15 +63,22 @@ class AppointmentController extends Controller
             ->get();
 
         $clients = Client::orderBy('name')->get(['id', 'name']);
-        $employees = User::orderBy('name')->get(['id', 'name', 'role']);
+        $employees = User::where('company_id', $user->company_id)
+            ->orderBy('name')
+            ->get(['id', 'name', 'role']);
+
+        $tags = Tag::orderBy('sort_order')->get(['id', 'name', 'color']);
 
         return Inertia::render('Calendar/Index', [
             'appointments' => $appointments,
             'clients' => $clients,
             'employees' => $employees,
+            'tags' => $tags,
             'currentDate' => $date->toDateString(),
             'view' => $view,
             'showWeekends' => $showWeekends,
+            'startHour' => $startHour,
+            'endHour' => $endHour,
         ]);
     }
 
@@ -82,7 +92,7 @@ class AppointmentController extends Controller
             'employee_id' => ['nullable', 'exists:users,id'],
             'start_at' => ['required', 'date'],
             'end_at' => ['required', 'date', 'after:start_at'],
-            'type' => ['required', 'string', 'in:'.implode(',', array_keys(Appointment::TYPES))],
+            'tag_id' => ['nullable', 'exists:tags,id'],
             'notes' => ['nullable', 'string'],
             'recurrence_type' => ['nullable', 'string', 'in:'.implode(',', Appointment::RECURRENCE_TYPES)],
             'recurrence_interval' => [
@@ -97,7 +107,7 @@ class AppointmentController extends Controller
             'employee_id' => $validated['employee_id'] ?? null,
             'start_at' => $validated['start_at'],
             'end_at' => $validated['end_at'],
-            'type' => $validated['type'],
+            'tag_id' => $validated['tag_id'] ?? null,
             'notes' => $validated['notes'] ?? null,
             'created_by' => $request->user()->id,
         ];
@@ -128,7 +138,7 @@ class AppointmentController extends Controller
             'employee_id' => ['nullable', 'exists:users,id'],
             'start_at' => ['sometimes', 'required', 'date'],
             'end_at' => ['sometimes', 'required', 'date', 'after:start_at'],
-            'type' => ['sometimes', 'required', 'string', 'in:'.implode(',', array_keys(Appointment::TYPES))],
+            'tag_id' => ['nullable', 'exists:tags,id'],
             'notes' => ['nullable', 'string'],
         ]);
 
