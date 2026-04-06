@@ -135,19 +135,19 @@ test.describe('Appointment Dialog - Confirm discard on close with changes', () =
         await expect(alert).toBeVisible({ timeout: 5000 });
     });
 
-    // --- Tag change ---
+    // --- Status change ---
 
-    test('shows confirm when closing after selecting tag', async ({ page }) => {
+    test('shows confirm when closing after selecting status', async ({ page }) => {
         const dialog = await openCreateDialog(page);
 
-        const tagBtn = dialog.locator('button').filter({ hasText: 'Tag' }).first();
-        await tagBtn.click();
+        const statusBtn = dialog.locator('button').filter({ hasText: 'Status' }).first();
+        await statusBtn.click();
         await page.waitForTimeout(300);
 
         const items = page.locator('[role="option"]');
         const count = await items.count();
         if (count <= 1) {
-            test.skip(true, 'No tags in test database');
+            test.skip(true, 'No statuses in test database');
             return;
         }
 

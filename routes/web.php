@@ -5,7 +5,7 @@ use App\Http\Controllers\ClientController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SettingController;
-use App\Http\Controllers\TagController;
+use App\Http\Controllers\StatusController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -36,11 +36,11 @@ Route::middleware('auth')->group(function () {
     Route::put('/settings/company', [SettingController::class, 'updateCompany'])->name('settings.company.update');
     Route::put('/settings/calendar', [SettingController::class, 'updateCalendar'])->name('settings.calendar.update');
 
-    // Tags
-    Route::post('/tags', [TagController::class, 'store'])->name('tags.store');
-    Route::put('/tags/{tag}', [TagController::class, 'update'])->name('tags.update');
-    Route::delete('/tags/{tag}', [TagController::class, 'destroy'])->name('tags.destroy');
-    Route::put('/tags-reorder', [TagController::class, 'reorder'])->name('tags.reorder');
+    // Statuses
+    Route::post('/statuses', [StatusController::class, 'store'])->name('statuses.store');
+    Route::put('/statuses/{status}', [StatusController::class, 'update'])->name('statuses.update');
+    Route::delete('/statuses/{status}', [StatusController::class, 'destroy'])->name('statuses.destroy');
+    Route::put('/statuses-reorder', [StatusController::class, 'reorder'])->name('statuses.reorder');
 });
 
 Route::middleware(['auth', 'owner'])->group(function () {

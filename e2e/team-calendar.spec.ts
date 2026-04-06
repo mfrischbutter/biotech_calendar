@@ -171,7 +171,7 @@ test.describe('Team Calendar View', () => {
 
         // Should show Day/Week sub-toggle when in team mode
         const daySubButton = page.locator('button').filter({ hasText: /^(Tag|Day)$/ });
-        // There may be multiple buttons with "Tag" — pick the smaller sub-toggle one
+        // There may be multiple buttons with "Tag" (German for Day) — pick the smaller sub-toggle one
         const subButtons = page.locator('.overflow-hidden button').filter({ hasText: /Tag|Day/ });
         const subCount = await subButtons.count();
         if (subCount === 0) {

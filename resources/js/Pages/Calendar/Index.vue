@@ -6,10 +6,10 @@ import type { FormDataConvertible } from '@inertiajs/core';
 import { format, parseISO, addWeeks, subWeeks, addDays, subDays, addMonths, subMonths, startOfWeek } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { Button } from '@/Components/ui/button';
-import { getTagDotStyle } from '@/lib/tag-colors';
+import { getStatusDotStyle } from '@/lib/status-colors';
 import { localToISO } from '@/lib/date-utils';
 import { useTrans } from '@/lib/use-trans';
-import type { Appointment, Tag } from '@/types';
+import type { Appointment, Status } from '@/types';
 import TimeGrid from './partials/TimeGrid.vue';
 import MonthGrid from './partials/MonthGrid.vue';
 import TeamGrid from './partials/TeamGrid.vue';
@@ -23,7 +23,7 @@ const props = defineProps<{
     appointments: Appointment[];
     clients: { id: number; first_name: string; last_name: string; company_name: string | null; name: string }[];
     employees: { id: number; first_name: string; last_name: string; name: string }[];
-    tags: Tag[];
+    statuses: Status[];
     currentDate: string;
     view: CalendarView;
     showWeekends: boolean;
@@ -151,7 +151,7 @@ function buildAppointmentPayload(appointment: Appointment, overrides: Record<str
         title: appointment.title,
         client_id: appointment.client?.id ?? null,
         employee_id: appointment.employee?.id ?? null,
-        tag_id: appointment.tag?.id ?? null,
+        status_id: appointment.status?.id ?? null,
         notes: appointment.notes,
         checklist: appointment.checklist,
         ...overrides,
@@ -276,14 +276,14 @@ function switchTeamSub(sub: 'day' | 'week') {
         </template>
 
         <!-- Legend (only on time grid / team views) -->
-        <div v-if="view !== 'month' && tags.length > 0" class="mb-3 flex flex-wrap items-center gap-4">
+        <div v-if="view !== 'month' && statuses.length > 0" class="mb-3 flex flex-wrap items-center gap-4">
             <div
-                v-for="tag in tags"
-                :key="tag.id"
+                v-for="status in statuses"
+                :key="status.id"
                 class="flex items-center gap-1.5 text-xs text-muted-foreground"
             >
-                <span class="h-2 w-2 rounded-full" :style="getTagDotStyle(tag.color)" />
-                {{ tag.name }}
+                <span class="h-2 w-2 rounded-full" :style="getStatusDotStyle(status.color)" />
+                {{ status.name }}
             </div>
         </div>
 
@@ -332,7 +332,7 @@ function switchTeamSub(sub: 'day' | 'week') {
             v-model:open="createDialogOpen"
             :clients="clients"
             :employees="employees"
-            :tags="tags"
+            :statuses="statuses"
             :default-date="defaultDate"
             :default-start-time="defaultStartTime"
             :default-end-time="defaultEndTime"
@@ -345,7 +345,7 @@ function switchTeamSub(sub: 'day' | 'week') {
             v-model:open="editDialogOpen"
             :clients="clients"
             :employees="employees"
-            :tags="tags"
+            :statuses="statuses"
             :appointment="selectedAppointment"
         />
     </AuthenticatedLayout>

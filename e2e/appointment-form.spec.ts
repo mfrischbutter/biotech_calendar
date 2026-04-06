@@ -78,14 +78,14 @@ test.describe('Appointment Form Dialog', () => {
         await expect(searchInput).toBeVisible({ timeout: 3000 });
     });
 
-    test('can open tag popover with hover effect on items', async ({ page }) => {
+    test('can open status popover with hover effect on items', async ({ page }) => {
         const dialog = await openCreateDialog(page);
 
-        // Tag button — match the pill button with exact "Tag" text
-        const tagButton = dialog.locator('button').filter({ hasText: 'Tag' }).first();
-        await tagButton.click();
+        // Status button — match the pill button with exact "Status" text
+        const statusButton = dialog.locator('button').filter({ hasText: 'Status' }).first();
+        await statusButton.click();
 
-        const searchInput = page.locator('input[placeholder*="auswählen"]').or(page.locator('input[placeholder*="tag"]'));
+        const searchInput = page.locator('input[placeholder*="auswählen"]').or(page.locator('input[placeholder*="status"]'));
         await expect(searchInput).toBeVisible({ timeout: 3000 });
     });
 

@@ -4,7 +4,7 @@ import { format, parseISO } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { useCalendarDrag } from '@/lib/use-calendar-drag';
 import { localMinutes } from '@/lib/date-utils';
-import { getTagStyle } from '@/lib/tag-colors';
+import { getStatusStyle } from '@/lib/status-colors';
 import { computeOverlapLayout } from '@/lib/overlap-layout';
 import { useTrans } from '@/lib/use-trans';
 import type { Appointment } from '@/types';
@@ -186,7 +186,7 @@ function getTimeLabel(appt: Appointment): string {
 }
 
 function apptCardStyle(appt: Appointment, dayDate: string) {
-    const tagStyle = getTagStyle(appt.tag?.color ?? null);
+    const tagStyle = getStatusStyle(appt.status?.color ?? null);
     return {
         ...getAppointmentStyle(appt, dayDate),
         backgroundColor: tagStyle.backgroundColor,
@@ -195,7 +195,7 @@ function apptCardStyle(appt: Appointment, dayDate: string) {
 }
 
 function apptTitleColor(appt: Appointment): string {
-    return appt.tag?.color ?? 'hsl(var(--muted-foreground))';
+    return appt.status?.color ?? 'hsl(var(--muted-foreground))';
 }
 
 // ---------------------------------------------------------------------------
@@ -280,7 +280,7 @@ function dragPreviewStyle() {
     const base = getDragPreviewStyle();
     if (!base) return null;
     if (drag.value.mode !== 'create' && drag.value.appointment) {
-        const tagStyle = getTagStyle(drag.value.appointment.tag?.color ?? null);
+        const tagStyle = getStatusStyle(drag.value.appointment.status?.color ?? null);
         return { ...base, backgroundColor: tagStyle.backgroundColor, borderLeftColor: tagStyle.borderColor, opacity: '0.8' };
     }
     return base;

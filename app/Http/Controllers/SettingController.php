@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Company;
 use App\Models\Setting;
-use App\Models\Tag;
+use App\Models\Status;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -17,7 +17,7 @@ class SettingController extends Controller
         abort_unless($user->hasPermission('settings.view'), 403);
 
         $company = Company::findOrFail($user->company_id);
-        $tags = Tag::orderBy('sort_order')->get();
+        $statuses = Status::orderBy('sort_order')->get();
 
         return Inertia::render('Settings/Index', [
             'company' => $company,
@@ -26,7 +26,7 @@ class SettingController extends Controller
                 'start_hour' => (int) Setting::get('start_hour', '8'),
                 'end_hour' => (int) Setting::get('end_hour', '18'),
             ],
-            'tags' => $tags,
+            'statuses' => $statuses,
         ]);
     }
 

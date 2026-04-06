@@ -18,7 +18,7 @@ class Appointment extends Model
         'title',
         'start_at',
         'end_at',
-        'tag_id',
+        'status_id',
         'notes',
         'checklist',
         'created_by',
@@ -55,9 +55,9 @@ class Appointment extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function tag(): BelongsTo
+    public function status(): BelongsTo
     {
-        return $this->belongsTo(Tag::class);
+        return $this->belongsTo(Status::class);
     }
 
     public function parent(): BelongsTo

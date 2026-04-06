@@ -4,7 +4,7 @@ import { format, parseISO } from 'date-fns';
 import { de } from 'date-fns/locale';
 import type { Appointment } from '@/types';
 import { useTrans } from '@/lib/use-trans';
-import { getTagStyle } from '@/lib/tag-colors';
+import { getStatusStyle } from '@/lib/status-colors';
 import { localMinutes, isoToLocalParts } from '@/lib/date-utils';
 
 const { t } = useTrans();
@@ -232,7 +232,7 @@ function isDayDragTarget(appt: Appointment): boolean {
                     <td class="sticky left-0 z-10 w-48 min-w-[12rem] border-r p-2 text-sm font-medium" :class="row.unassigned ? 'bg-muted italic text-muted-foreground' : 'bg-background'">{{ row.name }}</td>
                     <td v-for="date in dates" :key="date" class="border-r p-1 align-top transition-colors min-w-[8rem]" :class="isDragOver(row.id, date) ? 'bg-primary/10' : ''"
                         @dragover="onDragOver(row.id, date, $event)" @dragleave="dragOverCell = null" @drop="onDrop(row.id, date, $event)" @dblclick="emit('createAppointment', date, '09:00', '10:00', row.id)">
-                        <div v-for="appt in cellAppts(row.id, date)" :key="appt.id" class="mb-1 cursor-pointer rounded border px-1.5 py-1 text-xs" :style="getTagStyle(appt.tag?.color ?? null)"
+                        <div v-for="appt in cellAppts(row.id, date)" :key="appt.id" class="mb-1 cursor-pointer rounded border px-1.5 py-1 text-xs" :style="getStatusStyle(appt.status?.color ?? null)"
                              :data-appointment-id="appt.id" draggable="true" @dragstart="onDragStart(appt, $event)" @dragend="onDragEnd" @click.stop="emit('appointmentClick', appt)">
                             <div class="font-medium truncate">{{ appt.client?.company_name || appt.client?.name || appt.title }}</div>
                             <div class="opacity-70" style="font-size: 10px">{{ getTimeLabel(appt) }}</div>
@@ -262,7 +262,7 @@ function isDayDragTarget(appt: Appointment): boolean {
                          class="absolute cursor-grab rounded border px-1.5 py-1 text-xs overflow-hidden transition-opacity"
                          :class="isDayDragTarget(appt) ? 'opacity-30' : ''"
                          :data-appointment-id="appt.id"
-                         :style="{ ...apptDayStyle(appt), ...getTagStyle(appt.tag?.color ?? null), top: `${(dayLanesByRow.get(row.id)?.get(appt.id)?.lane ?? 0) * LANE_HEIGHT + 4}px`, height: `${LANE_HEIGHT - 4}px` }"
+                         :style="{ ...apptDayStyle(appt), ...getStatusStyle(appt.status?.color ?? null), top: `${(dayLanesByRow.get(row.id)?.get(appt.id)?.lane ?? 0) * LANE_HEIGHT + 4}px`, height: `${LANE_HEIGHT - 4}px` }"
                          @mousedown="handleDayMouseDown(appt, row.id, $event)" @click.stop>
                         <div class="font-medium truncate">{{ appt.client?.company_name || appt.client?.name || appt.title }}</div>
                         <div class="opacity-70" style="font-size: 10px">{{ getTimeLabel(appt) }}</div>
@@ -270,7 +270,7 @@ function isDayDragTarget(appt: Appointment): boolean {
                     <!-- Drag preview ghost -->
                     <div v-if="dayDrag.active && dayDrag.targetEmpId === row.id && dayPreviewStyle()"
                          class="absolute z-30 pointer-events-none rounded border-l-4 px-1.5 py-1 text-xs opacity-80"
-                         :style="{ ...dayPreviewStyle()!, ...getTagStyle(dayDrag.appointment?.tag?.color ?? null), top: '4px', bottom: '4px' }">
+                         :style="{ ...dayPreviewStyle()!, ...getStatusStyle(dayDrag.appointment?.status?.color ?? null), top: '4px', bottom: '4px' }">
                         <div class="font-medium truncate">{{ dayDrag.appointment?.client?.company_name || dayDrag.appointment?.client?.name || dayDrag.appointment?.title }}</div>
                         <div class="opacity-70" style="font-size: 10px">{{ fmtMin(dayDrag.startMin) }} – {{ fmtMin(dayDrag.startMin + dayDrag.duration) }}</div>
                     </div>

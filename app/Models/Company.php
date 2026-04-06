@@ -37,9 +37,9 @@ class Company extends Model
         return $this->hasMany(Appointment::class);
     }
 
-    public function tags(): HasMany
+    public function statuses(): HasMany
     {
-        return $this->hasMany(Tag::class);
+        return $this->hasMany(Status::class);
     }
 
     public function settings(): HasMany

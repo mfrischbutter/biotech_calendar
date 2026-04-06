@@ -6,7 +6,7 @@ use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Tag extends Model
+class Status extends Model
 {
     use BelongsToCompany;
 

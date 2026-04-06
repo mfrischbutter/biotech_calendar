@@ -7,7 +7,7 @@ use App\Models\Client;
 use App\Models\Company;
 use App\Models\Permission;
 use App\Models\Setting;
-use App\Models\Tag;
+use App\Models\Status;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -36,9 +36,9 @@ class DatabaseSeeder extends Seeder
         Setting::create(['company_id' => $company->id, 'key' => 'start_hour', 'value' => '7']);
         Setting::create(['company_id' => $company->id, 'key' => 'end_hour', 'value' => '18']);
 
-        // --- Tags (pest control themed) ---
-        $tags = [];
-        $tagData = [
+        // --- Statuses (pest control themed) ---
+        $statuses = [];
+        $statusData = [
             ['name' => 'Erstbegehung', 'color' => '#f97316'],
             ['name' => 'Routinekontrolle', 'color' => '#3b82f6'],
             ['name' => 'Akutbehandlung', 'color' => '#ef4444'],
@@ -48,8 +48,8 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Abgeschlossen', 'color' => '#22c55e'],
         ];
 
-        foreach ($tagData as $i => $t) {
-            $tags[$t['name']] = Tag::create([
+        foreach ($statusData as $i => $t) {
+            $statuses[$t['name']] = Status::create([
                 'company_id' => $company->id,
                 'name' => $t['name'],
                 'color' => $t['color'],
@@ -169,7 +169,7 @@ class DatabaseSeeder extends Seeder
             Carbon $end,
             ?Client $client,
             ?User $employee,
-            ?Tag $tag,
+            ?Status $status,
             ?string $notes = null,
             ?array $checklist = null,
             ?User $createdBy = null,
@@ -181,7 +181,7 @@ class DatabaseSeeder extends Seeder
                 'end_at' => $end,
                 'client_id' => $client?->id,
                 'employee_id' => $employee?->id,
-                'tag_id' => $tag?->id,
+                'status_id' => $status?->id,
                 'notes' => $notes,
                 'checklist' => $checklist,
                 'created_by' => ($createdBy ?? $owner)->id,
@@ -205,7 +205,7 @@ class DatabaseSeeder extends Seeder
             'Erstbegehung Bäckerei Bergmann',
             $mon->copy()->setTime(8, 0),
             $mon->copy()->setTime(9, 30),
-            $bergmann, $owner, $tags['Erstbegehung'],
+            $bergmann, $owner, $statuses['Erstbegehung'],
             'Mehlmottenbefall im Lagerraum gemeldet. Komplette Begehung aller Räumlichkeiten.',
             [
                 ['text' => 'Lagerraum inspizieren', 'checked' => false],
@@ -219,7 +219,7 @@ class DatabaseSeeder extends Seeder
             'Dokumentation KW-Berichte',
             $mon->copy()->setTime(14, 0),
             $mon->copy()->setTime(16, 0),
-            null, $owner, $tags['Dokumentation'],
+            null, $owner, $statuses['Dokumentation'],
             'Wochenberichte der letzten KW zusammenfassen und an Kunden versenden.',
         );
 
@@ -228,7 +228,7 @@ class DatabaseSeeder extends Seeder
             'Routinekontrolle Hotel Residenz',
             $mon->copy()->setTime(8, 0),
             $mon->copy()->setTime(10, 0),
-            $gruber, $markus, $tags['Routinekontrolle'],
+            $gruber, $markus, $statuses['Routinekontrolle'],
             'Monatliche Kontrollrunde: Küche, Keller, Dachboden. Köderstationen prüfen.',
             [
                 ['text' => 'Köderstationen Küche', 'checked' => false],
@@ -243,7 +243,7 @@ class DatabaseSeeder extends Seeder
             'Akutbehandlung Mayer — Wespen',
             $mon->copy()->setTime(9, 0),
             $mon->copy()->setTime(10, 30),
-            $mayer, $markus, $tags['Akutbehandlung'],
+            $mayer, $markus, $statuses['Akutbehandlung'],
             'Dringend! Wespennest am Balkon, Kleinkinder im Haushalt.',
         );
 
@@ -251,7 +251,7 @@ class DatabaseSeeder extends Seeder
             'Nachkontrolle Gaststätte Hirsch',
             $mon->copy()->setTime(13, 0),
             $mon->copy()->setTime(14, 0),
-            $schuster, $markus, $tags['Nachkontrolle'],
+            $schuster, $markus, $statuses['Nachkontrolle'],
             'Kontrolle 2 Wochen nach Schabenbehandlung.',
         );
 
@@ -260,7 +260,7 @@ class DatabaseSeeder extends Seeder
             'Beratung Kindergarten Sonnenschein',
             $mon->copy()->setTime(9, 0),
             $mon->copy()->setTime(10, 30),
-            $krause, $lisa, $tags['Beratung'],
+            $krause, $lisa, $statuses['Beratung'],
             'Beratungsgespräch zu präventiven Maßnahmen. Elternbrief vorbereiten.',
         );
 
@@ -268,7 +268,7 @@ class DatabaseSeeder extends Seeder
             'Routinekontrolle Metzgerei Huber',
             $mon->copy()->setTime(11, 0),
             $mon->copy()->setTime(12, 0),
-            $huber, $lisa, $tags['Routinekontrolle'],
+            $huber, $lisa, $statuses['Routinekontrolle'],
         );
 
         // Jonas: one appointment
@@ -276,7 +276,7 @@ class DatabaseSeeder extends Seeder
             'Erstbegehung Lagerhalle Neumann',
             $mon->copy()->setTime(10, 0),
             $mon->copy()->setTime(12, 0),
-            $neumann, $jonas, $tags['Erstbegehung'],
+            $neumann, $jonas, $statuses['Erstbegehung'],
             'Verdacht auf Rattenbefall im Außenbereich. Große Lagerhalle mit 3 Eingängen.',
             [
                 ['text' => 'Außenbereich abgehen', 'checked' => false],
@@ -301,7 +301,7 @@ class DatabaseSeeder extends Seeder
             'Rattenbekämpfung Lagerhalle Neumann',
             $tue->copy()->setTime(7, 30),
             $tue->copy()->setTime(10, 0),
-            $neumann, $jonas, $tags['Akutbehandlung'],
+            $neumann, $jonas, $statuses['Akutbehandlung'],
             'Köderboxen auslegen, Zugänge abdichten.',
             [
                 ['text' => 'Köderboxen auslegen (12 Stk.)', 'checked' => false],
@@ -314,7 +314,7 @@ class DatabaseSeeder extends Seeder
             'Routinekontrolle Restaurant Bella Vista',
             $tue->copy()->setTime(8, 0),
             $tue->copy()->setTime(9, 30),
-            $koch, $markus, $tags['Routinekontrolle'],
+            $koch, $markus, $statuses['Routinekontrolle'],
             'Quartalskontrolle Küche und Lager.',
         );
 
@@ -323,21 +323,21 @@ class DatabaseSeeder extends Seeder
             'Teammeeting Wochenplanung',
             $tue->copy()->setTime(8, 30),
             $tue->copy()->setTime(9, 30),
-            null, $owner, $tags['Dokumentation'],
+            null, $owner, $statuses['Dokumentation'],
         );
 
         $appt(
             'Teammeeting Wochenplanung',
             $tue->copy()->setTime(8, 30),
             $tue->copy()->setTime(9, 30),
-            null, $lisa, $tags['Dokumentation'],
+            null, $lisa, $statuses['Dokumentation'],
         );
 
         $appt(
             'Beratung Wohnanlage Lehmann',
             $tue->copy()->setTime(10, 0),
             $tue->copy()->setTime(11, 30),
-            $lehmann, $owner, $tags['Beratung'],
+            $lehmann, $owner, $statuses['Beratung'],
             'Taubenabwehr für Innenhof besprechen. Herr Lehmann will Angebot für Netze.',
         );
 
@@ -346,14 +346,14 @@ class DatabaseSeeder extends Seeder
             'Nachkontrolle Supermarkt Braun',
             $tue->copy()->setTime(13, 0),
             $tue->copy()->setTime(14, 0),
-            $braun, $lisa, $tags['Nachkontrolle'],
+            $braun, $lisa, $statuses['Nachkontrolle'],
         );
 
         $appt(
             'Kundenbesuch Zimmermann — Marder',
             $tue->copy()->setTime(13, 30),
             $tue->copy()->setTime(15, 0),
-            $zimmermann, $lisa, $tags['Erstbegehung'],
+            $zimmermann, $lisa, $statuses['Erstbegehung'],
             'Mardergeräusche auf dem Dachboden. Erstbegehung und Beratung.',
         );
 
@@ -361,7 +361,7 @@ class DatabaseSeeder extends Seeder
             'Dokumentation Bella Vista',
             $tue->copy()->setTime(14, 0),
             $tue->copy()->setTime(15, 0),
-            $koch, $lisa, $tags['Dokumentation'],
+            $koch, $lisa, $statuses['Dokumentation'],
         );
 
         // UNASSIGNED Tuesday
@@ -369,7 +369,7 @@ class DatabaseSeeder extends Seeder
             'Angebotsanfrage Schädlingsmonitoring',
             $tue->copy()->setTime(11, 0),
             $tue->copy()->setTime(12, 0),
-            null, null, $tags['Beratung'],
+            null, null, $statuses['Beratung'],
             'Neue Anfrage über Website. Großküche in Pasing, monatliches Monitoring gewünscht.',
         );
 
@@ -379,7 +379,7 @@ class DatabaseSeeder extends Seeder
             'Wespenentfernung Fam. Mayer',
             $wed->copy()->setTime(8, 0),
             $wed->copy()->setTime(9, 0),
-            $mayer, $markus, $tags['Akutbehandlung'],
+            $mayer, $markus, $statuses['Akutbehandlung'],
             'Wespennest entfernen. Schutzausrüstung mitnehmen!',
         );
 
@@ -387,14 +387,14 @@ class DatabaseSeeder extends Seeder
             'Routinekontrolle Bäckerei Bergmann',
             $wed->copy()->setTime(9, 30),
             $wed->copy()->setTime(11, 0),
-            $bergmann, $markus, $tags['Routinekontrolle'],
+            $bergmann, $markus, $statuses['Routinekontrolle'],
         );
 
         $appt(
             'Akutbehandlung Schaben — Gaststätte Hirsch',
             $wed->copy()->setTime(7, 0),
             $wed->copy()->setTime(9, 0),
-            $schuster, $jonas, $tags['Akutbehandlung'],
+            $schuster, $jonas, $statuses['Akutbehandlung'],
             'Schabenbefall in der Küche, vor Öffnungszeit behandeln!',
         );
 
@@ -402,7 +402,7 @@ class DatabaseSeeder extends Seeder
             'Beratung Hotel Residenz — Bettwanzen',
             $wed->copy()->setTime(10, 0),
             $wed->copy()->setTime(11, 30),
-            $gruber, $owner, $tags['Beratung'],
+            $gruber, $owner, $statuses['Beratung'],
             'Gast hat Bettwanzen gemeldet. Zimmer 204 + angrenzende Zimmer inspizieren.',
             [
                 ['text' => 'Zimmer 204 inspizieren', 'checked' => false],
@@ -416,7 +416,7 @@ class DatabaseSeeder extends Seeder
             'Schulung Hygienevorschriften',
             $wed->copy()->setTime(14, 0),
             $wed->copy()->setTime(16, 0),
-            null, $owner, $tags['Beratung'],
+            null, $owner, $statuses['Beratung'],
             'Interne Schulung für das Team.',
         );
 
@@ -424,21 +424,21 @@ class DatabaseSeeder extends Seeder
             'Schulung Hygienevorschriften',
             $wed->copy()->setTime(14, 0),
             $wed->copy()->setTime(16, 0),
-            null, $markus, $tags['Beratung'],
+            null, $markus, $statuses['Beratung'],
         );
 
         $appt(
             'Schulung Hygienevorschriften',
             $wed->copy()->setTime(14, 0),
             $wed->copy()->setTime(16, 0),
-            null, $lisa, $tags['Beratung'],
+            null, $lisa, $statuses['Beratung'],
         );
 
         $appt(
             'Schulung Hygienevorschriften',
             $wed->copy()->setTime(14, 0),
             $wed->copy()->setTime(16, 0),
-            null, $jonas, $tags['Beratung'],
+            null, $jonas, $statuses['Beratung'],
         );
 
         // Lisa: short morning appointments
@@ -446,14 +446,14 @@ class DatabaseSeeder extends Seeder
             'Nachkontrolle Kindergarten Sonnenschein',
             $wed->copy()->setTime(8, 0),
             $wed->copy()->setTime(9, 0),
-            $krause, $lisa, $tags['Nachkontrolle'],
+            $krause, $lisa, $statuses['Nachkontrolle'],
         );
 
         $appt(
             'Ködertausch Metzgerei Huber',
             $wed->copy()->setTime(9, 30),
             $wed->copy()->setTime(10, 30),
-            $huber, $lisa, $tags['Routinekontrolle'],
+            $huber, $lisa, $statuses['Routinekontrolle'],
         );
 
         // --- Thursday ---
@@ -463,7 +463,7 @@ class DatabaseSeeder extends Seeder
             'Bettwanzenbehandlung Hotel Residenz',
             $thu->copy()->setTime(7, 0),
             $thu->copy()->setTime(10, 0),
-            $gruber, $markus, $tags['Akutbehandlung'],
+            $gruber, $markus, $statuses['Akutbehandlung'],
             'Thermische Behandlung Zimmer 204. Zugang ab 7 Uhr über Hintereingang.',
         );
 
@@ -471,7 +471,7 @@ class DatabaseSeeder extends Seeder
             'Bettwanzenbehandlung Hotel Residenz',
             $thu->copy()->setTime(7, 0),
             $thu->copy()->setTime(10, 0),
-            $gruber, $jonas, $tags['Akutbehandlung'],
+            $gruber, $jonas, $statuses['Akutbehandlung'],
             'Unterstützung Markus. Zimmer 203 + 205 behandeln.',
         );
 
@@ -479,14 +479,14 @@ class DatabaseSeeder extends Seeder
             'Routinekontrolle Supermarkt Braun',
             $thu->copy()->setTime(8, 0),
             $thu->copy()->setTime(9, 30),
-            $braun, $lisa, $tags['Routinekontrolle'],
+            $braun, $lisa, $statuses['Routinekontrolle'],
         );
 
         $appt(
             'Kundengespräch Lehmann — Angebot',
             $thu->copy()->setTime(10, 0),
             $thu->copy()->setTime(11, 0),
-            $lehmann, $owner, $tags['Beratung'],
+            $lehmann, $owner, $statuses['Beratung'],
             'Angebot Taubennetze besprechen und unterzeichnen.',
         );
 
@@ -495,7 +495,7 @@ class DatabaseSeeder extends Seeder
             'Nachkontrolle Lagerhalle Neumann',
             $thu->copy()->setTime(13, 0),
             $thu->copy()->setTime(14, 0),
-            $neumann, $jonas, $tags['Nachkontrolle'],
+            $neumann, $jonas, $statuses['Nachkontrolle'],
             'Köderverbrauch prüfen, ggf. nachfüllen.',
         );
 
@@ -503,11 +503,11 @@ class DatabaseSeeder extends Seeder
             'Erstbegehung Frau Wagner',
             $thu->copy()->setTime(14, 0),
             $thu->copy()->setTime(15, 30),
-            $wagner, $lisa, $tags['Erstbegehung'],
+            $wagner, $lisa, $statuses['Erstbegehung'],
             'Ameisenbefall Küche und Terrasse.',
         );
 
-        // No-tag appointment (appointment with no tag)
+        // No-status appointment (appointment with no status)
         $appt(
             'Materialbestellung + Lager aufräumen',
             $thu->copy()->setTime(15, 0),
@@ -531,7 +531,7 @@ class DatabaseSeeder extends Seeder
             'Abschlusskontrolle Gaststätte Hirsch',
             $fri->copy()->setTime(8, 0),
             $fri->copy()->setTime(9, 0),
-            $schuster, $jonas, $tags['Abgeschlossen'],
+            $schuster, $jonas, $statuses['Abgeschlossen'],
             'Schabenbehandlung erfolgreich. Abschlussdokumentation.',
         );
 
@@ -540,7 +540,7 @@ class DatabaseSeeder extends Seeder
             'Wöchentliche Routinekontrolle Bella Vista',
             $fri->copy()->setTime(9, 0),
             $fri->copy()->setTime(10, 0),
-            $koch, $markus, $tags['Routinekontrolle'],
+            $koch, $markus, $statuses['Routinekontrolle'],
         );
         $recurringParent->update([
             'recurrence_type' => 'weekly',
@@ -552,7 +552,7 @@ class DatabaseSeeder extends Seeder
             'Dokumentation + Wochenbericht',
             $fri->copy()->setTime(10, 0),
             $fri->copy()->setTime(12, 0),
-            null, $owner, $tags['Dokumentation'],
+            null, $owner, $statuses['Dokumentation'],
             'KW-Bericht zusammenstellen, Fotos sortieren.',
         );
 
@@ -560,7 +560,7 @@ class DatabaseSeeder extends Seeder
             'Ameisenbehandlung Frau Wagner',
             $fri->copy()->setTime(10, 0),
             $fri->copy()->setTime(11, 30),
-            $wagner, $lisa, $tags['Akutbehandlung'],
+            $wagner, $lisa, $statuses['Akutbehandlung'],
             'Gel-Köder und Barrierespray ausbringen.',
         );
 
@@ -569,14 +569,14 @@ class DatabaseSeeder extends Seeder
             'Nachkontrolle Mayer — Wespen',
             $fri->copy()->setTime(13, 0),
             $fri->copy()->setTime(14, 0),
-            $mayer, $markus, $tags['Nachkontrolle'],
+            $mayer, $markus, $statuses['Nachkontrolle'],
         );
 
         $appt(
             'Routinekontrolle Kindergarten Sonnenschein',
             $fri->copy()->setTime(13, 30),
             $fri->copy()->setTime(14, 30),
-            $krause, $markus, $tags['Routinekontrolle'],
+            $krause, $markus, $statuses['Routinekontrolle'],
         );
 
         // No-client appointment
@@ -592,7 +592,7 @@ class DatabaseSeeder extends Seeder
             'Dringende Anfrage — Rattenbefall Keller',
             $fri->copy()->setTime(8, 0),
             $fri->copy()->setTime(8, 30),
-            null, null, $tags['Akutbehandlung'],
+            null, null, $statuses['Akutbehandlung'],
             'Anruf von Privatperson aus Laim. Sofort zuweisen!',
         );
 
@@ -612,7 +612,7 @@ class DatabaseSeeder extends Seeder
             'Nachkontrolle Bäckerei Bergmann',
             $mon2->copy()->setTime(8, 0),
             $mon2->copy()->setTime(9, 30),
-            $bergmann, $owner, $tags['Nachkontrolle'],
+            $bergmann, $owner, $statuses['Nachkontrolle'],
             'Mehlmottenfallen kontrollieren. 2 Wochen nach Erstbegehung.',
         );
 
@@ -620,14 +620,14 @@ class DatabaseSeeder extends Seeder
             'Routinekontrolle Hotel Residenz',
             $mon2->copy()->setTime(8, 0),
             $mon2->copy()->setTime(10, 0),
-            $gruber, $markus, $tags['Routinekontrolle'],
+            $gruber, $markus, $statuses['Routinekontrolle'],
         );
 
         $appt(
             'Taubenabwehr Installation Lehmann',
             $mon2->copy()->setTime(8, 0),
             $mon2->copy()->setTime(12, 0),
-            $lehmann, $jonas, $tags['Akutbehandlung'],
+            $lehmann, $jonas, $statuses['Akutbehandlung'],
             'Taubennetze im Innenhof montieren. Material ist im Lager.',
             [
                 ['text' => 'Material laden', 'checked' => false],
@@ -642,14 +642,14 @@ class DatabaseSeeder extends Seeder
             'Nachkontrolle Frau Wagner — Ameisen',
             $mon2->copy()->setTime(10, 0),
             $mon2->copy()->setTime(11, 0),
-            $wagner, $lisa, $tags['Nachkontrolle'],
+            $wagner, $lisa, $statuses['Nachkontrolle'],
         );
 
         $appt(
             'Beratung Supermarkt Braun — Monitoring',
             $mon2->copy()->setTime(11, 0),
             $mon2->copy()->setTime(12, 0),
-            $braun, $lisa, $tags['Beratung'],
+            $braun, $lisa, $statuses['Beratung'],
             'Neues Monitoringsystem besprechen.',
         );
 
@@ -658,7 +658,7 @@ class DatabaseSeeder extends Seeder
             'Beratung Neukunde Taubenproblem',
             $mon2->copy()->setTime(10, 0),
             $mon2->copy()->setTime(11, 0),
-            null, $owner, $tags['Beratung'],
+            null, $owner, $statuses['Beratung'],
             'Erstgespräch mit Hausverwaltung aus Schwabing.',
         );
 
@@ -668,14 +668,14 @@ class DatabaseSeeder extends Seeder
             'Teammeeting Wochenplanung',
             $tue2->copy()->setTime(8, 30),
             $tue2->copy()->setTime(9, 30),
-            null, $owner, $tags['Dokumentation'],
+            null, $owner, $statuses['Dokumentation'],
         );
 
         $appt(
             'Akutbehandlung Ratten — Bella Vista Keller',
             $tue2->copy()->setTime(7, 0),
             $tue2->copy()->setTime(9, 0),
-            $koch, $markus, $tags['Akutbehandlung'],
+            $koch, $markus, $statuses['Akutbehandlung'],
             'Rattenspuren im Keller entdeckt. Vor Öffnungszeit behandeln.',
         );
 
@@ -683,7 +683,7 @@ class DatabaseSeeder extends Seeder
             'Erstbegehung Neukunde Schwabing',
             $tue2->copy()->setTime(10, 0),
             $tue2->copy()->setTime(11, 30),
-            null, $owner, $tags['Erstbegehung'],
+            null, $owner, $statuses['Erstbegehung'],
             'Taubenbefall Dachgeschoss Wohnanlage.',
         );
 
@@ -691,21 +691,21 @@ class DatabaseSeeder extends Seeder
             'Routinekontrolle Gaststätte Hirsch',
             $tue2->copy()->setTime(10, 0),
             $tue2->copy()->setTime(11, 0),
-            $schuster, $jonas, $tags['Routinekontrolle'],
+            $schuster, $jonas, $statuses['Routinekontrolle'],
         );
 
         $appt(
             'Ködertausch Lagerhalle Neumann',
             $tue2->copy()->setTime(13, 0),
             $tue2->copy()->setTime(14, 30),
-            $neumann, $jonas, $tags['Routinekontrolle'],
+            $neumann, $jonas, $statuses['Routinekontrolle'],
         );
 
         $appt(
             'Nachkontrolle Zimmermann — Marder',
             $tue2->copy()->setTime(14, 0),
             $tue2->copy()->setTime(15, 0),
-            $zimmermann, $lisa, $tags['Nachkontrolle'],
+            $zimmermann, $lisa, $statuses['Nachkontrolle'],
             'Lebendfalle kontrollieren.',
         );
 
@@ -714,7 +714,7 @@ class DatabaseSeeder extends Seeder
             'Reklamation Metzgerei Huber',
             $tue2->copy()->setTime(9, 0),
             $tue2->copy()->setTime(9, 30),
-            $huber, null, $tags['Routinekontrolle'],
+            $huber, null, $statuses['Routinekontrolle'],
             'Frau Huber meldet erneuten Mottenbefall trotz Behandlung. Bitte schnell zuweisen.',
         );
 
@@ -724,7 +724,7 @@ class DatabaseSeeder extends Seeder
             'Bettwanzen-Nachkontrolle Hotel Residenz',
             $wed2->copy()->setTime(8, 0),
             $wed2->copy()->setTime(9, 30),
-            $gruber, $markus, $tags['Nachkontrolle'],
+            $gruber, $markus, $statuses['Nachkontrolle'],
             'Kontrollinspektion 1 Woche nach thermischer Behandlung.',
         );
 
@@ -732,7 +732,7 @@ class DatabaseSeeder extends Seeder
             'Routinekontrolle Bäckerei Bergmann',
             $wed2->copy()->setTime(10, 0),
             $wed2->copy()->setTime(11, 0),
-            $bergmann, $markus, $tags['Routinekontrolle'],
+            $bergmann, $markus, $statuses['Routinekontrolle'],
         );
 
         // Long appointment for Jonas
@@ -740,7 +740,7 @@ class DatabaseSeeder extends Seeder
             'Taubenabwehr Fertigstellung Lehmann',
             $wed2->copy()->setTime(8, 0),
             $wed2->copy()->setTime(13, 0),
-            $lehmann, $jonas, $tags['Akutbehandlung'],
+            $lehmann, $jonas, $statuses['Akutbehandlung'],
             'Restarbeiten Taubennetze + Reinigung.',
         );
 
@@ -748,7 +748,7 @@ class DatabaseSeeder extends Seeder
             'Ameisenbekämpfung Wagner — Abschluss',
             $wed2->copy()->setTime(9, 0),
             $wed2->copy()->setTime(10, 0),
-            $wagner, $lisa, $tags['Abgeschlossen'],
+            $wagner, $lisa, $statuses['Abgeschlossen'],
             'Letzte Kontrolle, Behandlung abgeschlossen.',
         );
 
@@ -756,14 +756,14 @@ class DatabaseSeeder extends Seeder
             'Kundenbesuch Kindergarten Sonnenschein',
             $wed2->copy()->setTime(10, 30),
             $wed2->copy()->setTime(11, 30),
-            $krause, $lisa, $tags['Routinekontrolle'],
+            $krause, $lisa, $statuses['Routinekontrolle'],
         );
 
         $appt(
             'Angebotserstellung Monitoringvertrag',
             $wed2->copy()->setTime(14, 0),
             $wed2->copy()->setTime(16, 0),
-            null, $owner, $tags['Dokumentation'],
+            null, $owner, $statuses['Dokumentation'],
             'Monitoringvertrag für Supermarkt Braun finalisieren.',
         );
 
@@ -774,14 +774,14 @@ class DatabaseSeeder extends Seeder
             'Nachkontrolle Bella Vista Keller',
             $thu2->copy()->setTime(8, 0),
             $thu2->copy()->setTime(9, 0),
-            $koch, $markus, $tags['Nachkontrolle'],
+            $koch, $markus, $statuses['Nachkontrolle'],
         );
 
         $appt(
             'Routinekontrolle Metzgerei Huber',
             $thu2->copy()->setTime(8, 30),
             $thu2->copy()->setTime(10, 0),
-            $huber, $markus, $tags['Routinekontrolle'],
+            $huber, $markus, $statuses['Routinekontrolle'],
             'Inkl. Reklamationsbearbeitung Mottenbefall.',
         );
 
@@ -789,14 +789,14 @@ class DatabaseSeeder extends Seeder
             'Ködertausch Mayer',
             $thu2->copy()->setTime(9, 0),
             $thu2->copy()->setTime(9, 30),
-            $mayer, $markus, $tags['Routinekontrolle'],
+            $mayer, $markus, $statuses['Routinekontrolle'],
         );
 
         $appt(
             'Routinekontrolle Wohnanlage Lehmann',
             $thu2->copy()->setTime(10, 0),
             $thu2->copy()->setTime(11, 30),
-            $lehmann, $owner, $tags['Nachkontrolle'],
+            $lehmann, $owner, $statuses['Nachkontrolle'],
             'Abnahme Taubenabwehr + erste Kontrollrunde.',
         );
 
@@ -804,18 +804,18 @@ class DatabaseSeeder extends Seeder
             'Nachkontrolle Lagerhalle Neumann',
             $thu2->copy()->setTime(10, 0),
             $thu2->copy()->setTime(11, 0),
-            $neumann, $jonas, $tags['Nachkontrolle'],
+            $neumann, $jonas, $statuses['Nachkontrolle'],
         );
 
         $appt(
             'Erstbegehung neues Objekt Pasing',
             $thu2->copy()->setTime(13, 0),
             $thu2->copy()->setTime(15, 0),
-            null, $lisa, $tags['Erstbegehung'],
+            null, $lisa, $statuses['Erstbegehung'],
             'Großküche in Pasing. Angebot Website-Anfrage.',
         );
 
-        // Short no-tag appointment
+        // Short no-status appointment
         $appt(
             'Telefonat Versicherung',
             $thu2->copy()->setTime(16, 0),
@@ -830,7 +830,7 @@ class DatabaseSeeder extends Seeder
             'Wöchentliche Routinekontrolle Bella Vista',
             $fri2->copy()->setTime(9, 0),
             $fri2->copy()->setTime(10, 0),
-            $koch, $markus, $tags['Routinekontrolle'],
+            $koch, $markus, $statuses['Routinekontrolle'],
         );
         $recurringChild->update(['parent_id' => $recurringParent->id]);
 
@@ -838,14 +838,14 @@ class DatabaseSeeder extends Seeder
             'Dokumentation + Wochenbericht',
             $fri2->copy()->setTime(10, 0),
             $fri2->copy()->setTime(12, 0),
-            null, $owner, $tags['Dokumentation'],
+            null, $owner, $statuses['Dokumentation'],
         );
 
         $appt(
             'Abschlusskontrolle Zimmermann — Marder',
             $fri2->copy()->setTime(8, 0),
             $fri2->copy()->setTime(9, 30),
-            $zimmermann, $lisa, $tags['Abgeschlossen'],
+            $zimmermann, $lisa, $statuses['Abgeschlossen'],
             'Marder gefangen und umgesiedelt. Eingang abgedichtet.',
         );
 
@@ -853,21 +853,21 @@ class DatabaseSeeder extends Seeder
             'Nachkontrolle Hotel Residenz — Bettwanzen',
             $fri2->copy()->setTime(8, 0),
             $fri2->copy()->setTime(9, 0),
-            $gruber, $jonas, $tags['Nachkontrolle'],
+            $gruber, $jonas, $statuses['Nachkontrolle'],
         );
 
         $appt(
             'Routinekontrolle Kindergarten Sonnenschein',
             $fri2->copy()->setTime(13, 0),
             $fri2->copy()->setTime(14, 0),
-            $krause, $markus, $tags['Routinekontrolle'],
+            $krause, $markus, $statuses['Routinekontrolle'],
         );
 
         $appt(
             'Beratung Supermarkt Braun — Vertragsabschluss',
             $fri2->copy()->setTime(14, 0),
             $fri2->copy()->setTime(15, 0),
-            $braun, $owner, $tags['Beratung'],
+            $braun, $owner, $statuses['Beratung'],
             'Monitoringvertrag unterzeichnen.',
         );
 
@@ -876,7 +876,7 @@ class DatabaseSeeder extends Seeder
             'Neue Anfrage — Kakerlaken Gastro Haidhausen',
             $fri2->copy()->setTime(10, 0),
             $fri2->copy()->setTime(10, 30),
-            null, null, $tags['Akutbehandlung'],
+            null, null, $statuses['Akutbehandlung'],
             'Dringend! Gesundheitsamt hat Frist gesetzt. Sofort zuweisen.',
         );
     }

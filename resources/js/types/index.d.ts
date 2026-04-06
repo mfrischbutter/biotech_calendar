@@ -20,7 +20,7 @@ export interface Employee {
     permissions: string[];
 }
 
-export interface Tag {
+export interface Status {
     id: number;
     name: string;
     color: string;
@@ -74,7 +74,7 @@ export interface Appointment {
     employee: { id: number; first_name: string; last_name: string; name: string } | null;
     start_at: string;
     end_at: string;
-    tag: { id: number; name: string; color: string } | null;
+    status: { id: number; name: string; color: string } | null;
     notes: string | null;
     checklist: ChecklistItem[] | null;
     recurrence_type: RecurrenceType | null;

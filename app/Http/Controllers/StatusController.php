@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Tag;
+use App\Models\Status;
 use Illuminate\Http\Request;
 
-class TagController extends Controller
+class StatusController extends Controller
 {
     public function store(Request $request)
     {
@@ -13,12 +13,12 @@ class TagController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'color' => ['required', 'string', 'in:'.implode(',', Tag::COLORS)],
+            'color' => ['required', 'string', 'in:'.implode(',', Status::COLORS)],
         ]);
 
-        $maxSort = Tag::max('sort_order') ?? -1;
+        $maxSort = Status::max('sort_order') ?? -1;
 
-        Tag::create([
+        Status::create([
             ...$validated,
             'sort_order' => $maxSort + 1,
         ]);
@@ -26,25 +26,25 @@ class TagController extends Controller
         return back();
     }
 
-    public function update(Request $request, Tag $tag)
+    public function update(Request $request, Status $status)
     {
         abort_unless($request->user()->hasPermission('settings.edit'), 403);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'color' => ['required', 'string', 'in:'.implode(',', Tag::COLORS)],
+            'color' => ['required', 'string', 'in:'.implode(',', Status::COLORS)],
         ]);
 
-        $tag->update($validated);
+        $status->update($validated);
 
         return back();
     }
 
-    public function destroy(Request $request, Tag $tag)
+    public function destroy(Request $request, Status $status)
     {
         abort_unless($request->user()->hasPermission('settings.edit'), 403);
 
-        $tag->delete();
+        $status->delete();
 
         return back();
     }
@@ -54,13 +54,13 @@ class TagController extends Controller
         abort_unless($request->user()->hasPermission('settings.edit'), 403);
 
         $validated = $request->validate([
-            'tags' => ['required', 'array'],
-            'tags.*.id' => ['required', 'exists:tags,id'],
-            'tags.*.sort_order' => ['required', 'integer', 'min:0'],
+            'statuses' => ['required', 'array'],
+            'statuses.*.id' => ['required', 'exists:statuses,id'],
+            'statuses.*.sort_order' => ['required', 'integer', 'min:0'],
         ]);
 
-        foreach ($validated['tags'] as $item) {
-            Tag::where('id', $item['id'])->update(['sort_order' => $item['sort_order']]);
+        foreach ($validated['statuses'] as $item) {
+            Status::where('id', $item['id'])->update(['sort_order' => $item['sort_order']]);
         }
 
         return back();

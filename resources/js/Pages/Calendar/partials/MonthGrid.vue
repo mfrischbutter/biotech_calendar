@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { format, parseISO, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { getTagStyle, getTagDotStyle } from '@/lib/tag-colors';
+import { getStatusStyle, getStatusDotStyle } from '@/lib/status-colors';
 import { localDateString } from '@/lib/date-utils';
 import { useTrans } from '@/lib/use-trans';
 import type { Appointment } from '@/types';
@@ -111,12 +111,12 @@ function getTimeLabel(appt: Appointment): string {
                             v-for="appt in (appointmentsByDay[day.date] || []).slice(0, 3)"
                             :key="appt.id"
                             class="flex items-center gap-1 rounded px-1 py-0.5 text-[11px] leading-tight cursor-pointer hover:opacity-80 truncate"
-                            :style="{ backgroundColor: getTagStyle(appt.tag?.color ?? null).backgroundColor }"
+                            :style="{ backgroundColor: getStatusStyle(appt.status?.color ?? null).backgroundColor }"
                             @click.stop="emit('appointmentClick', appt)"
                         >
-                            <span class="w-1.5 h-1.5 rounded-full shrink-0" :style="getTagDotStyle(appt.tag?.color ?? null)" />
+                            <span class="w-1.5 h-1.5 rounded-full shrink-0" :style="getStatusDotStyle(appt.status?.color ?? null)" />
                             <span class="text-muted-foreground shrink-0">{{ getTimeLabel(appt) }}</span>
-                            <span class="truncate" :style="{ color: appt.tag?.color ?? 'hsl(var(--muted-foreground))' }">
+                            <span class="truncate" :style="{ color: appt.status?.color ?? 'hsl(var(--muted-foreground))' }">
                                 {{ appt.client?.company_name || appt.client?.name || appt.title }}
                             </span>
                         </div>

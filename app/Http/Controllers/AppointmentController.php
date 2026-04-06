@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Appointment;
 use App\Models\Client;
 use App\Models\Setting;
-use App\Models\Tag;
+use App\Models\Status;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -50,7 +50,7 @@ class AppointmentController extends Controller
             ],
         };
 
-        $appointments = Appointment::with(['client:id,first_name,last_name,company_name', 'employee:id,first_name,last_name', 'tag:id,name,color'])
+        $appointments = Appointment::with(['client:id,first_name,last_name,company_name', 'employee:id,first_name,last_name', 'status:id,name,color'])
             ->where(function ($q) use ($rangeStart, $rangeEnd) {
                 $q->whereBetween('start_at', [$rangeStart, $rangeEnd])
                     ->orWhereBetween('end_at', [$rangeStart, $rangeEnd])
@@ -67,13 +67,13 @@ class AppointmentController extends Controller
             ->orderBy('last_name')->orderBy('first_name')
             ->get(['id', 'first_name', 'last_name', 'role']);
 
-        $tags = Tag::orderBy('sort_order')->get(['id', 'name', 'color']);
+        $statuses = Status::orderBy('sort_order')->get(['id', 'name', 'color']);
 
         return Inertia::render('Calendar/Index', [
             'appointments' => $appointments,
             'clients' => $clients,
             'employees' => $employees,
-            'tags' => $tags,
+            'statuses' => $statuses,
             'currentDate' => $date->toDateString(),
             'view' => $view,
             'showWeekends' => $showWeekends,
@@ -92,7 +92,7 @@ class AppointmentController extends Controller
             'employee_id' => ['nullable', 'exists:users,id'],
             'start_at' => ['required', 'date'],
             'end_at' => ['required', 'date', 'after:start_at'],
-            'tag_id' => ['nullable', 'exists:tags,id'],
+            'status_id' => ['nullable', 'exists:statuses,id'],
             'notes' => ['nullable', 'string'],
             'checklist' => ['nullable', 'array', 'max:50'],
             'checklist.*.text' => ['required', 'string', 'max:500'],
@@ -110,7 +110,7 @@ class AppointmentController extends Controller
             'employee_id' => $validated['employee_id'] ?? null,
             'start_at' => $validated['start_at'],
             'end_at' => $validated['end_at'],
-            'tag_id' => $validated['tag_id'] ?? null,
+            'status_id' => $validated['status_id'] ?? null,
             'notes' => $validated['notes'] ?? null,
             'checklist' => $validated['checklist'] ?? null,
             'created_by' => $request->user()->id,
@@ -142,7 +142,7 @@ class AppointmentController extends Controller
             'employee_id' => ['nullable', 'exists:users,id'],
             'start_at' => ['sometimes', 'required', 'date'],
             'end_at' => ['sometimes', 'required', 'date', 'after:start_at'],
-            'tag_id' => ['nullable', 'exists:tags,id'],
+            'status_id' => ['nullable', 'exists:statuses,id'],
             'notes' => ['nullable', 'string'],
             'checklist' => ['nullable', 'array', 'max:50'],
             'checklist.*.text' => ['required', 'string', 'max:500'],

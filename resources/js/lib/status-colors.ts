@@ -8,7 +8,7 @@ function lightTint(hex: string, amount = 0.88): string {
 }
 
 /** Generate inline styles from a hex color for appointment cards. */
-export function getTagStyle(color: string | null): {
+export function getStatusStyle(color: string | null): {
     backgroundColor: string;
     borderColor: string;
     color: string;
@@ -28,15 +28,15 @@ export function getTagStyle(color: string | null): {
     };
 }
 
-/** Generate dot style for tag indicators. */
-export function getTagDotStyle(color: string | null): { backgroundColor: string } {
+/** Generate dot style for status indicators. */
+export function getStatusDotStyle(color: string | null): { backgroundColor: string } {
     return {
         backgroundColor: color || 'hsl(var(--muted-foreground))',
     };
 }
 
-/** Predefined palette matching Tag::COLORS on the backend. */
-export const TAG_COLORS = [
+/** Predefined palette matching Status::COLORS on the backend. */
+export const STATUS_COLORS = [
     '#3b82f6', // blue
     '#f97316', // orange
     '#22c55e', // green

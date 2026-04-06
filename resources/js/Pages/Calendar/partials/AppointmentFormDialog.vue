@@ -23,7 +23,7 @@ import {
 } from '@/Components/ui/alert-dialog';
 import { localToISO, isoToLocalParts } from '@/lib/date-utils';
 import { useTrans } from '@/lib/use-trans';
-import type { Appointment, ChecklistItem, Tag } from '@/types';
+import type { Appointment, ChecklistItem, Status } from '@/types';
 import AppointmentToolbar from './AppointmentToolbar.vue';
 import ChecklistEditor from './ChecklistEditor.vue';
 
@@ -32,7 +32,7 @@ const { t } = useTrans();
 const props = defineProps<{
     clients: { id: number; first_name: string; last_name: string; company_name: string | null; name: string }[];
     employees: { id: number; first_name: string; last_name: string; name: string }[];
-    tags: Tag[];
+    statuses: Status[];
     appointment?: Appointment;
     defaultDate?: string;
     defaultStartTime?: string;
@@ -54,7 +54,7 @@ const form = useForm({
     start_time: initStart?.time ?? (props.defaultStartTime ?? '09:00'),
     end_date: initEnd?.date ?? (props.defaultDate ?? ''),
     end_time: initEnd?.time ?? (props.defaultEndTime ?? '10:00'),
-    tag_id: props.appointment?.tag?.id?.toString() ?? 'none',
+    status_id: props.appointment?.status?.id?.toString() ?? 'none',
     notes: props.appointment?.notes ?? '',
     checklist: (props.appointment?.checklist ?? []) as ChecklistItem[],
     is_recurring: !!props.appointment?.recurrence_type || !!props.appointment?.parent_id,
@@ -93,7 +93,7 @@ function takeSnapshot(): string {
         start_time: form.start_time,
         end_date: form.end_date,
         end_time: form.end_time,
-        tag_id: form.tag_id,
+        status_id: form.status_id,
         notes: form.notes,
         checklist: form.checklist,
         is_recurring: form.is_recurring,
@@ -151,7 +151,7 @@ function populateFromAppointment() {
     form.start_time = s?.time ?? '09:00';
     form.end_date = e?.date ?? '';
     form.end_time = e?.time ?? '10:00';
-    form.tag_id = props.appointment?.tag?.id?.toString() ?? 'none';
+    form.status_id = props.appointment?.status?.id?.toString() ?? 'none';
     form.notes = props.appointment?.notes ?? '';
     form.checklist = (props.appointment?.checklist ?? []) as ChecklistItem[];
     form.is_recurring = !!props.appointment?.recurrence_type || !!props.appointment?.parent_id;
@@ -196,7 +196,7 @@ function submit() {
         employee_id: form.employee_id && form.employee_id !== 'none' ? parseInt(form.employee_id) : null,
         start_at: localToISO(form.start_date, form.start_time),
         end_at: localToISO(form.end_date, form.end_time),
-        tag_id: form.tag_id && form.tag_id !== 'none' ? parseInt(form.tag_id) : null,
+        status_id: form.status_id && form.status_id !== 'none' ? parseInt(form.status_id) : null,
         notes: form.notes || null,
         checklist: form.checklist.length > 0 ? form.checklist : null,
     };
@@ -261,11 +261,11 @@ function submit() {
                 <AppointmentToolbar
                     :clients="clients"
                     :employees="employees"
-                    :tags="tags"
+                    :statuses="statuses"
                     :is-editing="isEditing"
                     v-model:client-id="form.client_id"
                     v-model:employee-id="form.employee_id"
-                    v-model:tag-id="form.tag_id"
+                    v-model:status-id="form.status_id"
                     v-model:start-date="form.start_date"
                     v-model:start-time="form.start_time"
                     v-model:end-date="form.end_date"

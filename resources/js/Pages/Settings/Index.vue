@@ -3,27 +3,27 @@ import { ref } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
 import { useTrans } from '@/lib/use-trans';
-import type { Company, CalendarSettings, Tag } from '@/types';
+import type { Company, CalendarSettings, Status } from '@/types';
 import CompanyProfileForm from './partials/CompanyProfileForm.vue';
 import CalendarSettingsForm from './partials/CalendarSettingsForm.vue';
-import TagManager from './partials/TagManager.vue';
+import StatusManager from './partials/StatusManager.vue';
 
 const { t } = useTrans();
 
 defineProps<{
     company: Company;
     calendarSettings: CalendarSettings;
-    tags: Tag[];
+    statuses: Status[];
 }>();
 
-type SettingsTab = 'company' | 'calendar' | 'tags';
+type SettingsTab = 'company' | 'calendar' | 'statuses';
 
 const activeTab = ref<SettingsTab>('company');
 
 const tabs: { key: SettingsTab; label: string }[] = [
     { key: 'company', label: t('Company Profile') },
     { key: 'calendar', label: t('Calendar') },
-    { key: 'tags', label: t('Tags') },
+    { key: 'statuses', label: t('Statuses') },
 ];
 </script>
 
@@ -54,7 +54,7 @@ const tabs: { key: SettingsTab; label: string }[] = [
             <!-- Tab content -->
             <CompanyProfileForm v-if="activeTab === 'company'" :company="company" />
             <CalendarSettingsForm v-else-if="activeTab === 'calendar'" :settings="calendarSettings" />
-            <TagManager v-else :tags="tags" />
+            <StatusManager v-else :statuses="statuses" />
         </div>
     </AuthenticatedLayout>
 </template>

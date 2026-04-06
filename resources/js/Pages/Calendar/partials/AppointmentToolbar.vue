@@ -23,9 +23,9 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/Components/ui/select';
-import { getTagDotStyle } from '@/lib/tag-colors';
+import { getStatusDotStyle } from '@/lib/status-colors';
 import { useTrans } from '@/lib/use-trans';
-import type { Tag } from '@/types';
+import type { Status } from '@/types';
 import DateTimePickerPopover from './DateTimePickerPopover.vue';
 
 const { t } = useTrans();
@@ -33,10 +33,10 @@ const { t } = useTrans();
 const props = defineProps<{
     clients: { id: number; first_name: string; last_name: string; company_name: string | null; name: string }[];
     employees: { id: number; first_name: string; last_name: string; name: string }[];
-    tags: Tag[];
+    statuses: Status[];
     clientId: string;
     employeeId: string;
-    tagId: string;
+    statusId: string;
     startDate: string;
     startTime: string;
     endDate: string;
@@ -52,7 +52,7 @@ const props = defineProps<{
 const emit = defineEmits<{
     'update:clientId': [value: string];
     'update:employeeId': [value: string];
-    'update:tagId': [value: string];
+    'update:statusId': [value: string];
     'update:startDate': [value: string];
     'update:startTime': [value: string];
     'update:endDate': [value: string];
@@ -67,8 +67,8 @@ const clientPopoverOpen = ref(false);
 const clientSearch = ref('');
 const employeePopoverOpen = ref(false);
 const employeeSearch = ref('');
-const tagPopoverOpen = ref(false);
-const tagSearch = ref('');
+const statusPopoverOpen = ref(false);
+const statusSearch = ref('');
 const recurrencePopoverOpen = ref(false);
 
 const filteredClients = computed(() => {
@@ -83,10 +83,10 @@ const filteredEmployees = computed(() => {
     return props.employees.filter((e) => e.name.toLowerCase().includes(q));
 });
 
-const filteredTags = computed(() => {
-    if (!tagSearch.value) return props.tags;
-    const q = tagSearch.value.toLowerCase();
-    return props.tags.filter((t) => t.name.toLowerCase().includes(q));
+const filteredStatuses = computed(() => {
+    if (!statusSearch.value) return props.statuses;
+    const q = statusSearch.value.toLowerCase();
+    return props.statuses.filter((t) => t.name.toLowerCase().includes(q));
 });
 
 const selectedClientName = computed(() => {
@@ -99,9 +99,9 @@ const selectedEmployeeName = computed(() => {
     return props.employees.find((e) => e.id.toString() === props.employeeId)?.name ?? '';
 });
 
-const selectedTag = computed(() => {
-    if (!props.tagId || props.tagId === 'none') return null;
-    return props.tags.find((t) => t.id.toString() === props.tagId) ?? null;
+const selectedStatus = computed(() => {
+    if (!props.statusId || props.statusId === 'none') return null;
+    return props.statuses.find((t) => t.id.toString() === props.statusId) ?? null;
 });
 
 function selectClient(id: string) {
@@ -116,10 +116,10 @@ function selectEmployee(id: string) {
     employeeSearch.value = '';
 }
 
-function selectTag(id: string) {
-    emit('update:tagId', id);
-    tagPopoverOpen.value = false;
-    tagSearch.value = '';
+function selectStatus(id: string) {
+    emit('update:statusId', id);
+    statusPopoverOpen.value = false;
+    statusSearch.value = '';
 }
 
 function toggleRecurring() {
@@ -195,38 +195,38 @@ function handlePointerDownOutside(e: Event) {
             </PopoverContent>
         </Popover>
 
-        <!-- Tag -->
-        <Popover v-model:open="tagPopoverOpen">
+        <!-- Status -->
+        <Popover v-model:open="statusPopoverOpen">
             <PopoverTrigger as-child>
                 <Button type="button" variant="outline" class="rounded-full h-7 px-3 gap-1.5 text-xs font-normal">
-                    <template v-if="selectedTag">
-                        <span class="h-2.5 w-2.5 rounded-full shrink-0" :style="getTagDotStyle(selectedTag.color)" />
-                        {{ selectedTag.name }}
+                    <template v-if="selectedStatus">
+                        <span class="h-2.5 w-2.5 rounded-full shrink-0" :style="getStatusDotStyle(selectedStatus.color)" />
+                        {{ selectedStatus.name }}
                     </template>
                     <template v-else>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-                        {{ t('Tag') }}
+                        {{ t('Status') }}
                     </template>
                 </Button>
             </PopoverTrigger>
             <PopoverContent class="w-52 p-0" @pointer-down-outside="handlePointerDownOutside">
                 <Command>
-                    <CommandInput v-model="tagSearch" :placeholder="t('Select tag...')" class="ring-0 focus:ring-0 focus:outline-none border-0 shadow-none" />
+                    <CommandInput v-model="statusSearch" :placeholder="t('Select status...')" class="ring-0 focus:ring-0 focus:outline-none border-0 shadow-none" />
                     <CommandList>
                         <CommandEmpty>{{ t('No client found.') }}</CommandEmpty>
                         <CommandGroup class="[&>*]:cursor-pointer [&>*:hover]:bg-accent">
-                            <CommandItem value="none" @select="selectTag('none')">
+                            <CommandItem value="none" @select="selectStatus('none')">
                                 <span class="text-muted-foreground">{{ t('None') }}</span>
                             </CommandItem>
                             <CommandItem
-                                v-for="tag in filteredTags"
-                                :key="tag.id"
-                                :value="tag.name"
-                                @select="selectTag(tag.id.toString())"
+                                v-for="status in filteredStatuses"
+                                :key="status.id"
+                                :value="status.name"
+                                @select="selectStatus(status.id.toString())"
                             >
                                 <div class="flex items-center gap-2">
-                                    <span class="h-2.5 w-2.5 rounded-full shrink-0" :style="getTagDotStyle(tag.color)" />
-                                    {{ tag.name }}
+                                    <span class="h-2.5 w-2.5 rounded-full shrink-0" :style="getStatusDotStyle(status.color)" />
+                                    {{ status.name }}
                                 </div>
                             </CommandItem>
                         </CommandGroup>
