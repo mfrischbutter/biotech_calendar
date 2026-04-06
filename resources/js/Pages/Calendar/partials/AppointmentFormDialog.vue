@@ -55,6 +55,7 @@ const form = useForm({
     end_date: initEnd?.date ?? (props.defaultDate ?? ''),
     end_time: initEnd?.time ?? (props.defaultEndTime ?? '10:00'),
     status_id: props.appointment?.status?.id?.toString() ?? 'none',
+    kind: props.appointment?.kind ?? 'none',
     notes: props.appointment?.notes ?? '',
     checklist: (props.appointment?.checklist ?? []) as ChecklistItem[],
     is_recurring: !!props.appointment?.recurrence_type || !!props.appointment?.parent_id,
@@ -94,6 +95,7 @@ function takeSnapshot(): string {
         end_date: form.end_date,
         end_time: form.end_time,
         status_id: form.status_id,
+        kind: form.kind,
         notes: form.notes,
         checklist: form.checklist,
         is_recurring: form.is_recurring,
@@ -152,6 +154,7 @@ function populateFromAppointment() {
     form.end_date = e?.date ?? '';
     form.end_time = e?.time ?? '10:00';
     form.status_id = props.appointment?.status?.id?.toString() ?? 'none';
+    form.kind = props.appointment?.kind ?? 'none';
     form.notes = props.appointment?.notes ?? '';
     form.checklist = (props.appointment?.checklist ?? []) as ChecklistItem[];
     form.is_recurring = !!props.appointment?.recurrence_type || !!props.appointment?.parent_id;
@@ -197,6 +200,7 @@ function submit() {
         start_at: localToISO(form.start_date, form.start_time),
         end_at: localToISO(form.end_date, form.end_time),
         status_id: form.status_id && form.status_id !== 'none' ? parseInt(form.status_id) : null,
+        kind: form.kind && form.kind !== 'none' ? form.kind : null,
         notes: form.notes || null,
         checklist: form.checklist.length > 0 ? form.checklist : null,
     };
@@ -266,6 +270,7 @@ function submit() {
                     v-model:client-id="form.client_id"
                     v-model:employee-id="form.employee_id"
                     v-model:status-id="form.status_id"
+                    v-model:kind="form.kind"
                     v-model:start-date="form.start_date"
                     v-model:start-time="form.start_time"
                     v-model:end-date="form.end_date"

@@ -19,6 +19,7 @@ class Appointment extends Model
         'start_at',
         'end_at',
         'status_id',
+        'kind',
         'notes',
         'checklist',
         'created_by',
@@ -37,6 +38,8 @@ class Appointment extends Model
             'recurrence_end' => 'date',
         ];
     }
+
+    public const KINDS = ['ohne_termin', 'kundentermin'];
 
     public const RECURRENCE_TYPES = ['weekly', 'biweekly', 'monthly', 'custom'];
 

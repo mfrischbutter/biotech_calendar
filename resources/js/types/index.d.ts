@@ -44,6 +44,8 @@ export interface CalendarSettings {
     end_hour: number;
 }
 
+export type AppointmentKind = 'ohne_termin' | 'kundentermin';
+
 export type RecurrenceType = 'weekly' | 'biweekly' | 'monthly' | 'custom';
 
 export interface Client {
@@ -75,6 +77,7 @@ export interface Appointment {
     start_at: string;
     end_at: string;
     status: { id: number; name: string; color: string } | null;
+    kind: AppointmentKind | null;
     notes: string | null;
     checklist: ChecklistItem[] | null;
     recurrence_type: RecurrenceType | null;

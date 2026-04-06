@@ -152,6 +152,7 @@ function buildAppointmentPayload(appointment: Appointment, overrides: Record<str
         client_id: appointment.client?.id ?? null,
         employee_id: appointment.employee?.id ?? null,
         status_id: appointment.status?.id ?? null,
+        kind: appointment.kind,
         notes: appointment.notes,
         checklist: appointment.checklist,
         ...overrides,

@@ -25,7 +25,7 @@ import {
 } from '@/Components/ui/select';
 import { getStatusDotStyle } from '@/lib/status-colors';
 import { useTrans } from '@/lib/use-trans';
-import type { Status } from '@/types';
+import type { AppointmentKind, Status } from '@/types';
 import DateTimePickerPopover from './DateTimePickerPopover.vue';
 
 const { t } = useTrans();
@@ -37,6 +37,7 @@ const props = defineProps<{
     clientId: string;
     employeeId: string;
     statusId: string;
+    kind: string;
     startDate: string;
     startTime: string;
     endDate: string;
@@ -53,6 +54,7 @@ const emit = defineEmits<{
     'update:clientId': [value: string];
     'update:employeeId': [value: string];
     'update:statusId': [value: string];
+    'update:kind': [value: string];
     'update:startDate': [value: string];
     'update:startTime': [value: string];
     'update:endDate': [value: string];
@@ -69,7 +71,23 @@ const employeePopoverOpen = ref(false);
 const employeeSearch = ref('');
 const statusPopoverOpen = ref(false);
 const statusSearch = ref('');
+const kindPopoverOpen = ref(false);
 const recurrencePopoverOpen = ref(false);
+
+const KINDS: { value: AppointmentKind; label: string }[] = [
+    { value: 'ohne_termin', label: t('Without appointment') },
+    { value: 'kundentermin', label: t('Client appointment') },
+];
+
+const selectedKindLabel = computed(() => {
+    if (!props.kind || props.kind === 'none') return '';
+    return KINDS.find((k) => k.value === props.kind)?.label ?? '';
+});
+
+function selectKind(value: string) {
+    emit('update:kind', value);
+    kindPopoverOpen.value = false;
+}
 
 const filteredClients = computed(() => {
     if (!clientSearch.value) return props.clients;
@@ -228,6 +246,35 @@ function handlePointerDownOutside(e: Event) {
                                     <span class="h-2.5 w-2.5 rounded-full shrink-0" :style="getStatusDotStyle(status.color)" />
                                     {{ status.name }}
                                 </div>
+                            </CommandItem>
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+
+        <!-- Kind -->
+        <Popover v-model:open="kindPopoverOpen">
+            <PopoverTrigger as-child>
+                <Button type="button" variant="outline" class="rounded-full h-7 px-3 gap-1.5 text-xs font-normal">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    {{ selectedKindLabel || t('Kind') }}
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent class="w-52 p-0" @pointer-down-outside="handlePointerDownOutside">
+                <Command>
+                    <CommandList>
+                        <CommandGroup class="[&>*]:cursor-pointer [&>*:hover]:bg-accent">
+                            <CommandItem value="none" @select="selectKind('none')">
+                                <span class="text-muted-foreground">{{ t('None') }}</span>
+                            </CommandItem>
+                            <CommandItem
+                                v-for="k in KINDS"
+                                :key="k.value"
+                                :value="k.label"
+                                @select="selectKind(k.value)"
+                            >
+                                {{ k.label }}
                             </CommandItem>
                         </CommandGroup>
                     </CommandList>

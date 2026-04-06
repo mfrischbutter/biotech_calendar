@@ -156,6 +156,9 @@
     "No client found.": "Kein Kunde gefunden.",
     "Select employee...": "Mitarbeiter auswählen...",
     "Select status...": "Status auswählen...",
+    "Kind": "Art",
+    "Without appointment": "Ohne Termin",
+    "Client appointment": "Kundentermin",
     "Additional information...": "Zusätzliche Informationen...",
 
     "First name": "Vorname",
