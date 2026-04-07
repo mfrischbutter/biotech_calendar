@@ -62,7 +62,7 @@ class AppointmentController extends Controller
             ->orderBy('start_at')
             ->get();
 
-        $clients = Client::orderBy('last_name')->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'company_name']);
+        $clients = Client::orderBy('last_name')->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'company_name', 'street', 'zip', 'city']);
         $employees = User::where('company_id', $user->company_id)
             ->orderBy('last_name')->orderBy('first_name')
             ->get(['id', 'first_name', 'last_name', 'role']);
@@ -95,6 +95,9 @@ class AppointmentController extends Controller
             'status_id' => ['nullable', 'exists:statuses,id'],
             'kind' => ['nullable', 'string', 'in:'.implode(',', Appointment::KINDS)],
             'notes' => ['nullable', 'string'],
+            'street' => ['nullable', 'string', 'max:255'],
+            'zip' => ['nullable', 'string', 'max:20'],
+            'city' => ['nullable', 'string', 'max:255'],
             'checklist' => ['nullable', 'array', 'max:50'],
             'checklist.*.text' => ['required', 'string', 'max:500'],
             'checklist.*.checked' => ['required', 'boolean'],
@@ -114,6 +117,9 @@ class AppointmentController extends Controller
             'status_id' => $validated['status_id'] ?? null,
             'kind' => $validated['kind'] ?? null,
             'notes' => $validated['notes'] ?? null,
+            'street' => $validated['street'] ?? null,
+            'zip' => $validated['zip'] ?? null,
+            'city' => $validated['city'] ?? null,
             'checklist' => $validated['checklist'] ?? null,
             'created_by' => $request->user()->id,
         ];
@@ -147,6 +153,9 @@ class AppointmentController extends Controller
             'status_id' => ['nullable', 'exists:statuses,id'],
             'kind' => ['nullable', 'string', 'in:'.implode(',', Appointment::KINDS)],
             'notes' => ['nullable', 'string'],
+            'street' => ['nullable', 'string', 'max:255'],
+            'zip' => ['nullable', 'string', 'max:20'],
+            'city' => ['nullable', 'string', 'max:255'],
             'checklist' => ['nullable', 'array', 'max:50'],
             'checklist.*.text' => ['required', 'string', 'max:500'],
             'checklist.*.checked' => ['required', 'boolean'],

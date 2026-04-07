@@ -2,15 +2,14 @@
 import { ref, watch, computed, nextTick } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
 import { Button } from '@/Components/ui/button';
-import { Separator } from '@/Components/ui/separator';
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/Components/ui/dialog';
+    Drawer,
+    DrawerContent,
+    DrawerDescription,
+    DrawerFooter,
+    DrawerHeader,
+    DrawerTitle,
+} from '@/Components/ui/drawer';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -21,16 +20,21 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/Components/ui/alert-dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/Components/ui/dropdown-menu';
 import { localToISO, isoToLocalParts } from '@/lib/date-utils';
 import { useTrans } from '@/lib/use-trans';
-import type { Appointment, ChecklistItem, Status } from '@/types';
-import AppointmentToolbar from './AppointmentToolbar.vue';
-import ChecklistEditor from './ChecklistEditor.vue';
+import type { Appointment, AppointmentKind, ChecklistItem, Status } from '@/types';
+import AppointmentFormSections from './AppointmentFormSections.vue';
 
 const { t } = useTrans();
 
 const props = defineProps<{
-    clients: { id: number; first_name: string; last_name: string; company_name: string | null; name: string }[];
+    clients: { id: number; first_name: string; last_name: string; company_name: string | null; name: string; street: string | null; zip: string | null; city: string | null }[];
     employees: { id: number; first_name: string; last_name: string; name: string }[];
     statuses: Status[];
     appointment?: Appointment;
@@ -52,11 +56,14 @@ const form = useForm({
     employee_id: props.appointment?.employee?.id?.toString() ?? (props.defaultEmployeeId ? props.defaultEmployeeId.toString() : 'none'),
     start_date: initStart?.date ?? (props.defaultDate ?? ''),
     start_time: initStart?.time ?? (props.defaultStartTime ?? '09:00'),
-    end_date: initEnd?.date ?? (props.defaultDate ?? ''),
+    end_date: initStart?.date ?? (props.defaultDate ?? ''),
     end_time: initEnd?.time ?? (props.defaultEndTime ?? '10:00'),
     status_id: props.appointment?.status?.id?.toString() ?? 'none',
     kind: props.appointment?.kind ?? 'none',
     notes: props.appointment?.notes ?? '',
+    street: props.appointment?.street ?? '',
+    zip: props.appointment?.zip ?? '',
+    city: props.appointment?.city ?? '',
     checklist: (props.appointment?.checklist ?? []) as ChecklistItem[],
     is_recurring: !!props.appointment?.recurrence_type || !!props.appointment?.parent_id,
     recurrence_type: props.appointment?.recurrence_type ?? 'weekly',
@@ -64,7 +71,16 @@ const form = useForm({
     recurrence_end: props.appointment?.recurrence_end ?? '',
 });
 
-const notesRef = ref<HTMLTextAreaElement>();
+const KINDS: { value: AppointmentKind; label: string; prefix: string }[] = [
+    { value: 'kundentermin', label: t('Client appointment'), prefix: 'T' },
+    { value: 'ohne_termin', label: t('Without appointment'), prefix: 'OT' },
+];
+
+const kindPrefix = computed(() => {
+    return KINDS.find((k) => k.value === form.kind)?.prefix ?? '';
+});
+
+const sectionsRef = ref<InstanceType<typeof AppointmentFormSections>>();
 const confirmDiscardOpen = ref(false);
 const confirmDeleteOpen = ref(false);
 const initialSnapshot = ref('');
@@ -87,20 +103,12 @@ function deleteAppointment(mode: 'single' | 'future' | 'series') {
 
 function takeSnapshot(): string {
     return JSON.stringify({
-        title: form.title,
-        client_id: form.client_id,
-        employee_id: form.employee_id,
-        start_date: form.start_date,
-        start_time: form.start_time,
-        end_date: form.end_date,
-        end_time: form.end_time,
-        status_id: form.status_id,
-        kind: form.kind,
-        notes: form.notes,
-        checklist: form.checklist,
-        is_recurring: form.is_recurring,
-        recurrence_type: form.recurrence_type,
-        recurrence_interval: form.recurrence_interval,
+        title: form.title, client_id: form.client_id, employee_id: form.employee_id,
+        start_date: form.start_date, start_time: form.start_time, end_date: form.end_date,
+        end_time: form.end_time, status_id: form.status_id, kind: form.kind,
+        notes: form.notes, street: form.street, zip: form.zip, city: form.city,
+        checklist: form.checklist, is_recurring: form.is_recurring,
+        recurrence_type: form.recurrence_type, recurrence_interval: form.recurrence_interval,
         recurrence_end: form.recurrence_end,
     });
 }
@@ -109,22 +117,8 @@ function isDirty(): boolean {
     return takeSnapshot() !== initialSnapshot.value;
 }
 
-function autoResize() {
-    const el = notesRef.value;
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = `${el.scrollHeight}px`;
-}
-
-function handlePointerDownOutside(e: Event) {
-    if (isDirty()) {
-        e.preventDefault();
-        confirmDiscardOpen.value = true;
-    }
-}
-
 function requestClose() {
-    if (isDirty()) {
+    if (initialSnapshot.value && isDirty()) {
         confirmDiscardOpen.value = true;
     } else {
         forceClose();
@@ -151,11 +145,14 @@ function populateFromAppointment() {
     form.employee_id = props.appointment?.employee?.id?.toString() ?? 'none';
     form.start_date = s?.date ?? '';
     form.start_time = s?.time ?? '09:00';
-    form.end_date = e?.date ?? '';
+    form.end_date = s?.date ?? '';
     form.end_time = e?.time ?? '10:00';
     form.status_id = props.appointment?.status?.id?.toString() ?? 'none';
     form.kind = props.appointment?.kind ?? 'none';
     form.notes = props.appointment?.notes ?? '';
+    form.street = props.appointment?.street ?? '';
+    form.zip = props.appointment?.zip ?? '';
+    form.city = props.appointment?.city ?? '';
     form.checklist = (props.appointment?.checklist ?? []) as ChecklistItem[];
     form.is_recurring = !!props.appointment?.recurrence_type || !!props.appointment?.parent_id;
     form.recurrence_type = props.appointment?.recurrence_type ?? 'weekly';
@@ -166,10 +163,9 @@ function populateFromAppointment() {
 watch(open, (value) => {
     if (value) {
         if (isEditing.value) {
-            // Re-populate from current appointment (may have changed via v-if remount or prop change)
             populateFromAppointment();
             initialSnapshot.value = takeSnapshot();
-            nextTick(() => autoResize());
+            nextTick(() => sectionsRef.value?.autoResize());
         } else {
             form.start_date = props.defaultDate ?? '';
             form.start_time = props.defaultStartTime ?? '09:00';
@@ -178,7 +174,7 @@ watch(open, (value) => {
             form.employee_id = props.defaultEmployeeId ? props.defaultEmployeeId.toString() : 'none';
             nextTick(() => {
                 initialSnapshot.value = takeSnapshot();
-                autoResize();
+                sectionsRef.value?.autoResize();
             });
         }
     }
@@ -202,6 +198,9 @@ function submit() {
         status_id: form.status_id && form.status_id !== 'none' ? parseInt(form.status_id) : null,
         kind: form.kind && form.kind !== 'none' ? form.kind : null,
         notes: form.notes || null,
+        street: form.street || null,
+        zip: form.zip || null,
+        city: form.city || null,
         checklist: form.checklist.length > 0 ? form.checklist : null,
     };
 
@@ -226,63 +225,86 @@ function submit() {
 </script>
 
 <template>
-    <Dialog :open="open" @update:open="handleOpenChange">
-        <DialogContent
-            class="sm:max-w-[624px] pt-4"
-            @pointer-down-outside="handlePointerDownOutside"
-            @escape-key-down.prevent="requestClose"
+    <Drawer :open="open" direction="right" @update:open="handleOpenChange">
+        <DrawerContent
+            class="fixed inset-y-0 right-0 left-auto mt-0 flex h-full w-full flex-col rounded-l-[10px] rounded-t-none sm:max-w-[520px]"
         >
-            <DialogHeader>
-                <DialogTitle>{{ isEditing ? t('Edit Appointment') : t('New Appointment') }}</DialogTitle>
-                <DialogDescription class="sr-only">
+            <DrawerHeader class="relative">
+                <DrawerTitle>{{ isEditing ? t('Edit Appointment') : t('New Appointment') }}</DrawerTitle>
+                <DrawerDescription class="sr-only">
                     {{ isEditing ? t('Update appointment details.') : t('Create a new appointment.') }}
-                </DialogDescription>
-            </DialogHeader>
+                </DrawerDescription>
+                <button
+                    type="button"
+                    class="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    @click="requestClose"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    <span class="sr-only">Close</span>
+                </button>
+            </DrawerHeader>
 
-            <form @submit.prevent="submit" class="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
-                <input
-                    v-model="form.title"
-                    type="text"
-                    :placeholder="t('Appointment title')"
-                    required
-                    class="w-full bg-transparent text-lg font-medium border-0 outline-none ring-0 focus:outline-none focus:ring-0 p-0 text-foreground placeholder:text-muted-foreground"
-                />
-                <p v-if="form.errors.title" class="text-xs text-destructive">{{ form.errors.title }}</p>
+            <form @submit.prevent="submit" class="flex flex-1 flex-col overflow-hidden">
+                <div class="no-scrollbar flex-1 overflow-y-auto px-4 pb-4">
+                    <!-- Title with Kind prefix -->
+                    <div class="mb-4 flex items-center gap-2">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger as-child>
+                                <button
+                                    type="button"
+                                    class="shrink-0 rounded border px-1.5 py-0.5 text-xs font-semibold text-muted-foreground hover:bg-muted transition-colors"
+                                    :class="kindPrefix ? 'border-border' : 'border-dashed border-muted-foreground/40'"
+                                >
+                                    {{ kindPrefix || '...' }}
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" class="w-48">
+                                <DropdownMenuItem @click="form.kind = 'none'">
+                                    <span class="text-muted-foreground">{{ t('No selection') }}</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem v-for="k in KINDS" :key="k.value" @click="form.kind = k.value">
+                                    <span class="mr-2 inline-block w-6 text-center text-xs font-semibold text-muted-foreground">[{{ k.prefix }}]</span>
+                                    {{ k.label }}
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        <input
+                            v-model="form.title"
+                            type="text"
+                            :placeholder="t('Appointment title')"
+                            required
+                            class="min-w-0 flex-1 bg-transparent text-lg font-medium border-0 outline-none ring-0 focus:outline-none focus:ring-0 p-0 text-foreground placeholder:text-muted-foreground"
+                        />
+                    </div>
+                    <p v-if="form.errors.title" class="mb-2 text-xs text-destructive">{{ form.errors.title }}</p>
 
-                <textarea
-                    ref="notesRef"
-                    v-model="form.notes"
-                    @input="autoResize"
-                    :placeholder="t('Add a description...')"
-                    rows="3"
-                    class="w-full bg-transparent text-sm border-0 outline-none ring-0 focus:outline-none focus:ring-0 p-0 text-foreground placeholder:text-muted-foreground resize-none overflow-hidden"
-                />
+                    <AppointmentFormSections
+                        ref="sectionsRef"
+                        :clients="clients"
+                        :employees="employees"
+                        :statuses="statuses"
+                        :is-editing="isEditing"
+                        v-model:client-id="form.client_id"
+                        v-model:employee-id="form.employee_id"
+                        v-model:status-id="form.status_id"
+                        v-model:start-date="form.start_date"
+                        v-model:start-time="form.start_time"
+                        v-model:end-date="form.end_date"
+                        v-model:end-time="form.end_time"
+                        v-model:notes="form.notes"
+                        v-model:street="form.street"
+                        v-model:zip="form.zip"
+                        v-model:city="form.city"
+                        v-model:checklist="form.checklist"
+                        v-model:is-recurring="form.is_recurring"
+                        v-model:recurrence-type="form.recurrence_type"
+                        v-model:recurrence-interval="form.recurrence_interval"
+                        v-model:recurrence-end="form.recurrence_end"
+                        :errors="(form.errors as Record<string, string>)"
+                    />
+                </div>
 
-                <ChecklistEditor v-model="form.checklist" />
-
-                <Separator />
-
-                <AppointmentToolbar
-                    :clients="clients"
-                    :employees="employees"
-                    :statuses="statuses"
-                    :is-editing="isEditing"
-                    v-model:client-id="form.client_id"
-                    v-model:employee-id="form.employee_id"
-                    v-model:status-id="form.status_id"
-                    v-model:kind="form.kind"
-                    v-model:start-date="form.start_date"
-                    v-model:start-time="form.start_time"
-                    v-model:end-date="form.end_date"
-                    v-model:end-time="form.end_time"
-                    v-model:is-recurring="form.is_recurring"
-                    v-model:recurrence-type="form.recurrence_type"
-                    v-model:recurrence-interval="form.recurrence_interval"
-                    v-model:recurrence-end="form.recurrence_end"
-                    :errors="(form.errors as Record<string, string>)"
-                />
-
-                <DialogFooter class="flex !justify-between">
+                <DrawerFooter class="flex !flex-row !justify-between border-t">
                     <Button
                         v-if="isEditing"
                         type="button"
@@ -298,10 +320,10 @@ function submit() {
                     <Button type="submit" :disabled="form.processing">
                         {{ form.processing ? t('Saving...') : (isEditing ? t('Update') : t('Create appointment')) }}
                     </Button>
-                </DialogFooter>
+                </DrawerFooter>
             </form>
-        </DialogContent>
-    </Dialog>
+        </DrawerContent>
+    </Drawer>
 
     <AlertDialog v-model:open="confirmDiscardOpen">
         <AlertDialogContent>

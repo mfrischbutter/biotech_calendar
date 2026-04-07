@@ -79,6 +79,9 @@ export interface Appointment {
     status: { id: number; name: string; color: string } | null;
     kind: AppointmentKind | null;
     notes: string | null;
+    street: string | null;
+    zip: string | null;
+    city: string | null;
     checklist: ChecklistItem[] | null;
     recurrence_type: RecurrenceType | null;
     recurrence_interval: number | null;

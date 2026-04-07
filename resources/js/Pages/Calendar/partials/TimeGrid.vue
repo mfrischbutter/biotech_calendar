@@ -7,6 +7,7 @@ import { localMinutes } from '@/lib/date-utils';
 import { getStatusStyle } from '@/lib/status-colors';
 import { computeOverlapLayout } from '@/lib/overlap-layout';
 import { useTrans } from '@/lib/use-trans';
+import { appointmentLabel } from '@/lib/appointment-label';
 import type { Appointment } from '@/types';
 import type { DayLayout } from '@/lib/overlap-layout';
 
@@ -393,7 +394,7 @@ function dragPreviewStyle() {
                                 class="font-medium text-xs truncate"
                                 :style="{ color: apptTitleColor(appt) }"
                             >
-                                {{ appt.client?.company_name || appt.client?.name || appt.title }}
+                                {{ appointmentLabel(appt) }}
                             </div>
                             <div v-if="!isShort(appt)" class="text-[11px] text-muted-foreground truncate">
                                 {{ getTimeLabel(appt) }}
@@ -422,7 +423,7 @@ function dragPreviewStyle() {
                     >
                         <div class="px-2 py-1 text-xs">
                             <div v-if="drag.appointment" class="font-medium truncate" :style="{ color: apptTitleColor(drag.appointment) }">
-                                {{ drag.appointment.client?.company_name || drag.appointment.client?.name || drag.appointment.title }}
+                                {{ appointmentLabel(drag.appointment) }}
                             </div>
                             <div class="font-medium" :class="drag.mode === 'create' ? 'text-primary' : 'text-muted-foreground'">
                                 {{ getDragTimeLabel()?.start }} – {{ getDragTimeLabel()?.end }}

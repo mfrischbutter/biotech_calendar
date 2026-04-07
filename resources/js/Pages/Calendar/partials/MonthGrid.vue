@@ -5,6 +5,7 @@ import { de } from 'date-fns/locale';
 import { getStatusStyle, getStatusDotStyle } from '@/lib/status-colors';
 import { localDateString } from '@/lib/date-utils';
 import { useTrans } from '@/lib/use-trans';
+import { appointmentLabel } from '@/lib/appointment-label';
 import type { Appointment } from '@/types';
 
 const { t } = useTrans();
@@ -117,7 +118,7 @@ function getTimeLabel(appt: Appointment): string {
                             <span class="w-1.5 h-1.5 rounded-full shrink-0" :style="getStatusDotStyle(appt.status?.color ?? null)" />
                             <span class="text-muted-foreground shrink-0">{{ getTimeLabel(appt) }}</span>
                             <span class="truncate" :style="{ color: appt.status?.color ?? 'hsl(var(--muted-foreground))' }">
-                                {{ appt.client?.company_name || appt.client?.name || appt.title }}
+                                {{ appointmentLabel(appt) }}
                             </span>
                         </div>
                         <div

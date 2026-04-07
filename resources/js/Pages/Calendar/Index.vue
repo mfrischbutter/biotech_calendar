@@ -21,7 +21,7 @@ type CalendarView = 'day' | 'week' | 'month' | 'team-day' | 'team-week';
 
 const props = defineProps<{
     appointments: Appointment[];
-    clients: { id: number; first_name: string; last_name: string; company_name: string | null; name: string }[];
+    clients: { id: number; first_name: string; last_name: string; company_name: string | null; name: string; street: string | null; zip: string | null; city: string | null }[];
     employees: { id: number; first_name: string; last_name: string; name: string }[];
     statuses: Status[];
     currentDate: string;
@@ -38,11 +38,11 @@ const defaultDate = ref('');
 const defaultStartTime = ref('');
 const defaultEndTime = ref('');
 
-let dialogCloseGuard = false;
+let drawerCloseGuard = false;
 watch(editDialogOpen, (val) => {
     if (!val) {
-        dialogCloseGuard = true;
-        setTimeout(() => { dialogCloseGuard = false; }, 300);
+        drawerCloseGuard = true;
+        setTimeout(() => { drawerCloseGuard = false; }, 300);
     }
 }, { flush: 'sync' });
 
@@ -134,7 +134,7 @@ function openCreateDialog(date?: string, startTime?: string, endTime?: string) {
 }
 
 function openEditDialog(appointment: Appointment) {
-    if (dialogCloseGuard) return;
+    if (drawerCloseGuard) return;
     selectedAppointment.value = appointment;
     editDialogOpen.value = true;
 }
@@ -154,6 +154,9 @@ function buildAppointmentPayload(appointment: Appointment, overrides: Record<str
         status_id: appointment.status?.id ?? null,
         kind: appointment.kind,
         notes: appointment.notes,
+        street: appointment.street,
+        zip: appointment.zip,
+        city: appointment.city,
         checklist: appointment.checklist,
         ...overrides,
     } as Record<string, FormDataConvertible>;

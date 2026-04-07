@@ -166,7 +166,7 @@
     "Salutation": "Anrede",
     "Mr": "Herr",
     "Mrs": "Frau",
-    "No selection": "Keine Option",
+    "No selection": "Keine Auswahl",
     "Select...": "Auswählen...",
     "Company name": "Firmenname",
     "Client name": "Kundenname",
@@ -197,5 +197,15 @@
     "Delete All Future Appointments": "Diesen und alle zukünftigen löschen",
     "Delete Entire Series": "Gesamte Serie löschen",
 
-    "Language": "Sprache"
+    "Language": "Sprache",
+
+    "Address": "Adresse",
+    "Custom address": "Abweichende Adresse",
+    "Use client address": "Kundenadresse verwenden",
+    "No address": "Keine Adresse",
+    "Client address": "Kundenadresse",
+    "Allocation": "Zuordnung",
+    "Description": "Beschreibung",
+    "Checklist": "Checkliste",
+    "End time must be after start time": "Endzeit muss nach der Startzeit liegen"
 }
