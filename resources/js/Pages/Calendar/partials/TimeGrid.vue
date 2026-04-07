@@ -312,9 +312,9 @@ function dragPreviewStyle() {
                     {{ day.dayLabel }}
                 </div>
                 <div
-                    class="mt-0.5 inline-flex items-center justify-center text-[26px] leading-none font-normal"
+                    class="mt-0.5 inline-flex items-center justify-center text-base leading-none font-normal md:text-[26px]"
                     :class="day.isToday
-                        ? 'bg-primary text-primary-foreground rounded-full w-[46px] h-[46px]'
+                        ? 'bg-primary text-primary-foreground rounded-full w-[30px] h-[30px] md:w-[46px] md:h-[46px]'
                         : 'text-foreground'"
                 >
                     {{ day.dayNum }}

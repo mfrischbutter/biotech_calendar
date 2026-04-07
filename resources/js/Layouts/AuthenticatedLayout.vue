@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, computed, onUnmounted } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 import { useTrans } from '@/lib/use-trans';
 import { initials } from '@/lib/utils';
@@ -15,10 +15,23 @@ import {
 
 const page = usePage();
 const expanded = ref(localStorage.getItem('sidebar-expanded') !== 'false');
+const mobileOpen = ref(false);
 
-watch(expanded, (val) => {
-    localStorage.setItem('sidebar-expanded', String(val));
+const showSidebarLabels = computed(() => expanded.value || mobileOpen.value);
+
+function toggleSidebar() {
+    if (window.innerWidth < 768) {
+        mobileOpen.value = !mobileOpen.value;
+    } else {
+        expanded.value = !expanded.value;
+        localStorage.setItem('sidebar-expanded', String(expanded.value));
+    }
+}
+
+const removeNavigateListener = router.on('navigate', () => {
+    mobileOpen.value = false;
 });
+onUnmounted(() => removeNavigateListener());
 
 const { t } = useTrans();
 const user = page.props.auth.user;
@@ -44,23 +57,79 @@ function isActive(href: string | null): boolean {
 </script>
 
 <template>
-    <div class="flex h-screen overflow-hidden bg-muted/40">
+    <div class="flex flex-col md:flex-row h-screen overflow-hidden bg-muted/40">
+        <!-- Mobile top bar -->
+        <div class="flex h-14 items-center border-b bg-background px-4 md:hidden">
+            <button
+                @click="toggleSidebar"
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-foreground hover:bg-muted"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 12h18M3 6h18M3 18h18" />
+                </svg>
+            </button>
+            <span class="flex-1 text-center text-sm font-semibold">Biotech</span>
+            <DropdownMenu>
+                <DropdownMenuTrigger as-child>
+                    <Button variant="ghost" size="icon" class="h-10 w-10">
+                        <Avatar class="h-7 w-7">
+                            <AvatarFallback class="text-xs">
+                                {{ initials(page.props.auth.user.name) }}
+                            </AvatarFallback>
+                        </Avatar>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" class="w-48">
+                    <DropdownMenuItem as-child>
+                        <Link :href="route('profile.edit')" class="w-full cursor-pointer">
+                            {{ t('Profile') }}
+                        </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                        class="cursor-pointer"
+                        @click="router.post(route('logout'))"
+                    >
+                        {{ t('Log Out') }}
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </div>
+
+        <!-- Mobile backdrop -->
+        <Transition
+            enter-active-class="transition-opacity duration-200"
+            leave-active-class="transition-opacity duration-200"
+            enter-from-class="opacity-0"
+            leave-to-class="opacity-0"
+        >
+            <div
+                v-if="mobileOpen"
+                class="fixed inset-0 z-30 bg-black/50 md:hidden"
+                @click="mobileOpen = false"
+            />
+        </Transition>
+
         <!-- Sidebar -->
         <aside
-            class="flex flex-col border-r bg-background overflow-hidden transition-[width] duration-200"
-            :class="expanded ? 'w-[250px]' : 'w-14'"
+            class="flex flex-col border-r bg-background overflow-hidden transition-all duration-200
+                fixed inset-y-0 left-0 z-40 w-[250px] -translate-x-full
+                md:relative md:translate-x-0 md:z-auto"
+            :class="[
+                mobileOpen ? 'translate-x-0' : '',
+                expanded ? 'md:w-[250px]' : 'md:w-14',
+            ]"
         >
             <!-- Logo / toggle -->
             <div class="flex h-14 items-center px-2">
                 <button
-                    @click="expanded = !expanded"
+                    @click="toggleSidebar"
                     class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-foreground hover:bg-muted"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M3 12h18M3 6h18M3 18h18" />
                     </svg>
                 </button>
-                <span v-if="expanded" class="ml-2 text-sm font-semibold whitespace-nowrap">
+                <span v-if="showSidebarLabels" class="ml-2 text-sm font-semibold whitespace-nowrap">
                     Biotech
                 </span>
             </div>
@@ -78,7 +147,7 @@ function isActive(href: string | null): boolean {
                             isActive(item.href)
                                 ? 'bg-primary text-primary-foreground'
                                 : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                            expanded ? 'px-3 gap-3' : 'w-10 justify-center',
+                            showSidebarLabels ? 'px-3 gap-3' : 'w-10 justify-center',
                         ]"
                     >
                         <!-- Dashboard icon -->
@@ -101,7 +170,7 @@ function isActive(href: string | null): boolean {
                         <svg v-if="item.icon === 'settings'" xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
                         </svg>
-                        <span v-if="expanded" class="whitespace-nowrap">{{ item.name }}</span>
+                        <span v-if="showSidebarLabels" class="whitespace-nowrap">{{ item.name }}</span>
                     </Link>
                 </template>
             </nav>
@@ -115,14 +184,14 @@ function isActive(href: string | null): boolean {
                         <Button
                             variant="ghost"
                             class="w-full h-10"
-                            :class="expanded ? 'justify-start gap-3 px-3' : 'justify-center px-0'"
+                            :class="showSidebarLabels ? 'justify-start gap-3 px-3' : 'justify-center px-0'"
                         >
                             <Avatar class="h-7 w-7 shrink-0">
                                 <AvatarFallback class="text-xs">
                                     {{ initials(page.props.auth.user.name) }}
                                 </AvatarFallback>
                             </Avatar>
-                            <span v-if="expanded" class="truncate text-sm">
+                            <span v-if="showSidebarLabels" class="truncate text-sm">
                                 {{ page.props.auth.user.name }}
                             </span>
                         </Button>
@@ -147,7 +216,7 @@ function isActive(href: string | null): boolean {
         <!-- Main content -->
         <div class="flex flex-1 flex-col overflow-hidden">
             <!-- Page header -->
-            <header v-if="$slots.header" class="border-b bg-background px-6 py-4">
+            <header v-if="$slots.header" class="border-b bg-background px-4 py-3 md:px-6 md:py-4">
                 <slot name="header" />
             </header>
 
@@ -156,7 +225,7 @@ function isActive(href: string | null): boolean {
                 v-motion
                 :initial="{ opacity: 0, y: 8 }"
                 :enter="{ opacity: 1, y: 0, transition: { duration: 250 } }"
-                class="flex-1 overflow-y-auto p-6"
+                class="flex-1 overflow-y-auto p-4 md:p-6"
             >
                 <slot />
             </main>

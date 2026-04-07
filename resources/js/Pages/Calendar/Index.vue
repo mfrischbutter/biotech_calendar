@@ -209,9 +209,9 @@ function switchTeamSub(sub: 'day' | 'week') {
 
     <AuthenticatedLayout>
         <template #header>
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    <!-- Navigation -->
+            <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <!-- Row 1: nav + title -->
+                <div class="flex items-center gap-2 md:gap-4">
                     <div class="flex items-center gap-1">
                         <Button variant="outline" size="icon" class="h-8 w-8" @click="navigate(-1)">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
@@ -221,18 +221,19 @@ function switchTeamSub(sub: 'day' | 'week') {
                         </Button>
                     </div>
                     <Button variant="outline" size="sm" @click="goToToday">{{ t('Today') }}</Button>
-                    <h2 class="text-lg font-semibold text-foreground">
+                    <h2 class="text-sm font-semibold text-foreground md:text-lg">
                         {{ headerTitle }}
                     </h2>
                 </div>
 
-                <div class="flex items-center gap-3">
+                <!-- Row 2: view switcher + actions -->
+                <div class="flex items-center gap-2 md:gap-3">
                     <!-- View switcher -->
                     <div class="flex rounded-md border overflow-hidden">
                         <button
                             v-for="v in mainViews"
                             :key="v.key"
-                            class="px-3 py-1.5 text-sm font-medium transition-colors"
+                            class="px-2 py-1 text-xs font-medium transition-colors md:px-3 md:py-1.5 md:text-sm"
                             :class="view === v.key
                                 ? 'bg-primary text-primary-foreground'
                                 : 'text-muted-foreground hover:bg-muted'"
@@ -244,7 +245,7 @@ function switchTeamSub(sub: 'day' | 'week') {
 
                     <!-- Team view toggle -->
                     <button
-                        class="rounded-md border px-3 py-1.5 text-sm font-medium transition-colors"
+                        class="rounded-md border px-2 py-1 text-xs font-medium transition-colors md:px-3 md:py-1.5 md:text-sm"
                         :class="isTeamView
                             ? 'bg-primary text-primary-foreground'
                             : 'text-muted-foreground hover:bg-muted'"
@@ -256,14 +257,14 @@ function switchTeamSub(sub: 'day' | 'week') {
                     <!-- Team sub-toggle (day/week) -->
                     <div v-if="isTeamView" class="flex rounded-md border overflow-hidden">
                         <button
-                            class="px-2.5 py-1.5 text-xs font-medium transition-colors"
+                            class="px-2 py-1 text-xs font-medium transition-colors md:px-2.5 md:py-1.5"
                             :class="teamSubView === 'day' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'"
                             @click="switchTeamSub('day')"
                         >
                             {{ t('Day') }}
                         </button>
                         <button
-                            class="px-2.5 py-1.5 text-xs font-medium transition-colors"
+                            class="px-2 py-1 text-xs font-medium transition-colors md:px-2.5 md:py-1.5"
                             :class="teamSubView === 'week' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'"
                             @click="switchTeamSub('week')"
                         >
@@ -271,16 +272,16 @@ function switchTeamSub(sub: 'day' | 'week') {
                         </button>
                     </div>
 
-                    <Button @click="openCreateDialog()">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        {{ t('New Appointment') }}
+                    <Button size="sm" class="ml-auto md:ml-0 md:size-default" @click="openCreateDialog()">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        <span class="hidden md:inline">{{ t('New Appointment') }}</span>
                     </Button>
                 </div>
             </div>
         </template>
 
         <!-- Legend (only on time grid / team views) -->
-        <div v-if="view !== 'month' && statuses.length > 0" class="mb-3 flex flex-wrap items-center gap-4">
+        <div v-if="view !== 'month' && statuses.length > 0" class="mb-2 flex flex-wrap items-center gap-2 md:mb-3 md:gap-4">
             <div
                 v-for="status in statuses"
                 :key="status.id"
@@ -292,7 +293,7 @@ function switchTeamSub(sub: 'day' | 'week') {
         </div>
 
         <!-- Calendar content -->
-        <div class="h-[calc(100vh-200px)]">
+        <div class="h-[calc(100vh-260px)] md:h-[calc(100vh-200px)]">
             <!-- Team view -->
             <TeamGrid
                 v-if="isTeamView"

@@ -84,7 +84,7 @@ function getTimeLabel(appt: Appointment): string {
             <div
                 v-for="(week, wi) in weeks"
                 :key="wi"
-                class="grid grid-cols-7 border-b last:border-b-0 min-h-[100px]"
+                class="grid grid-cols-7 border-b last:border-b-0 min-h-[60px] md:min-h-[100px]"
             >
                 <div
                     v-for="day in week"
@@ -111,19 +111,19 @@ function getTimeLabel(appt: Appointment): string {
                         <div
                             v-for="appt in (appointmentsByDay[day.date] || []).slice(0, 3)"
                             :key="appt.id"
-                            class="flex items-center gap-1 rounded px-1 py-0.5 text-[11px] leading-tight cursor-pointer hover:opacity-80 truncate"
+                            class="flex items-center gap-1 rounded px-0.5 py-0.5 text-[10px] leading-tight cursor-pointer hover:opacity-80 truncate md:px-1 md:text-[11px]"
                             :style="{ backgroundColor: getStatusStyle(appt.status?.color ?? null).backgroundColor }"
                             @click.stop="emit('appointmentClick', appt)"
                         >
                             <span class="w-1.5 h-1.5 rounded-full shrink-0" :style="getStatusDotStyle(appt.status?.color ?? null)" />
-                            <span class="text-muted-foreground shrink-0">{{ getTimeLabel(appt) }}</span>
+                            <span class="text-muted-foreground shrink-0 hidden md:inline">{{ getTimeLabel(appt) }}</span>
                             <span class="truncate" :style="{ color: appt.status?.color ?? 'hsl(var(--muted-foreground))' }">
                                 {{ appointmentLabel(appt) }}
                             </span>
                         </div>
                         <div
                             v-if="(appointmentsByDay[day.date]?.length || 0) > 3"
-                            class="text-[10px] text-muted-foreground pl-1"
+                            class="text-[10px] text-muted-foreground pl-0.5 md:pl-1"
                         >
                             +{{ appointmentsByDay[day.date].length - 3 }} {{ t('more') }}
                         </div>

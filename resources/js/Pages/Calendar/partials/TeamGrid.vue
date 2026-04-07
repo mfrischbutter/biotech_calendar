@@ -224,14 +224,14 @@ function isDayDragTarget(appt: Appointment): boolean {
         <table v-if="isWeek" class="w-full border-collapse">
             <thead class="sticky top-0 z-20 bg-background">
                 <tr>
-                    <th class="w-48 min-w-[12rem] border-b border-r p-2 text-left text-sm font-medium text-muted-foreground">{{ t('Employee') }}</th>
-                    <th v-for="date in dates" :key="date" class="border-b border-r p-2 text-center text-sm font-medium text-muted-foreground min-w-[8rem]">{{ formatDayHeader(date) }}</th>
+                    <th class="w-28 min-w-[7rem] border-b border-r p-2 text-left text-xs font-medium text-muted-foreground md:w-48 md:min-w-[12rem] md:text-sm">{{ t('Employee') }}</th>
+                    <th v-for="date in dates" :key="date" class="border-b border-r p-2 text-center text-xs font-medium text-muted-foreground min-w-[6rem] md:text-sm md:min-w-[8rem]">{{ formatDayHeader(date) }}</th>
                 </tr>
             </thead>
             <tbody>
                 <tr v-for="row in allRows" :key="row.id ?? 'unassigned'" class="border-b" :class="row.unassigned ? 'bg-muted/30' : ''">
-                    <td class="sticky left-0 z-10 w-48 min-w-[12rem] border-r p-2 text-sm font-medium" :class="row.unassigned ? 'bg-muted italic text-muted-foreground' : 'bg-background'">{{ row.name }}</td>
-                    <td v-for="date in dates" :key="date" class="border-r p-1 align-top transition-colors min-w-[8rem]" :class="isDragOver(row.id, date) ? 'bg-primary/10' : ''"
+                    <td class="sticky left-0 z-10 w-28 min-w-[7rem] border-r p-2 text-xs font-medium md:w-48 md:min-w-[12rem] md:text-sm" :class="row.unassigned ? 'bg-muted italic text-muted-foreground' : 'bg-background'">{{ row.name }}</td>
+                    <td v-for="date in dates" :key="date" class="border-r p-1 align-top transition-colors min-w-[6rem] md:min-w-[8rem]" :class="isDragOver(row.id, date) ? 'bg-primary/10' : ''"
                         @dragover="onDragOver(row.id, date, $event)" @dragleave="dragOverCell = null" @drop="onDrop(row.id, date, $event)" @dblclick="emit('createAppointment', date, '09:00', '10:00', row.id)">
                         <div v-for="appt in cellAppts(row.id, date)" :key="appt.id" class="mb-1 cursor-pointer rounded border px-1.5 py-1 text-xs" :style="getStatusStyle(appt.status?.color ?? null)"
                              :data-appointment-id="appt.id" draggable="true" @dragstart="onDragStart(appt, $event)" @dragend="onDragEnd" @click.stop="emit('appointmentClick', appt)">
@@ -246,7 +246,7 @@ function isDayDragTarget(appt: Appointment): boolean {
         <!-- DAY MODE -->
         <div v-else class="inline-flex flex-col min-w-full">
             <div class="sticky top-0 z-20 flex border-b bg-background">
-                <div class="sticky left-0 z-30 w-48 min-w-[12rem] shrink-0 border-r bg-background p-2 text-sm font-medium text-muted-foreground">{{ t('Employee') }}</div>
+                <div class="sticky left-0 z-30 w-28 min-w-[7rem] shrink-0 border-r bg-background p-2 text-xs font-medium text-muted-foreground md:w-48 md:min-w-[12rem] md:text-sm">{{ t('Employee') }}</div>
                 <div class="flex" :style="{ width: `${timelineWidth}px` }">
                     <div v-for="hour in hours" :key="hour" class="shrink-0 border-r py-2 text-center text-xs text-muted-foreground" :style="{ width: `${HOUR_WIDTH}px` }">
                         {{ String(hour).padStart(2, '0') }}:00
@@ -254,7 +254,7 @@ function isDayDragTarget(appt: Appointment): boolean {
                 </div>
             </div>
             <div v-for="row in allRows" :key="row.id ?? 'unassigned'" class="flex border-b" :class="row.unassigned ? 'bg-muted/30' : ''">
-                <div class="sticky left-0 z-10 w-48 min-w-[12rem] shrink-0 border-r p-2 text-sm font-medium" :class="row.unassigned ? 'bg-muted italic text-muted-foreground' : 'bg-background'">{{ row.name }}</div>
+                <div class="sticky left-0 z-10 w-28 min-w-[7rem] shrink-0 border-r p-2 text-xs font-medium md:w-48 md:min-w-[12rem] md:text-sm" :class="row.unassigned ? 'bg-muted italic text-muted-foreground' : 'bg-background'">{{ row.name }}</div>
                 <div :ref="(el) => setRowRef(row.id, el)" class="relative" :style="{ width: `${timelineWidth}px`, height: `${rowHeight(row.id)}px` }"
                      @dblclick="emit('createAppointment', dates[0], '09:00', '10:00', row.id)">
                     <div v-for="hour in hours" :key="hour" class="absolute inset-y-0 border-r border-dashed border-border/40" :style="{ left: `${(hour - startHour) * HOUR_WIDTH}px` }" />
