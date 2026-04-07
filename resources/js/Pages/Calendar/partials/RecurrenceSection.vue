@@ -2,6 +2,7 @@
 import { Checkbox } from '@/Components/ui/checkbox';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
+import DatePicker from '@/Components/DatePicker.vue';
 import {
     Select,
     SelectContent,
@@ -73,12 +74,10 @@ const emit = defineEmits<{
 
             <div class="space-y-1.5">
                 <Label class="text-xs text-muted-foreground">{{ t('Series End Date') }} *</Label>
-                <Input
+                <DatePicker
                     :model-value="recurrenceEnd"
-                    type="date"
+                    @update:model-value="(val) => emit('update:recurrenceEnd', val)"
                     required
-                    class="h-9"
-                    @update:model-value="(val: string | number) => emit('update:recurrenceEnd', String(val))"
                 />
             </div>
         </div>

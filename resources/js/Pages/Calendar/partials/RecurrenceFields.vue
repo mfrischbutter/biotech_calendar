@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
+import DatePicker from '@/Components/DatePicker.vue';
 import { Checkbox } from '@/Components/ui/checkbox';
 import {
     Select,
@@ -81,12 +82,10 @@ const recurrenceLabels: Record<string, string> = {
 
             <div class="space-y-2">
                 <Label for="appt-recurrence-end">{{ t('Series End Date') }} *</Label>
-                <Input
-                    id="appt-recurrence-end"
+                <DatePicker
                     :model-value="recurrenceEnd"
-                    type="date"
+                    @update:model-value="(val) => emit('update:recurrenceEnd', val)"
                     required
-                    @update:model-value="(val: string | number) => emit('update:recurrenceEnd', String(val))"
                 />
             </div>
         </div>

@@ -207,5 +207,6 @@
     "Allocation": "Zuordnung",
     "Description": "Beschreibung",
     "Checklist": "Checkliste",
-    "End time must be after start time": "Endzeit muss nach der Startzeit liegen"
+    "End time must be after start time": "Endzeit muss nach der Startzeit liegen",
+    "Select date...": "Datum auswählen..."
 }

@@ -16,6 +16,7 @@ import {
 } from '@/Components/ui/command';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
+import DatePicker from '@/Components/DatePicker.vue';
 import {
     Select,
     SelectContent,
@@ -349,11 +350,10 @@ function handlePointerDownOutside(e: Event) {
 
                         <div class="space-y-2">
                             <Label>{{ t('Series End Date') }} *</Label>
-                            <Input
+                            <DatePicker
                                 :model-value="recurrenceEnd"
-                                type="date"
+                                @update:model-value="(val) => emit('update:recurrenceEnd', val)"
                                 required
-                                @update:model-value="(val: string | number) => emit('update:recurrenceEnd', String(val))"
                             />
                         </div>
                     </div>

@@ -5,6 +5,7 @@ import { de } from 'date-fns/locale';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
+import DatePicker from '@/Components/DatePicker.vue';
 import {
     Popover,
     PopoverContent,
@@ -68,11 +69,11 @@ function handlePointerDownOutside(e: Event) {
             <div class="grid grid-cols-2 gap-3">
                 <div class="space-y-1.5">
                     <Label class="text-xs text-muted-foreground">{{ t('Start') }}</Label>
-                    <Input
-                        type="date"
+                    <DatePicker
                         :model-value="startDate"
-                        @update:model-value="(v: string | number) => emit('update:startDate', String(v))"
-                        class="h-8 text-xs"
+                        @update:model-value="(v) => emit('update:startDate', v)"
+                        button-class="h-8 w-full justify-start font-normal text-xs"
+                        :has-error="!!errors.start_at"
                         required
                     />
                 </div>
@@ -88,11 +89,11 @@ function handlePointerDownOutside(e: Event) {
                 </div>
                 <div class="space-y-1.5">
                     <Label class="text-xs text-muted-foreground">{{ t('End') }}</Label>
-                    <Input
-                        type="date"
+                    <DatePicker
                         :model-value="endDate"
-                        @update:model-value="(v: string | number) => emit('update:endDate', String(v))"
-                        class="h-8 text-xs"
+                        @update:model-value="(v) => emit('update:endDate', v)"
+                        button-class="h-8 w-full justify-start font-normal text-xs"
+                        :has-error="!!errors.end_at"
                         required
                     />
                 </div>

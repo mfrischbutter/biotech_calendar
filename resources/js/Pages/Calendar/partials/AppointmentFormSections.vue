@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
+import DatePicker from '@/Components/DatePicker.vue';
 import {
     Select,
     SelectContent,
@@ -315,11 +316,10 @@ defineExpose({ notesRef, autoResize });
         <!-- Date & Time -->
         <div class="space-y-1.5">
             <Label class="text-xs text-muted-foreground">{{ t('Date & Time') }}</Label>
-            <Input
-                type="date"
+            <DatePicker
                 :model-value="startDate"
-                @update:model-value="(v: string | number) => handleDateChange(String(v))"
-                class="h-9"
+                @update:model-value="handleDateChange"
+                :has-error="!!errors.start_at"
                 required
             />
             <div class="grid grid-cols-2 gap-3">
