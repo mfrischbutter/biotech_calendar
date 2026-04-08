@@ -87,6 +87,30 @@ export interface Appointment {
     recurrence_interval: number | null;
     recurrence_end: string | null;
     parent_id: number | null;
+    comments?: Comment[];
+}
+
+export interface Comment {
+    id: number;
+    appointment_id: number;
+    user_id: number | null;
+    user: { id: number; first_name: string; last_name: string } | null;
+    body: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ActivityLog {
+    id: number;
+    appointment_id: number | null;
+    user_id: number | null;
+    user: { id: number; first_name: string; last_name: string } | null;
+    appointment: { id: number; title: string } | null;
+    comment: { id: number; body: string } | null;
+    action: 'created' | 'updated' | 'deleted' | 'comment_added';
+    changes: Record<string, { old: string | null; new: string | null }> | null;
+    description: string | null;
+    created_at: string;
 }
 
 export interface SharedCompany {

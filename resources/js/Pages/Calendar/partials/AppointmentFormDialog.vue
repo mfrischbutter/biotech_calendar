@@ -30,6 +30,7 @@ import { localToISO, isoToLocalParts } from '@/lib/date-utils';
 import { useTrans } from '@/lib/use-trans';
 import type { Appointment, AppointmentKind, ChecklistItem, Status } from '@/types';
 import AppointmentFormSections from './AppointmentFormSections.vue';
+import CommentsSection from './CommentsSection.vue';
 
 const { t } = useTrans();
 
@@ -244,63 +245,71 @@ function submit() {
                 </button>
             </DrawerHeader>
 
-            <form @submit.prevent="submit" class="flex flex-1 flex-col overflow-hidden">
+            <div class="flex flex-1 flex-col overflow-hidden">
                 <div class="no-scrollbar flex-1 overflow-y-auto px-4 pb-4">
-                    <!-- Title with Kind prefix -->
-                    <div class="mb-4 flex items-center gap-2">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger as-child>
-                                <button
-                                    type="button"
-                                    class="shrink-0 rounded border px-1.5 py-0.5 text-xs font-semibold text-muted-foreground hover:bg-muted transition-colors"
-                                    :class="kindPrefix ? 'border-border' : 'border-dashed border-muted-foreground/40'"
-                                >
-                                    {{ kindPrefix || '...' }}
-                                </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" class="w-48">
-                                <DropdownMenuItem @click="form.kind = 'none'">
-                                    <span class="text-muted-foreground">{{ t('No selection') }}</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem v-for="k in KINDS" :key="k.value" @click="form.kind = k.value">
-                                    <span class="mr-2 inline-block w-6 text-center text-xs font-semibold text-muted-foreground">[{{ k.prefix }}]</span>
-                                    {{ k.label }}
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                        <input
-                            v-model="form.title"
-                            type="text"
-                            :placeholder="t('Appointment title')"
-                            required
-                            class="min-w-0 flex-1 bg-transparent text-lg font-medium border-0 outline-none ring-0 focus:outline-none focus:ring-0 p-0 text-foreground placeholder:text-muted-foreground"
-                        />
-                    </div>
-                    <p v-if="form.errors.title" class="mb-2 text-xs text-destructive">{{ form.errors.title }}</p>
+                    <form id="appointment-form" @submit.prevent="submit">
+                        <!-- Title with Kind prefix -->
+                        <div class="mb-4 flex items-center gap-2">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger as-child>
+                                    <button
+                                        type="button"
+                                        class="shrink-0 rounded border px-1.5 py-0.5 text-xs font-semibold text-muted-foreground hover:bg-muted transition-colors"
+                                        :class="kindPrefix ? 'border-border' : 'border-dashed border-muted-foreground/40'"
+                                    >
+                                        {{ kindPrefix || '...' }}
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" class="w-48">
+                                    <DropdownMenuItem @click="form.kind = 'none'">
+                                        <span class="text-muted-foreground">{{ t('No selection') }}</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem v-for="k in KINDS" :key="k.value" @click="form.kind = k.value">
+                                        <span class="mr-2 inline-block w-6 text-center text-xs font-semibold text-muted-foreground">[{{ k.prefix }}]</span>
+                                        {{ k.label }}
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                            <input
+                                v-model="form.title"
+                                type="text"
+                                :placeholder="t('Appointment title')"
+                                required
+                                class="min-w-0 flex-1 bg-transparent text-lg font-medium border-0 outline-none ring-0 focus:outline-none focus:ring-0 p-0 text-foreground placeholder:text-muted-foreground"
+                            />
+                        </div>
+                        <p v-if="form.errors.title" class="mb-2 text-xs text-destructive">{{ form.errors.title }}</p>
 
-                    <AppointmentFormSections
-                        ref="sectionsRef"
-                        :clients="clients"
-                        :employees="employees"
-                        :statuses="statuses"
-                        :is-editing="isEditing"
-                        v-model:client-id="form.client_id"
-                        v-model:employee-id="form.employee_id"
-                        v-model:status-id="form.status_id"
-                        v-model:start-date="form.start_date"
-                        v-model:start-time="form.start_time"
-                        v-model:end-date="form.end_date"
-                        v-model:end-time="form.end_time"
-                        v-model:notes="form.notes"
-                        v-model:street="form.street"
-                        v-model:zip="form.zip"
-                        v-model:city="form.city"
-                        v-model:checklist="form.checklist"
-                        v-model:is-recurring="form.is_recurring"
-                        v-model:recurrence-type="form.recurrence_type"
-                        v-model:recurrence-interval="form.recurrence_interval"
-                        v-model:recurrence-end="form.recurrence_end"
-                        :errors="(form.errors as Record<string, string>)"
+                        <AppointmentFormSections
+                            ref="sectionsRef"
+                            :clients="clients"
+                            :employees="employees"
+                            :statuses="statuses"
+                            :is-editing="isEditing"
+                            v-model:client-id="form.client_id"
+                            v-model:employee-id="form.employee_id"
+                            v-model:status-id="form.status_id"
+                            v-model:start-date="form.start_date"
+                            v-model:start-time="form.start_time"
+                            v-model:end-date="form.end_date"
+                            v-model:end-time="form.end_time"
+                            v-model:notes="form.notes"
+                            v-model:street="form.street"
+                            v-model:zip="form.zip"
+                            v-model:city="form.city"
+                            v-model:checklist="form.checklist"
+                            v-model:is-recurring="form.is_recurring"
+                            v-model:recurrence-type="form.recurrence_type"
+                            v-model:recurrence-interval="form.recurrence_interval"
+                            v-model:recurrence-end="form.recurrence_end"
+                            :errors="(form.errors as Record<string, string>)"
+                        />
+                    </form>
+
+                    <CommentsSection
+                        v-if="isEditing && appointment"
+                        :appointment-id="appointment.id"
+                        :comments="appointment.comments ?? []"
                     />
                 </div>
 
@@ -317,11 +326,11 @@ function submit() {
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                     </Button>
                     <div v-else />
-                    <Button type="submit" :disabled="form.processing">
+                    <Button type="submit" form="appointment-form" :disabled="form.processing">
                         {{ form.processing ? t('Saving...') : (isEditing ? t('Update') : t('Create appointment')) }}
                     </Button>
                 </DrawerFooter>
-            </form>
+            </div>
         </DrawerContent>
     </Drawer>
 

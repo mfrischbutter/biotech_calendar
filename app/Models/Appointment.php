@@ -76,6 +76,16 @@ class Appointment extends Model
         return $this->hasMany(self::class, 'parent_id');
     }
 
+    public function comments(): HasMany
+    {
+        return $this->hasMany(Comment::class);
+    }
+
+    public function activityLogs(): HasMany
+    {
+        return $this->hasMany(ActivityLog::class);
+    }
+
     public function isRecurring(): bool
     {
         return $this->recurrence_type !== null;

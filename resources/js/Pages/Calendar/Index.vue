@@ -29,6 +29,7 @@ const props = defineProps<{
     showWeekends: boolean;
     startHour: number;
     endHour: number;
+    openAppointmentId?: number | null;
 }>();
 
 const createDialogOpen = ref(false);
@@ -140,6 +141,15 @@ function openEditDialog(appointment: Appointment) {
 }
 
 const defaultEmployeeId = ref<number | null>(null);
+
+onMounted(() => {
+    if (props.openAppointmentId) {
+        const appt = props.appointments.find(a => a.id === props.openAppointmentId);
+        if (appt) {
+            openEditDialog(appt);
+        }
+    }
+});
 
 function handleCreateAppointment(date: string, startTime: string, endTime: string, employeeId?: number | null) {
     defaultEmployeeId.value = employeeId ?? null;

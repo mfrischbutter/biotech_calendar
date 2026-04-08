@@ -21,15 +21,21 @@ class AppointmentController extends Controller
         $request->validate([
             'date' => ['nullable', 'date'],
             'view' => ['nullable', 'in:day,week,month,team-day,team-week'],
+            'appointment' => ['nullable', 'integer'],
         ]);
 
         $user = $request->user();
         abort_unless($user->hasPermission('appointments.view'), 403);
 
+        $openAppointmentId = $request->integer('appointment') ?: null;
+        $openAppointment = $openAppointmentId ? Appointment::find($openAppointmentId) : null;
+
         $view = $request->input('view', 'week');
-        $date = $request->input('date')
-            ? Carbon::parse($request->input('date'))
-            : Carbon::now();
+        $date = $openAppointment
+            ? $openAppointment->start_at->copy()
+            : ($request->input('date')
+                ? Carbon::parse($request->input('date'))
+                : Carbon::now());
 
         $showWeekends = Setting::get('show_weekends', 'false') === 'true';
         $startHour = (int) Setting::get('start_hour', '0');
@@ -50,7 +56,7 @@ class AppointmentController extends Controller
             ],
         };
 
-        $appointments = Appointment::with(['client:id,first_name,last_name,company_name,street,zip,city', 'employee:id,first_name,last_name', 'status:id,name,color'])
+        $appointments = Appointment::with(['client:id,first_name,last_name,company_name,street,zip,city', 'employee:id,first_name,last_name', 'status:id,name,color', 'comments.user:id,first_name,last_name'])
             ->where(function ($q) use ($rangeStart, $rangeEnd) {
                 $q->whereBetween('start_at', [$rangeStart, $rangeEnd])
                     ->orWhereBetween('end_at', [$rangeStart, $rangeEnd])
@@ -79,6 +85,7 @@ class AppointmentController extends Controller
             'showWeekends' => $showWeekends,
             'startHour' => $startHour,
             'endHour' => $endHour,
+            'openAppointmentId' => $openAppointmentId,
         ]);
     }
 
