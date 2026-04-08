@@ -13,7 +13,7 @@ class StatusController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'color' => ['required', 'string', 'in:'.implode(',', Status::COLORS)],
+            'color' => ['required', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
         ]);
 
         $maxSort = Status::max('sort_order') ?? -1;
@@ -32,7 +32,7 @@ class StatusController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'color' => ['required', 'string', 'in:'.implode(',', Status::COLORS)],
+            'color' => ['required', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
         ]);
 
         $status->update($validated);

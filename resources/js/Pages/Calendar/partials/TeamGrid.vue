@@ -6,6 +6,7 @@ import type { Appointment } from '@/types';
 import { useTrans } from '@/lib/use-trans';
 import { appointmentLabel } from '@/lib/appointment-label';
 import { getStatusStyle } from '@/lib/status-colors';
+import AppointmentHoverCard from './AppointmentHoverCard.vue';
 import { localMinutes, isoToLocalParts } from '@/lib/date-utils';
 
 const { t } = useTrans();
@@ -233,11 +234,13 @@ function isDayDragTarget(appt: Appointment): boolean {
                     <td class="sticky left-0 z-10 w-28 min-w-[7rem] border-r p-2 text-xs font-medium md:w-48 md:min-w-[12rem] md:text-sm" :class="row.unassigned ? 'bg-muted italic text-muted-foreground' : 'bg-background'">{{ row.name }}</td>
                     <td v-for="date in dates" :key="date" class="border-r p-1 align-top transition-colors min-w-[6rem] md:min-w-[8rem]" :class="isDragOver(row.id, date) ? 'bg-primary/10' : ''"
                         @dragover="onDragOver(row.id, date, $event)" @dragleave="dragOverCell = null" @drop="onDrop(row.id, date, $event)" @dblclick="emit('createAppointment', date, '09:00', '10:00', row.id)">
-                        <div v-for="appt in cellAppts(row.id, date)" :key="appt.id" class="mb-1 cursor-pointer rounded border px-1.5 py-1 text-xs" :style="getStatusStyle(appt.status?.color ?? null)"
-                             :data-appointment-id="appt.id" draggable="true" @dragstart="onDragStart(appt, $event)" @dragend="onDragEnd" @click.stop="emit('appointmentClick', appt)">
-                            <div class="font-medium truncate">{{ appointmentLabel(appt) }}</div>
-                            <div class="opacity-70" style="font-size: 10px">{{ getTimeLabel(appt) }}</div>
-                        </div>
+                        <AppointmentHoverCard v-for="appt in cellAppts(row.id, date)" :key="appt.id" :appointment="appt">
+                            <div class="mb-1 cursor-pointer rounded border px-1.5 py-1 text-xs" :style="getStatusStyle(appt.status?.color ?? null)"
+                                 :data-appointment-id="appt.id" draggable="true" @dragstart="onDragStart(appt, $event)" @dragend="onDragEnd" @click.stop="emit('appointmentClick', appt)">
+                                <div class="font-medium truncate">{{ appointmentLabel(appt) }}</div>
+                                <div class="opacity-70" style="font-size: 10px">{{ getTimeLabel(appt) }}</div>
+                            </div>
+                        </AppointmentHoverCard>
                     </td>
                 </tr>
             </tbody>
@@ -259,15 +262,17 @@ function isDayDragTarget(appt: Appointment): boolean {
                      @dblclick="emit('createAppointment', dates[0], '09:00', '10:00', row.id)">
                     <div v-for="hour in hours" :key="hour" class="absolute inset-y-0 border-r border-dashed border-border/40" :style="{ left: `${(hour - startHour) * HOUR_WIDTH}px` }" />
                     <!-- Appointment cards -->
-                    <div v-for="appt in cellAppts(row.id, dates[0])" :key="appt.id"
-                         class="absolute cursor-grab rounded border px-1.5 py-1 text-xs overflow-hidden transition-opacity"
-                         :class="isDayDragTarget(appt) ? 'opacity-30' : ''"
-                         :data-appointment-id="appt.id"
-                         :style="{ ...apptDayStyle(appt), ...getStatusStyle(appt.status?.color ?? null), top: `${(dayLanesByRow.get(row.id)?.get(appt.id)?.lane ?? 0) * LANE_HEIGHT + 4}px`, height: `${LANE_HEIGHT - 4}px` }"
-                         @mousedown="handleDayMouseDown(appt, row.id, $event)" @click.stop>
-                        <div class="font-medium truncate">{{ appointmentLabel(appt) }}</div>
-                        <div class="opacity-70" style="font-size: 10px">{{ getTimeLabel(appt) }}</div>
-                    </div>
+                    <AppointmentHoverCard v-for="appt in cellAppts(row.id, dates[0])" :key="appt.id" :appointment="appt" :disabled="dayDrag.active">
+                        <div
+                             class="absolute cursor-grab rounded border px-1.5 py-1 text-xs overflow-hidden transition-opacity"
+                             :class="isDayDragTarget(appt) ? 'opacity-30' : ''"
+                             :data-appointment-id="appt.id"
+                             :style="{ ...apptDayStyle(appt), ...getStatusStyle(appt.status?.color ?? null), top: `${(dayLanesByRow.get(row.id)?.get(appt.id)?.lane ?? 0) * LANE_HEIGHT + 4}px`, height: `${LANE_HEIGHT - 4}px` }"
+                             @mousedown="handleDayMouseDown(appt, row.id, $event)" @click.stop>
+                            <div class="font-medium truncate">{{ appointmentLabel(appt) }}</div>
+                            <div class="opacity-70" style="font-size: 10px">{{ getTimeLabel(appt) }}</div>
+                        </div>
+                    </AppointmentHoverCard>
                     <!-- Drag preview ghost -->
                     <div v-if="dayDrag.active && dayDrag.targetEmpId === row.id && dayPreviewStyle()"
                          class="absolute z-30 pointer-events-none rounded border-l-4 px-1.5 py-1 text-xs opacity-80"

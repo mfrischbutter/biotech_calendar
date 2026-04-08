@@ -8,6 +8,7 @@ import { getStatusStyle } from '@/lib/status-colors';
 import { computeOverlapLayout } from '@/lib/overlap-layout';
 import { useTrans } from '@/lib/use-trans';
 import { appointmentLabel } from '@/lib/appointment-label';
+import AppointmentHoverCard from './AppointmentHoverCard.vue';
 import type { Appointment } from '@/types';
 import type { DayLayout } from '@/lib/overlap-layout';
 
@@ -242,8 +243,17 @@ function handleGlobalMouseMove(e: MouseEvent) {
 }
 
 function handleGlobalMouseUp() {
+    // Capture appointment before endDrag resets state
+    const clickedAppointment = drag.value.active && drag.value.mode === 'move' ? drag.value.appointment : null;
+
     const result = endDrag();
-    if (!result) return;
+    if (!result) {
+        // No drag movement — treat as a click
+        if (clickedAppointment) {
+            emit('appointmentClick', clickedAppointment);
+        }
+        return;
+    }
 
     suppressClick.value = true;
     setTimeout(() => { suppressClick.value = false; }, 50);
@@ -376,43 +386,48 @@ function dragPreviewStyle() {
                     </div>
 
                     <!-- Appointments -->
-                    <div
+                    <AppointmentHoverCard
                         v-for="appt in appointmentsByDay[day.date]"
                         :key="appt.id"
-                        :data-appointment-id="appt.id"
-                        class="absolute rounded-md overflow-hidden border-l-[4px]"
-                        :class="[
-                            isDragTarget(appt) ? 'opacity-0 !z-0' : '',
-                            drag.active && drag.totalMovement >= 4 ? 'pointer-events-none' : 'cursor-pointer transition-shadow hover:shadow-md',
-                        ]"
-                        :style="apptCardStyle(appt, day.date)"
-                        @mousedown.stop="handleAppointmentMouseDown($event, appt, day.date)"
-                        @click.stop="handleAppointmentClick($event, appt)"
+                        :appointment="appt"
+                        :disabled="drag.active"
                     >
-                        <div class="px-2 py-1 h-full" :class="isShort(appt) ? 'flex items-center gap-2' : ''">
-                            <div
-                                class="font-medium text-xs truncate"
-                                :style="{ color: apptTitleColor(appt) }"
-                            >
-                                {{ appointmentLabel(appt) }}
-                            </div>
-                            <div v-if="!isShort(appt)" class="text-[11px] text-muted-foreground truncate">
-                                {{ getTimeLabel(appt) }}
-                            </div>
-                            <div v-if="!isShort(appt) && appt.employee" class="text-[11px] text-muted-foreground truncate">
-                                {{ appt.employee.name }}
-                            </div>
-                            <div v-if="!isShort(appt) && appt.parent_id !== null" class="text-[10px] text-muted-foreground flex items-center gap-0.5">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-                                {{ t('Series') }}
-                            </div>
-                        </div>
-                        <!-- Resize handle -->
                         <div
-                            class="absolute bottom-0 left-0 right-0 h-2 cursor-s-resize hover:bg-black/10 rounded-b-md"
-                            @mousedown.stop="handleResizeMouseDown($event, appt, day.date)"
-                        />
-                    </div>
+                            :data-appointment-id="appt.id"
+                            class="absolute rounded-md overflow-hidden border-l-[4px]"
+                            :class="[
+                                isDragTarget(appt) ? 'opacity-0 !z-0' : '',
+                                drag.active && drag.totalMovement >= 4 ? 'pointer-events-none' : 'cursor-pointer transition-shadow hover:shadow-md',
+                            ]"
+                            :style="apptCardStyle(appt, day.date)"
+                            @mousedown.stop="handleAppointmentMouseDown($event, appt, day.date)"
+                            @click.stop="handleAppointmentClick($event, appt)"
+                        >
+                            <div class="px-2 py-1 h-full" :class="isShort(appt) ? 'flex items-center gap-2' : ''">
+                                <div
+                                    class="font-medium text-xs truncate"
+                                    :style="{ color: apptTitleColor(appt) }"
+                                >
+                                    {{ appointmentLabel(appt) }}
+                                </div>
+                                <div v-if="!isShort(appt)" class="text-[11px] text-muted-foreground truncate">
+                                    {{ getTimeLabel(appt) }}
+                                </div>
+                                <div v-if="!isShort(appt) && appt.employee" class="text-[11px] text-muted-foreground truncate">
+                                    {{ appt.employee.name }}
+                                </div>
+                                <div v-if="!isShort(appt) && appt.parent_id !== null" class="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                                    {{ t('Series') }}
+                                </div>
+                            </div>
+                            <!-- Resize handle -->
+                            <div
+                                class="absolute bottom-0 left-0 right-0 h-2 cursor-s-resize hover:bg-black/10 rounded-b-md"
+                                @mousedown.stop="handleResizeMouseDown($event, appt, day.date)"
+                            />
+                        </div>
+                    </AppointmentHoverCard>
 
                     <!-- Drag preview ghost -->
                     <div

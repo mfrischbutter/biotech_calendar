@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 async function login(page: import('@playwright/test').Page) {
     await page.goto('/login');
-    await page.fill('#email', 'owner@biotech.com');
+    await page.fill('#email', 'b.wilhelmsen@wilhelmsen-biotec.de');
     await page.fill('#password', 'password');
     await page.locator('form button').filter({ hasText: /Anmelden|Log in/ }).click();
     await page.waitForURL('**/dashboard**', { timeout: 10000 });

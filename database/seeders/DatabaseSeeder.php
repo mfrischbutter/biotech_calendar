@@ -12,6 +12,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Storage;
 
 class DatabaseSeeder extends Seeder
 {
@@ -22,13 +23,23 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Copy seed logo to storage
+        $logoSource = __DIR__.'/stubs/wilhelmsen-logo.png';
+        $logoPath = null;
+        if (file_exists($logoSource)) {
+            Storage::disk('public')->makeDirectory('logos');
+            $logoPath = 'logos/wilhelmsen-logo.png';
+            Storage::disk('public')->put($logoPath, file_get_contents($logoSource));
+        }
+
         $company = Company::create([
-            'name' => 'Schädlingsbekämpfung Hoffmann GmbH',
+            'name' => 'Wilhelmsen BioTec',
             'street' => 'Industriestraße 12',
             'zip' => '80339',
             'city' => 'München',
             'phone' => '+49 89 123456',
-            'email' => 'info@hoffmann-sb.de',
+            'email' => 'info@wilhelmsen-biotec.de',
+            'logo_path' => $logoPath,
         ]);
 
         // Calendar settings
@@ -36,16 +47,17 @@ class DatabaseSeeder extends Seeder
         Setting::create(['company_id' => $company->id, 'key' => 'start_hour', 'value' => '7']);
         Setting::create(['company_id' => $company->id, 'key' => 'end_hour', 'value' => '18']);
 
-        // --- Statuses (pest control themed) ---
+        // --- Statuses ---
         $statuses = [];
         $statusData = [
-            ['name' => 'Erstbegehung', 'color' => '#f97316'],
-            ['name' => 'Routinekontrolle', 'color' => '#3b82f6'],
-            ['name' => 'Akutbehandlung', 'color' => '#ef4444'],
-            ['name' => 'Nachkontrolle', 'color' => '#a855f7'],
-            ['name' => 'Beratung', 'color' => '#ec4899'],
-            ['name' => 'Dokumentation', 'color' => '#6b7280'],
-            ['name' => 'Abgeschlossen', 'color' => '#22c55e'],
+            ['name' => 'Block – noch nicht bestätigt', 'color' => '#f87171'],
+            ['name' => 'Erste Maßnahme', 'color' => '#a8d8b9'],
+            ['name' => 'Folgemaßnahme', 'color' => '#3b82f6'],
+            ['name' => 'Digitale Überwachung', 'color' => '#f59e0b'],
+            ['name' => 'Für Fakturierung bereit', 'color' => '#22c55e'],
+            ['name' => 'Fakturiert', 'color' => '#94a3b8'],
+            ['name' => 'Wiedervorlage', 'color' => '#ef4444'],
+            ['name' => 'Maßnahme Storniert', 'color' => '#374151'],
         ];
 
         foreach ($statusData as $i => $t) {
@@ -59,9 +71,9 @@ class DatabaseSeeder extends Seeder
 
         // --- Users ---
         $owner = User::create([
-            'first_name' => 'Stefan',
-            'last_name' => 'Hoffmann',
-            'email' => 'owner@biotech.com',
+            'first_name' => 'Björn',
+            'last_name' => 'Wilhelmsen',
+            'email' => 'b.wilhelmsen@wilhelmsen-biotec.de',
             'password' => bcrypt('password'),
             'role' => 'owner',
             'company_id' => $company->id,
@@ -205,7 +217,7 @@ class DatabaseSeeder extends Seeder
             'Erstbegehung Bäckerei Bergmann',
             $mon->copy()->setTime(8, 0),
             $mon->copy()->setTime(9, 30),
-            $bergmann, $owner, $statuses['Erstbegehung'],
+            $bergmann, $owner, $statuses['Erste Maßnahme'],
             'Mehlmottenbefall im Lagerraum gemeldet. Komplette Begehung aller Räumlichkeiten.',
             [
                 ['text' => 'Lagerraum inspizieren', 'checked' => false],
@@ -219,7 +231,7 @@ class DatabaseSeeder extends Seeder
             'Dokumentation KW-Berichte',
             $mon->copy()->setTime(14, 0),
             $mon->copy()->setTime(16, 0),
-            null, $owner, $statuses['Dokumentation'],
+            null, $owner, $statuses['Für Fakturierung bereit'],
             'Wochenberichte der letzten KW zusammenfassen und an Kunden versenden.',
         );
 
@@ -228,7 +240,7 @@ class DatabaseSeeder extends Seeder
             'Routinekontrolle Hotel Residenz',
             $mon->copy()->setTime(8, 0),
             $mon->copy()->setTime(10, 0),
-            $gruber, $markus, $statuses['Routinekontrolle'],
+            $gruber, $markus, $statuses['Folgemaßnahme'],
             'Monatliche Kontrollrunde: Küche, Keller, Dachboden. Köderstationen prüfen.',
             [
                 ['text' => 'Köderstationen Küche', 'checked' => false],
@@ -243,7 +255,7 @@ class DatabaseSeeder extends Seeder
             'Akutbehandlung Mayer — Wespen',
             $mon->copy()->setTime(9, 0),
             $mon->copy()->setTime(10, 30),
-            $mayer, $markus, $statuses['Akutbehandlung'],
+            $mayer, $markus, $statuses['Block – noch nicht bestätigt'],
             'Dringend! Wespennest am Balkon, Kleinkinder im Haushalt.',
         );
 
@@ -251,7 +263,7 @@ class DatabaseSeeder extends Seeder
             'Nachkontrolle Gaststätte Hirsch',
             $mon->copy()->setTime(13, 0),
             $mon->copy()->setTime(14, 0),
-            $schuster, $markus, $statuses['Nachkontrolle'],
+            $schuster, $markus, $statuses['Digitale Überwachung'],
             'Kontrolle 2 Wochen nach Schabenbehandlung.',
         );
 
@@ -260,7 +272,7 @@ class DatabaseSeeder extends Seeder
             'Beratung Kindergarten Sonnenschein',
             $mon->copy()->setTime(9, 0),
             $mon->copy()->setTime(10, 30),
-            $krause, $lisa, $statuses['Beratung'],
+            $krause, $lisa, $statuses['Wiedervorlage'],
             'Beratungsgespräch zu präventiven Maßnahmen. Elternbrief vorbereiten.',
         );
 
@@ -268,7 +280,7 @@ class DatabaseSeeder extends Seeder
             'Routinekontrolle Metzgerei Huber',
             $mon->copy()->setTime(11, 0),
             $mon->copy()->setTime(12, 0),
-            $huber, $lisa, $statuses['Routinekontrolle'],
+            $huber, $lisa, $statuses['Folgemaßnahme'],
         );
 
         // Jonas: one appointment
@@ -276,7 +288,7 @@ class DatabaseSeeder extends Seeder
             'Erstbegehung Lagerhalle Neumann',
             $mon->copy()->setTime(10, 0),
             $mon->copy()->setTime(12, 0),
-            $neumann, $jonas, $statuses['Erstbegehung'],
+            $neumann, $jonas, $statuses['Erste Maßnahme'],
             'Verdacht auf Rattenbefall im Außenbereich. Große Lagerhalle mit 3 Eingängen.',
             [
                 ['text' => 'Außenbereich abgehen', 'checked' => false],
@@ -301,7 +313,7 @@ class DatabaseSeeder extends Seeder
             'Rattenbekämpfung Lagerhalle Neumann',
             $tue->copy()->setTime(7, 30),
             $tue->copy()->setTime(10, 0),
-            $neumann, $jonas, $statuses['Akutbehandlung'],
+            $neumann, $jonas, $statuses['Block – noch nicht bestätigt'],
             'Köderboxen auslegen, Zugänge abdichten.',
             [
                 ['text' => 'Köderboxen auslegen (12 Stk.)', 'checked' => false],
@@ -314,7 +326,7 @@ class DatabaseSeeder extends Seeder
             'Routinekontrolle Restaurant Bella Vista',
             $tue->copy()->setTime(8, 0),
             $tue->copy()->setTime(9, 30),
-            $koch, $markus, $statuses['Routinekontrolle'],
+            $koch, $markus, $statuses['Folgemaßnahme'],
             'Quartalskontrolle Küche und Lager.',
         );
 
@@ -323,21 +335,21 @@ class DatabaseSeeder extends Seeder
             'Teammeeting Wochenplanung',
             $tue->copy()->setTime(8, 30),
             $tue->copy()->setTime(9, 30),
-            null, $owner, $statuses['Dokumentation'],
+            null, $owner, $statuses['Für Fakturierung bereit'],
         );
 
         $appt(
             'Teammeeting Wochenplanung',
             $tue->copy()->setTime(8, 30),
             $tue->copy()->setTime(9, 30),
-            null, $lisa, $statuses['Dokumentation'],
+            null, $lisa, $statuses['Für Fakturierung bereit'],
         );
 
         $appt(
             'Beratung Wohnanlage Lehmann',
             $tue->copy()->setTime(10, 0),
             $tue->copy()->setTime(11, 30),
-            $lehmann, $owner, $statuses['Beratung'],
+            $lehmann, $owner, $statuses['Wiedervorlage'],
             'Taubenabwehr für Innenhof besprechen. Herr Lehmann will Angebot für Netze.',
         );
 
@@ -346,14 +358,14 @@ class DatabaseSeeder extends Seeder
             'Nachkontrolle Supermarkt Braun',
             $tue->copy()->setTime(13, 0),
             $tue->copy()->setTime(14, 0),
-            $braun, $lisa, $statuses['Nachkontrolle'],
+            $braun, $lisa, $statuses['Digitale Überwachung'],
         );
 
         $appt(
             'Kundenbesuch Zimmermann — Marder',
             $tue->copy()->setTime(13, 30),
             $tue->copy()->setTime(15, 0),
-            $zimmermann, $lisa, $statuses['Erstbegehung'],
+            $zimmermann, $lisa, $statuses['Erste Maßnahme'],
             'Mardergeräusche auf dem Dachboden. Erstbegehung und Beratung.',
         );
 
@@ -361,7 +373,7 @@ class DatabaseSeeder extends Seeder
             'Dokumentation Bella Vista',
             $tue->copy()->setTime(14, 0),
             $tue->copy()->setTime(15, 0),
-            $koch, $lisa, $statuses['Dokumentation'],
+            $koch, $lisa, $statuses['Für Fakturierung bereit'],
         );
 
         // UNASSIGNED Tuesday
@@ -369,7 +381,7 @@ class DatabaseSeeder extends Seeder
             'Angebotsanfrage Schädlingsmonitoring',
             $tue->copy()->setTime(11, 0),
             $tue->copy()->setTime(12, 0),
-            null, null, $statuses['Beratung'],
+            null, null, $statuses['Wiedervorlage'],
             'Neue Anfrage über Website. Großküche in Pasing, monatliches Monitoring gewünscht.',
         );
 
@@ -379,7 +391,7 @@ class DatabaseSeeder extends Seeder
             'Wespenentfernung Fam. Mayer',
             $wed->copy()->setTime(8, 0),
             $wed->copy()->setTime(9, 0),
-            $mayer, $markus, $statuses['Akutbehandlung'],
+            $mayer, $markus, $statuses['Block – noch nicht bestätigt'],
             'Wespennest entfernen. Schutzausrüstung mitnehmen!',
         );
 
@@ -387,14 +399,14 @@ class DatabaseSeeder extends Seeder
             'Routinekontrolle Bäckerei Bergmann',
             $wed->copy()->setTime(9, 30),
             $wed->copy()->setTime(11, 0),
-            $bergmann, $markus, $statuses['Routinekontrolle'],
+            $bergmann, $markus, $statuses['Folgemaßnahme'],
         );
 
         $appt(
             'Akutbehandlung Schaben — Gaststätte Hirsch',
             $wed->copy()->setTime(7, 0),
             $wed->copy()->setTime(9, 0),
-            $schuster, $jonas, $statuses['Akutbehandlung'],
+            $schuster, $jonas, $statuses['Block – noch nicht bestätigt'],
             'Schabenbefall in der Küche, vor Öffnungszeit behandeln!',
         );
 
@@ -402,7 +414,7 @@ class DatabaseSeeder extends Seeder
             'Beratung Hotel Residenz — Bettwanzen',
             $wed->copy()->setTime(10, 0),
             $wed->copy()->setTime(11, 30),
-            $gruber, $owner, $statuses['Beratung'],
+            $gruber, $owner, $statuses['Wiedervorlage'],
             'Gast hat Bettwanzen gemeldet. Zimmer 204 + angrenzende Zimmer inspizieren.',
             [
                 ['text' => 'Zimmer 204 inspizieren', 'checked' => false],
@@ -416,7 +428,7 @@ class DatabaseSeeder extends Seeder
             'Schulung Hygienevorschriften',
             $wed->copy()->setTime(14, 0),
             $wed->copy()->setTime(16, 0),
-            null, $owner, $statuses['Beratung'],
+            null, $owner, $statuses['Wiedervorlage'],
             'Interne Schulung für das Team.',
         );
 
@@ -424,21 +436,21 @@ class DatabaseSeeder extends Seeder
             'Schulung Hygienevorschriften',
             $wed->copy()->setTime(14, 0),
             $wed->copy()->setTime(16, 0),
-            null, $markus, $statuses['Beratung'],
+            null, $markus, $statuses['Wiedervorlage'],
         );
 
         $appt(
             'Schulung Hygienevorschriften',
             $wed->copy()->setTime(14, 0),
             $wed->copy()->setTime(16, 0),
-            null, $lisa, $statuses['Beratung'],
+            null, $lisa, $statuses['Wiedervorlage'],
         );
 
         $appt(
             'Schulung Hygienevorschriften',
             $wed->copy()->setTime(14, 0),
             $wed->copy()->setTime(16, 0),
-            null, $jonas, $statuses['Beratung'],
+            null, $jonas, $statuses['Wiedervorlage'],
         );
 
         // Lisa: short morning appointments
@@ -446,14 +458,14 @@ class DatabaseSeeder extends Seeder
             'Nachkontrolle Kindergarten Sonnenschein',
             $wed->copy()->setTime(8, 0),
             $wed->copy()->setTime(9, 0),
-            $krause, $lisa, $statuses['Nachkontrolle'],
+            $krause, $lisa, $statuses['Digitale Überwachung'],
         );
 
         $appt(
             'Ködertausch Metzgerei Huber',
             $wed->copy()->setTime(9, 30),
             $wed->copy()->setTime(10, 30),
-            $huber, $lisa, $statuses['Routinekontrolle'],
+            $huber, $lisa, $statuses['Folgemaßnahme'],
         );
 
         // --- Thursday ---
@@ -463,7 +475,7 @@ class DatabaseSeeder extends Seeder
             'Bettwanzenbehandlung Hotel Residenz',
             $thu->copy()->setTime(7, 0),
             $thu->copy()->setTime(10, 0),
-            $gruber, $markus, $statuses['Akutbehandlung'],
+            $gruber, $markus, $statuses['Block – noch nicht bestätigt'],
             'Thermische Behandlung Zimmer 204. Zugang ab 7 Uhr über Hintereingang.',
         );
 
@@ -471,7 +483,7 @@ class DatabaseSeeder extends Seeder
             'Bettwanzenbehandlung Hotel Residenz',
             $thu->copy()->setTime(7, 0),
             $thu->copy()->setTime(10, 0),
-            $gruber, $jonas, $statuses['Akutbehandlung'],
+            $gruber, $jonas, $statuses['Block – noch nicht bestätigt'],
             'Unterstützung Markus. Zimmer 203 + 205 behandeln.',
         );
 
@@ -479,14 +491,14 @@ class DatabaseSeeder extends Seeder
             'Routinekontrolle Supermarkt Braun',
             $thu->copy()->setTime(8, 0),
             $thu->copy()->setTime(9, 30),
-            $braun, $lisa, $statuses['Routinekontrolle'],
+            $braun, $lisa, $statuses['Folgemaßnahme'],
         );
 
         $appt(
             'Kundengespräch Lehmann — Angebot',
             $thu->copy()->setTime(10, 0),
             $thu->copy()->setTime(11, 0),
-            $lehmann, $owner, $statuses['Beratung'],
+            $lehmann, $owner, $statuses['Wiedervorlage'],
             'Angebot Taubennetze besprechen und unterzeichnen.',
         );
 
@@ -495,7 +507,7 @@ class DatabaseSeeder extends Seeder
             'Nachkontrolle Lagerhalle Neumann',
             $thu->copy()->setTime(13, 0),
             $thu->copy()->setTime(14, 0),
-            $neumann, $jonas, $statuses['Nachkontrolle'],
+            $neumann, $jonas, $statuses['Digitale Überwachung'],
             'Köderverbrauch prüfen, ggf. nachfüllen.',
         );
 
@@ -503,7 +515,7 @@ class DatabaseSeeder extends Seeder
             'Erstbegehung Frau Wagner',
             $thu->copy()->setTime(14, 0),
             $thu->copy()->setTime(15, 30),
-            $wagner, $lisa, $statuses['Erstbegehung'],
+            $wagner, $lisa, $statuses['Erste Maßnahme'],
             'Ameisenbefall Küche und Terrasse.',
         );
 
@@ -531,7 +543,7 @@ class DatabaseSeeder extends Seeder
             'Abschlusskontrolle Gaststätte Hirsch',
             $fri->copy()->setTime(8, 0),
             $fri->copy()->setTime(9, 0),
-            $schuster, $jonas, $statuses['Abgeschlossen'],
+            $schuster, $jonas, $statuses['Fakturiert'],
             'Schabenbehandlung erfolgreich. Abschlussdokumentation.',
         );
 
@@ -540,7 +552,7 @@ class DatabaseSeeder extends Seeder
             'Wöchentliche Routinekontrolle Bella Vista',
             $fri->copy()->setTime(9, 0),
             $fri->copy()->setTime(10, 0),
-            $koch, $markus, $statuses['Routinekontrolle'],
+            $koch, $markus, $statuses['Folgemaßnahme'],
         );
         $recurringParent->update([
             'recurrence_type' => 'weekly',
@@ -552,7 +564,7 @@ class DatabaseSeeder extends Seeder
             'Dokumentation + Wochenbericht',
             $fri->copy()->setTime(10, 0),
             $fri->copy()->setTime(12, 0),
-            null, $owner, $statuses['Dokumentation'],
+            null, $owner, $statuses['Für Fakturierung bereit'],
             'KW-Bericht zusammenstellen, Fotos sortieren.',
         );
 
@@ -560,7 +572,7 @@ class DatabaseSeeder extends Seeder
             'Ameisenbehandlung Frau Wagner',
             $fri->copy()->setTime(10, 0),
             $fri->copy()->setTime(11, 30),
-            $wagner, $lisa, $statuses['Akutbehandlung'],
+            $wagner, $lisa, $statuses['Block – noch nicht bestätigt'],
             'Gel-Köder und Barrierespray ausbringen.',
         );
 
@@ -569,14 +581,14 @@ class DatabaseSeeder extends Seeder
             'Nachkontrolle Mayer — Wespen',
             $fri->copy()->setTime(13, 0),
             $fri->copy()->setTime(14, 0),
-            $mayer, $markus, $statuses['Nachkontrolle'],
+            $mayer, $markus, $statuses['Digitale Überwachung'],
         );
 
         $appt(
             'Routinekontrolle Kindergarten Sonnenschein',
             $fri->copy()->setTime(13, 30),
             $fri->copy()->setTime(14, 30),
-            $krause, $markus, $statuses['Routinekontrolle'],
+            $krause, $markus, $statuses['Folgemaßnahme'],
         );
 
         // No-client appointment
@@ -592,7 +604,7 @@ class DatabaseSeeder extends Seeder
             'Dringende Anfrage — Rattenbefall Keller',
             $fri->copy()->setTime(8, 0),
             $fri->copy()->setTime(8, 30),
-            null, null, $statuses['Akutbehandlung'],
+            null, null, $statuses['Block – noch nicht bestätigt'],
             'Anruf von Privatperson aus Laim. Sofort zuweisen!',
         );
 
@@ -612,7 +624,7 @@ class DatabaseSeeder extends Seeder
             'Nachkontrolle Bäckerei Bergmann',
             $mon2->copy()->setTime(8, 0),
             $mon2->copy()->setTime(9, 30),
-            $bergmann, $owner, $statuses['Nachkontrolle'],
+            $bergmann, $owner, $statuses['Digitale Überwachung'],
             'Mehlmottenfallen kontrollieren. 2 Wochen nach Erstbegehung.',
         );
 
@@ -620,14 +632,14 @@ class DatabaseSeeder extends Seeder
             'Routinekontrolle Hotel Residenz',
             $mon2->copy()->setTime(8, 0),
             $mon2->copy()->setTime(10, 0),
-            $gruber, $markus, $statuses['Routinekontrolle'],
+            $gruber, $markus, $statuses['Folgemaßnahme'],
         );
 
         $appt(
             'Taubenabwehr Installation Lehmann',
             $mon2->copy()->setTime(8, 0),
             $mon2->copy()->setTime(12, 0),
-            $lehmann, $jonas, $statuses['Akutbehandlung'],
+            $lehmann, $jonas, $statuses['Block – noch nicht bestätigt'],
             'Taubennetze im Innenhof montieren. Material ist im Lager.',
             [
                 ['text' => 'Material laden', 'checked' => false],
@@ -642,14 +654,14 @@ class DatabaseSeeder extends Seeder
             'Nachkontrolle Frau Wagner — Ameisen',
             $mon2->copy()->setTime(10, 0),
             $mon2->copy()->setTime(11, 0),
-            $wagner, $lisa, $statuses['Nachkontrolle'],
+            $wagner, $lisa, $statuses['Digitale Überwachung'],
         );
 
         $appt(
             'Beratung Supermarkt Braun — Monitoring',
             $mon2->copy()->setTime(11, 0),
             $mon2->copy()->setTime(12, 0),
-            $braun, $lisa, $statuses['Beratung'],
+            $braun, $lisa, $statuses['Wiedervorlage'],
             'Neues Monitoringsystem besprechen.',
         );
 
@@ -658,7 +670,7 @@ class DatabaseSeeder extends Seeder
             'Beratung Neukunde Taubenproblem',
             $mon2->copy()->setTime(10, 0),
             $mon2->copy()->setTime(11, 0),
-            null, $owner, $statuses['Beratung'],
+            null, $owner, $statuses['Wiedervorlage'],
             'Erstgespräch mit Hausverwaltung aus Schwabing.',
         );
 
@@ -668,14 +680,14 @@ class DatabaseSeeder extends Seeder
             'Teammeeting Wochenplanung',
             $tue2->copy()->setTime(8, 30),
             $tue2->copy()->setTime(9, 30),
-            null, $owner, $statuses['Dokumentation'],
+            null, $owner, $statuses['Für Fakturierung bereit'],
         );
 
         $appt(
             'Akutbehandlung Ratten — Bella Vista Keller',
             $tue2->copy()->setTime(7, 0),
             $tue2->copy()->setTime(9, 0),
-            $koch, $markus, $statuses['Akutbehandlung'],
+            $koch, $markus, $statuses['Block – noch nicht bestätigt'],
             'Rattenspuren im Keller entdeckt. Vor Öffnungszeit behandeln.',
         );
 
@@ -683,7 +695,7 @@ class DatabaseSeeder extends Seeder
             'Erstbegehung Neukunde Schwabing',
             $tue2->copy()->setTime(10, 0),
             $tue2->copy()->setTime(11, 30),
-            null, $owner, $statuses['Erstbegehung'],
+            null, $owner, $statuses['Erste Maßnahme'],
             'Taubenbefall Dachgeschoss Wohnanlage.',
         );
 
@@ -691,21 +703,21 @@ class DatabaseSeeder extends Seeder
             'Routinekontrolle Gaststätte Hirsch',
             $tue2->copy()->setTime(10, 0),
             $tue2->copy()->setTime(11, 0),
-            $schuster, $jonas, $statuses['Routinekontrolle'],
+            $schuster, $jonas, $statuses['Folgemaßnahme'],
         );
 
         $appt(
             'Ködertausch Lagerhalle Neumann',
             $tue2->copy()->setTime(13, 0),
             $tue2->copy()->setTime(14, 30),
-            $neumann, $jonas, $statuses['Routinekontrolle'],
+            $neumann, $jonas, $statuses['Folgemaßnahme'],
         );
 
         $appt(
             'Nachkontrolle Zimmermann — Marder',
             $tue2->copy()->setTime(14, 0),
             $tue2->copy()->setTime(15, 0),
-            $zimmermann, $lisa, $statuses['Nachkontrolle'],
+            $zimmermann, $lisa, $statuses['Digitale Überwachung'],
             'Lebendfalle kontrollieren.',
         );
 
@@ -714,7 +726,7 @@ class DatabaseSeeder extends Seeder
             'Reklamation Metzgerei Huber',
             $tue2->copy()->setTime(9, 0),
             $tue2->copy()->setTime(9, 30),
-            $huber, null, $statuses['Routinekontrolle'],
+            $huber, null, $statuses['Folgemaßnahme'],
             'Frau Huber meldet erneuten Mottenbefall trotz Behandlung. Bitte schnell zuweisen.',
         );
 
@@ -724,7 +736,7 @@ class DatabaseSeeder extends Seeder
             'Bettwanzen-Nachkontrolle Hotel Residenz',
             $wed2->copy()->setTime(8, 0),
             $wed2->copy()->setTime(9, 30),
-            $gruber, $markus, $statuses['Nachkontrolle'],
+            $gruber, $markus, $statuses['Digitale Überwachung'],
             'Kontrollinspektion 1 Woche nach thermischer Behandlung.',
         );
 
@@ -732,7 +744,7 @@ class DatabaseSeeder extends Seeder
             'Routinekontrolle Bäckerei Bergmann',
             $wed2->copy()->setTime(10, 0),
             $wed2->copy()->setTime(11, 0),
-            $bergmann, $markus, $statuses['Routinekontrolle'],
+            $bergmann, $markus, $statuses['Folgemaßnahme'],
         );
 
         // Long appointment for Jonas
@@ -740,7 +752,7 @@ class DatabaseSeeder extends Seeder
             'Taubenabwehr Fertigstellung Lehmann',
             $wed2->copy()->setTime(8, 0),
             $wed2->copy()->setTime(13, 0),
-            $lehmann, $jonas, $statuses['Akutbehandlung'],
+            $lehmann, $jonas, $statuses['Block – noch nicht bestätigt'],
             'Restarbeiten Taubennetze + Reinigung.',
         );
 
@@ -748,7 +760,7 @@ class DatabaseSeeder extends Seeder
             'Ameisenbekämpfung Wagner — Abschluss',
             $wed2->copy()->setTime(9, 0),
             $wed2->copy()->setTime(10, 0),
-            $wagner, $lisa, $statuses['Abgeschlossen'],
+            $wagner, $lisa, $statuses['Fakturiert'],
             'Letzte Kontrolle, Behandlung abgeschlossen.',
         );
 
@@ -756,14 +768,14 @@ class DatabaseSeeder extends Seeder
             'Kundenbesuch Kindergarten Sonnenschein',
             $wed2->copy()->setTime(10, 30),
             $wed2->copy()->setTime(11, 30),
-            $krause, $lisa, $statuses['Routinekontrolle'],
+            $krause, $lisa, $statuses['Folgemaßnahme'],
         );
 
         $appt(
             'Angebotserstellung Monitoringvertrag',
             $wed2->copy()->setTime(14, 0),
             $wed2->copy()->setTime(16, 0),
-            null, $owner, $statuses['Dokumentation'],
+            null, $owner, $statuses['Für Fakturierung bereit'],
             'Monitoringvertrag für Supermarkt Braun finalisieren.',
         );
 
@@ -774,14 +786,14 @@ class DatabaseSeeder extends Seeder
             'Nachkontrolle Bella Vista Keller',
             $thu2->copy()->setTime(8, 0),
             $thu2->copy()->setTime(9, 0),
-            $koch, $markus, $statuses['Nachkontrolle'],
+            $koch, $markus, $statuses['Digitale Überwachung'],
         );
 
         $appt(
             'Routinekontrolle Metzgerei Huber',
             $thu2->copy()->setTime(8, 30),
             $thu2->copy()->setTime(10, 0),
-            $huber, $markus, $statuses['Routinekontrolle'],
+            $huber, $markus, $statuses['Folgemaßnahme'],
             'Inkl. Reklamationsbearbeitung Mottenbefall.',
         );
 
@@ -789,14 +801,14 @@ class DatabaseSeeder extends Seeder
             'Ködertausch Mayer',
             $thu2->copy()->setTime(9, 0),
             $thu2->copy()->setTime(9, 30),
-            $mayer, $markus, $statuses['Routinekontrolle'],
+            $mayer, $markus, $statuses['Folgemaßnahme'],
         );
 
         $appt(
             'Routinekontrolle Wohnanlage Lehmann',
             $thu2->copy()->setTime(10, 0),
             $thu2->copy()->setTime(11, 30),
-            $lehmann, $owner, $statuses['Nachkontrolle'],
+            $lehmann, $owner, $statuses['Digitale Überwachung'],
             'Abnahme Taubenabwehr + erste Kontrollrunde.',
         );
 
@@ -804,14 +816,14 @@ class DatabaseSeeder extends Seeder
             'Nachkontrolle Lagerhalle Neumann',
             $thu2->copy()->setTime(10, 0),
             $thu2->copy()->setTime(11, 0),
-            $neumann, $jonas, $statuses['Nachkontrolle'],
+            $neumann, $jonas, $statuses['Digitale Überwachung'],
         );
 
         $appt(
             'Erstbegehung neues Objekt Pasing',
             $thu2->copy()->setTime(13, 0),
             $thu2->copy()->setTime(15, 0),
-            null, $lisa, $statuses['Erstbegehung'],
+            null, $lisa, $statuses['Erste Maßnahme'],
             'Großküche in Pasing. Angebot Website-Anfrage.',
         );
 
@@ -830,7 +842,7 @@ class DatabaseSeeder extends Seeder
             'Wöchentliche Routinekontrolle Bella Vista',
             $fri2->copy()->setTime(9, 0),
             $fri2->copy()->setTime(10, 0),
-            $koch, $markus, $statuses['Routinekontrolle'],
+            $koch, $markus, $statuses['Folgemaßnahme'],
         );
         $recurringChild->update(['parent_id' => $recurringParent->id]);
 
@@ -838,14 +850,14 @@ class DatabaseSeeder extends Seeder
             'Dokumentation + Wochenbericht',
             $fri2->copy()->setTime(10, 0),
             $fri2->copy()->setTime(12, 0),
-            null, $owner, $statuses['Dokumentation'],
+            null, $owner, $statuses['Für Fakturierung bereit'],
         );
 
         $appt(
             'Abschlusskontrolle Zimmermann — Marder',
             $fri2->copy()->setTime(8, 0),
             $fri2->copy()->setTime(9, 30),
-            $zimmermann, $lisa, $statuses['Abgeschlossen'],
+            $zimmermann, $lisa, $statuses['Fakturiert'],
             'Marder gefangen und umgesiedelt. Eingang abgedichtet.',
         );
 
@@ -853,21 +865,21 @@ class DatabaseSeeder extends Seeder
             'Nachkontrolle Hotel Residenz — Bettwanzen',
             $fri2->copy()->setTime(8, 0),
             $fri2->copy()->setTime(9, 0),
-            $gruber, $jonas, $statuses['Nachkontrolle'],
+            $gruber, $jonas, $statuses['Digitale Überwachung'],
         );
 
         $appt(
             'Routinekontrolle Kindergarten Sonnenschein',
             $fri2->copy()->setTime(13, 0),
             $fri2->copy()->setTime(14, 0),
-            $krause, $markus, $statuses['Routinekontrolle'],
+            $krause, $markus, $statuses['Folgemaßnahme'],
         );
 
         $appt(
             'Beratung Supermarkt Braun — Vertragsabschluss',
             $fri2->copy()->setTime(14, 0),
             $fri2->copy()->setTime(15, 0),
-            $braun, $owner, $statuses['Beratung'],
+            $braun, $owner, $statuses['Wiedervorlage'],
             'Monitoringvertrag unterzeichnen.',
         );
 
@@ -876,7 +888,7 @@ class DatabaseSeeder extends Seeder
             'Neue Anfrage — Kakerlaken Gastro Haidhausen',
             $fri2->copy()->setTime(10, 0),
             $fri2->copy()->setTime(10, 30),
-            null, null, $statuses['Akutbehandlung'],
+            null, null, $statuses['Block – noch nicht bestätigt'],
             'Dringend! Gesundheitsamt hat Frist gesetzt. Sofort zuweisen.',
         );
     }

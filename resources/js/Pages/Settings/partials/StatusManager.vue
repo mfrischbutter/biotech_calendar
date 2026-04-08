@@ -118,6 +118,8 @@ function handleDragEnd() {
     dragIndex.value = null;
 }
 
+const isCustomColor = computed(() => !STATUS_COLORS.includes(form.color));
+
 const canEdit = computed(() => {
     // Will be handled server-side via permissions
     return true;
@@ -147,7 +149,7 @@ const canEdit = computed(() => {
 
             <div class="space-y-2">
                 <Label>{{ t('Color') }} *</Label>
-                <div class="flex flex-wrap gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                     <button
                         v-for="color in STATUS_COLORS"
                         :key="color"
@@ -157,6 +159,19 @@ const canEdit = computed(() => {
                         :style="{ backgroundColor: color }"
                         @click="form.color = color"
                     />
+                    <label
+                        class="relative w-7 h-7 rounded-full border-2 transition-all cursor-pointer overflow-hidden"
+                        :class="isCustomColor ? 'border-foreground scale-110' : 'border-transparent hover:scale-105'"
+                        :style="{ backgroundColor: form.color }"
+                    >
+                        <input
+                            type="color"
+                            :value="form.color"
+                            class="absolute inset-0 opacity-0 cursor-pointer"
+                            @input="form.color = ($event.target as HTMLInputElement).value"
+                        />
+                        <svg v-if="!isCustomColor" xmlns="http://www.w3.org/2000/svg" class="absolute inset-0 m-auto h-4 w-4 text-white drop-shadow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </label>
                 </div>
                 <p v-if="form.errors.color" class="text-sm text-destructive">{{ form.errors.color }}</p>
             </div>

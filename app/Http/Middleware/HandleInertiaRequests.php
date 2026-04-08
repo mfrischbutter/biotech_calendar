@@ -55,7 +55,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'companyBranding' => $company ? [
                 'name' => $company->name,
-                'logo_url' => $company->logo_path ? '/storage/' . $company->logo_path : null,
+                'logo_url' => $company->logo_path ? '/storage/'.$company->logo_path : null,
             ] : null,
             'locale' => $locale,
             'translations' => $translations,

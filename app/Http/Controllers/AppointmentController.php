@@ -50,7 +50,7 @@ class AppointmentController extends Controller
             ],
         };
 
-        $appointments = Appointment::with(['client:id,first_name,last_name,company_name', 'employee:id,first_name,last_name', 'status:id,name,color'])
+        $appointments = Appointment::with(['client:id,first_name,last_name,company_name,street,zip,city', 'employee:id,first_name,last_name', 'status:id,name,color'])
             ->where(function ($q) use ($rangeStart, $rangeEnd) {
                 $q->whereBetween('start_at', [$rangeStart, $rangeEnd])
                     ->orWhereBetween('end_at', [$rangeStart, $rangeEnd])

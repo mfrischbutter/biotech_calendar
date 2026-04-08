@@ -72,7 +72,7 @@ export interface ChecklistItem {
 export interface Appointment {
     id: number;
     title: string;
-    client: { id: number; first_name: string; last_name: string; company_name: string | null; name: string } | null;
+    client: { id: number; first_name: string; last_name: string; company_name: string | null; name: string; street: string | null; zip: string | null; city: string | null } | null;
     employee: { id: number; first_name: string; last_name: string; name: string } | null;
     start_at: string;
     end_at: string;
