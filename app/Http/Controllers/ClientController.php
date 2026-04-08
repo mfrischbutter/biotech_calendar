@@ -53,6 +53,9 @@ class ClientController extends Controller
             'phone' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'string', 'email', 'max:255'],
             'notes' => ['nullable', 'string'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'place_id' => ['nullable', 'string', 'max:255'],
         ]);
 
         Client::create([
@@ -79,6 +82,9 @@ class ClientController extends Controller
             'phone' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'string', 'email', 'max:255'],
             'notes' => ['nullable', 'string'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'place_id' => ['nullable', 'string', 'max:255'],
         ]);
 
         $client->update($validated);

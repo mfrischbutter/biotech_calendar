@@ -33,6 +33,9 @@ export interface Company {
     street: string | null;
     zip: string | null;
     city: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    place_id: string | null;
     phone: string | null;
     email: string | null;
     logo_path: string | null;
@@ -59,6 +62,9 @@ export interface Client {
     street: string | null;
     zip: string | null;
     city: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    place_id: string | null;
     phone: string | null;
     email: string | null;
     notes: string | null;
@@ -82,6 +88,9 @@ export interface Appointment {
     street: string | null;
     zip: string | null;
     city: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    place_id: string | null;
     checklist: ChecklistItem[] | null;
     recurrence_type: RecurrenceType | null;
     recurrence_interval: number | null;
@@ -113,6 +122,16 @@ export interface ActivityLog {
     created_at: string;
 }
 
+export interface PlaceSuggestion {
+    placeId: string;
+    description: string;
+    street: string;
+    zip: string;
+    city: string;
+    latitude: number;
+    longitude: number;
+}
+
 export interface SharedCompany {
     name: string;
     logo_url: string | null;
@@ -125,6 +144,7 @@ export type PageProps<
         user: User;
     };
     companyBranding: SharedCompany | null;
+    googlePlacesApiKey: string | null;
     locale: string;
     translations: Record<string, string>;
 };

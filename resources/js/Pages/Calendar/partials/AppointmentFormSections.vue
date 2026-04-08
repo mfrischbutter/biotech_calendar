@@ -61,6 +61,9 @@ const props = defineProps<{
     street: string;
     zip: string;
     city: string;
+    latitude: number | null;
+    longitude: number | null;
+    placeId: string | null;
     checklist: { text: string; checked: boolean }[];
     isRecurring: boolean;
     recurrenceType: string;
@@ -81,6 +84,9 @@ const emit = defineEmits<{
     'update:street': [value: string];
     'update:zip': [value: string];
     'update:city': [value: string];
+    'update:latitude': [value: number | null];
+    'update:longitude': [value: number | null];
+    'update:placeId': [value: string | null];
     'update:checklist': [value: { text: string; checked: boolean }[]];
     'update:isRecurring': [value: boolean];
     'update:recurrenceType': [value: string];
@@ -251,10 +257,16 @@ defineExpose({ notesRef, autoResize });
                 :street="street"
                 :zip="zip"
                 :city="city"
+                :latitude="latitude"
+                :longitude="longitude"
+                :place-id="placeId"
                 :client-address="clientAddress"
                 @update:street="(v) => emit('update:street', v)"
                 @update:zip="(v) => emit('update:zip', v)"
                 @update:city="(v) => emit('update:city', v)"
+                @update:latitude="(v) => emit('update:latitude', v)"
+                @update:longitude="(v) => emit('update:longitude', v)"
+                @update:place-id="(v) => emit('update:placeId', v)"
             />
         </div>
 

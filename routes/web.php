@@ -16,6 +16,8 @@ Route::get('/', function () {
 
 Route::get('/dashboard', DashboardController::class)
     ->middleware(['auth', 'verified'])->name('dashboard');
+Route::post('/dashboard/comments-read', [DashboardController::class, 'markCommentsRead'])
+    ->middleware(['auth', 'verified'])->name('dashboard.comments.read');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

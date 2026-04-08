@@ -8,6 +8,8 @@
     "Recent Activity": "Letzte Aktivitäten",
     "No upcoming appointments": "Keine anstehenden Termine",
     "No recent activity": "Keine aktuellen Aktivitäten",
+    "No recent comments": "Keine aktuellen Kommentare",
+    "Activities": "Aktivitäten",
     "Comments": "Kommentare",
     "Write a comment...": "Kommentar schreiben...",
     "Send": "Senden",
@@ -222,5 +224,7 @@
     "Description": "Beschreibung",
     "Checklist": "Checkliste",
     "End time must be after start time": "Endzeit muss nach der Startzeit liegen",
-    "Select date...": "Datum auswählen..."
+    "Select date...": "Datum auswählen...",
+    "Searching...": "Suche...",
+    "No addresses found": "Keine Adressen gefunden"
 }

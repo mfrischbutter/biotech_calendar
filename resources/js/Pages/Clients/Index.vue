@@ -34,7 +34,7 @@ import {
     AlertDialogTrigger,
 } from '@/Components/ui/alert-dialog';
 import type { Client } from '@/types';
-import ClientFormDialog from './partials/ClientFormDialog.vue';
+import ClientFormDrawer from './partials/ClientFormDrawer.vue';
 
 const { t } = useTrans();
 
@@ -77,9 +77,9 @@ function deleteClient(client: Client) {
                         {{ t('Manage and search your client database.') }}
                     </p>
                 </div>
-                <ClientFormDialog>
+                <ClientFormDrawer>
                     <Button>{{ t('New Client') }}</Button>
-                </ClientFormDialog>
+                </ClientFormDrawer>
             </div>
         </template>
 
@@ -103,12 +103,12 @@ function deleteClient(client: Client) {
                 </EmptyDescription>
             </EmptyHeader>
             <EmptyContent v-if="!search">
-                <ClientFormDialog>
+                <ClientFormDrawer>
                     <Button size="sm">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         {{ t('New Client') }}
                     </Button>
-                </ClientFormDialog>
+                </ClientFormDrawer>
             </EmptyContent>
         </Empty>
 
@@ -145,9 +145,9 @@ function deleteClient(client: Client) {
                         </TableCell>
                         <TableCell class="text-right">
                             <div class="flex items-center justify-end gap-2">
-                                <ClientFormDialog :client="client">
+                                <ClientFormDrawer :client="client">
                                     <Button variant="ghost" size="sm">{{ t('Edit') }}</Button>
-                                </ClientFormDialog>
+                                </ClientFormDrawer>
                                 <AlertDialog>
                                     <AlertDialogTrigger as-child>
                                         <Button variant="ghost" size="sm" class="text-destructive hover:text-destructive">

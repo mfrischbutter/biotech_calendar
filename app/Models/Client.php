@@ -28,6 +28,9 @@ class Client extends Model
         'email',
         'notes',
         'user_id',
+        'latitude',
+        'longitude',
+        'place_id',
     ];
 
     protected $appends = ['name'];

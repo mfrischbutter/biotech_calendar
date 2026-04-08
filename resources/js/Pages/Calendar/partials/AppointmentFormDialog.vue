@@ -65,6 +65,9 @@ const form = useForm({
     street: props.appointment?.street ?? '',
     zip: props.appointment?.zip ?? '',
     city: props.appointment?.city ?? '',
+    latitude: props.appointment?.latitude ?? null,
+    longitude: props.appointment?.longitude ?? null,
+    place_id: props.appointment?.place_id ?? null,
     checklist: (props.appointment?.checklist ?? []) as ChecklistItem[],
     is_recurring: !!props.appointment?.recurrence_type || !!props.appointment?.parent_id,
     recurrence_type: props.appointment?.recurrence_type ?? 'weekly',
@@ -108,6 +111,7 @@ function takeSnapshot(): string {
         start_date: form.start_date, start_time: form.start_time, end_date: form.end_date,
         end_time: form.end_time, status_id: form.status_id, kind: form.kind,
         notes: form.notes, street: form.street, zip: form.zip, city: form.city,
+        latitude: form.latitude, longitude: form.longitude, place_id: form.place_id,
         checklist: form.checklist, is_recurring: form.is_recurring,
         recurrence_type: form.recurrence_type, recurrence_interval: form.recurrence_interval,
         recurrence_end: form.recurrence_end,
@@ -154,6 +158,9 @@ function populateFromAppointment() {
     form.street = props.appointment?.street ?? '';
     form.zip = props.appointment?.zip ?? '';
     form.city = props.appointment?.city ?? '';
+    form.latitude = props.appointment?.latitude ?? null;
+    form.longitude = props.appointment?.longitude ?? null;
+    form.place_id = props.appointment?.place_id ?? null;
     form.checklist = (props.appointment?.checklist ?? []) as ChecklistItem[];
     form.is_recurring = !!props.appointment?.recurrence_type || !!props.appointment?.parent_id;
     form.recurrence_type = props.appointment?.recurrence_type ?? 'weekly';
@@ -202,6 +209,9 @@ function submit() {
         street: form.street || null,
         zip: form.zip || null,
         city: form.city || null,
+        latitude: form.latitude,
+        longitude: form.longitude,
+        place_id: form.place_id,
         checklist: form.checklist.length > 0 ? form.checklist : null,
     };
 
@@ -297,6 +307,9 @@ function submit() {
                             v-model:street="form.street"
                             v-model:zip="form.zip"
                             v-model:city="form.city"
+                            v-model:latitude="form.latitude"
+                            v-model:longitude="form.longitude"
+                            v-model:place-id="form.place_id"
                             v-model:checklist="form.checklist"
                             v-model:is-recurring="form.is_recurring"
                             v-model:recurrence-type="form.recurrence_type"

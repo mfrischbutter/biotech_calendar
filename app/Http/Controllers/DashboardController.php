@@ -40,12 +40,31 @@ class DashboardController extends Controller
         $recentActivity = ActivityLog::with([
             'user:id,first_name,last_name',
             'appointment:id,title',
-            'comment:id,body',
         ])
+            ->where('action', '!=', 'comment_added')
             ->recent(7)
             ->latest()
             ->limit(20)
             ->get();
+
+        $recentComments = ActivityLog::with([
+            'user:id,first_name,last_name',
+            'appointment:id,title',
+            'comment:id,body',
+        ])
+            ->where('action', 'comment_added')
+            ->recent(7)
+            ->latest()
+            ->limit(20)
+            ->get();
+
+        $user = $request->user();
+        $readAt = $user->dashboard_comments_read_at;
+        $unreadCommentsCount = ActivityLog::where('action', 'comment_added')
+            ->where('user_id', '!=', $user->id)
+            ->recent(7)
+            ->when($readAt, fn ($q) => $q->where('created_at', '>', $readAt))
+            ->count();
 
         return Inertia::render('Dashboard/Index', [
             'totalClients' => $totalClients,
@@ -54,6 +73,17 @@ class DashboardController extends Controller
             'thisMonthAppointments' => $thisMonthAppointments,
             'upcomingAppointments' => $upcomingAppointments,
             'recentActivity' => $recentActivity,
+            'recentComments' => $recentComments,
+            'unreadCommentsCount' => $unreadCommentsCount,
         ]);
+    }
+
+    public function markCommentsRead(Request $request)
+    {
+        $request->user()->update([
+            'dashboard_comments_read_at' => now(),
+        ]);
+
+        return back();
     }
 }

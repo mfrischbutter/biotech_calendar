@@ -57,6 +57,7 @@ class HandleInertiaRequests extends Middleware
                 'name' => $company->name,
                 'logo_url' => $company->logo_path ? '/storage/'.$company->logo_path : null,
             ] : null,
+            'googlePlacesApiKey' => config('services.google.places_api_key'),
             'locale' => $locale,
             'translations' => $translations,
         ];

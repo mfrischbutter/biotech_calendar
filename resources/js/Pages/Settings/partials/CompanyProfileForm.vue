@@ -4,8 +4,9 @@ import { useForm } from '@inertiajs/vue3';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
+import AddressAutocomplete from '@/Components/AddressAutocomplete.vue';
 import { useTrans } from '@/lib/use-trans';
-import type { Company } from '@/types';
+import type { Company, PlaceSuggestion } from '@/types';
 
 const { t } = useTrans();
 
@@ -20,8 +21,20 @@ const form = useForm({
     city: props.company.city ?? '',
     phone: props.company.phone ?? '',
     email: props.company.email ?? '',
+    latitude: props.company.latitude ?? null,
+    longitude: props.company.longitude ?? null,
+    place_id: props.company.place_id ?? null,
     logo: null as File | null,
 });
+
+function onPlaceSelected(place: PlaceSuggestion) {
+    form.street = place.street;
+    form.zip = place.zip;
+    form.city = place.city;
+    form.latitude = place.latitude;
+    form.longitude = place.longitude;
+    form.place_id = place.placeId;
+}
 
 const logoPreview = ref<string | null>(
     props.company.logo_path ? `/storage/${props.company.logo_path}` : null,
@@ -77,7 +90,11 @@ function submit() {
 
         <div class="space-y-2">
             <Label for="company-street">{{ t('Street') }}</Label>
-            <Input id="company-street" v-model="form.street" type="text" />
+            <AddressAutocomplete
+                id="company-street"
+                v-model="form.street"
+                @place-selected="onPlaceSelected"
+            />
         </div>
 
         <div class="grid grid-cols-3 gap-4">

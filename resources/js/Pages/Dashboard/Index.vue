@@ -16,6 +16,8 @@ defineProps<{
     thisMonthAppointments: number;
     upcomingAppointments: Appointment[];
     recentActivity: ActivityLog[];
+    recentComments: ActivityLog[];
+    unreadCommentsCount: number;
 }>();
 </script>
 
@@ -39,7 +41,11 @@ defineProps<{
 
             <div class="grid gap-6 lg:grid-cols-2">
                 <UpcomingAppointments :appointments="upcomingAppointments" />
-                <ActivityFeed :activities="recentActivity" />
+                <ActivityFeed
+                    :activities="recentActivity"
+                    :comments="recentComments"
+                    :unread-comments-count="unreadCommentsCount"
+                />
             </div>
         </div>
     </AuthenticatedLayout>
