@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Company;
 use App\Models\Permission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
@@ -38,6 +39,7 @@ class HandleInertiaRequests extends Middleware
             : [];
 
         $user = $request->user();
+        $company = $user ? Company::find($user->company_id) : null;
 
         return [
             ...parent::share($request),
@@ -51,6 +53,10 @@ class HandleInertiaRequests extends Middleware
                         : $user->permissions->pluck('permission')->toArray(),
                 ] : null,
             ],
+            'companyBranding' => $company ? [
+                'name' => $company->name,
+                'logo_url' => $company->logo_path ? '/storage/' . $company->logo_path : null,
+            ] : null,
             'locale' => $locale,
             'translations' => $translations,
         ];

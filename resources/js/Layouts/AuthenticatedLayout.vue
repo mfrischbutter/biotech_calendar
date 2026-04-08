@@ -35,6 +35,7 @@ onUnmounted(() => removeNavigateListener());
 
 const { t } = useTrans();
 const user = page.props.auth.user;
+const company = page.props.companyBranding as { name: string; logo_url: string | null } | null;
 
 const permissions = (user?.permissions ?? []) as string[];
 
@@ -68,7 +69,10 @@ function isActive(href: string | null): boolean {
                     <path d="M3 12h18M3 6h18M3 18h18" />
                 </svg>
             </button>
-            <span class="flex-1 text-center text-sm font-semibold">Biotech</span>
+            <span class="flex-1 flex items-center justify-center">
+                <img v-if="company?.logo_url" :src="company.logo_url" :alt="company.name" class="h-7 object-contain" />
+                <span v-else class="text-sm font-semibold">{{ company?.name ?? 'Wilhelmsen BioTec' }}</span>
+            </span>
             <DropdownMenu>
                 <DropdownMenuTrigger as-child>
                     <Button variant="ghost" size="icon" class="h-10 w-10">
@@ -129,9 +133,10 @@ function isActive(href: string | null): boolean {
                         <path d="M3 12h18M3 6h18M3 18h18" />
                     </svg>
                 </button>
-                <span v-if="showSidebarLabels" class="ml-2 text-sm font-semibold whitespace-nowrap">
-                    Biotech
-                </span>
+                <template v-if="showSidebarLabels">
+                    <img v-if="company?.logo_url" :src="company.logo_url" :alt="company.name" class="ml-2 h-7 object-contain" />
+                    <span v-else class="ml-2 text-sm font-semibold whitespace-nowrap">{{ company?.name ?? 'Wilhelmsen BioTec' }}</span>
+                </template>
             </div>
 
             <Separator />

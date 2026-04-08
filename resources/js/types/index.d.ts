@@ -89,12 +89,18 @@ export interface Appointment {
     parent_id: number | null;
 }
 
+export interface SharedCompany {
+    name: string;
+    logo_url: string | null;
+}
+
 export type PageProps<
     T extends Record<string, unknown> = Record<string, unknown>,
 > = T & {
     auth: {
         user: User;
     };
+    companyBranding: SharedCompany | null;
     locale: string;
     translations: Record<string, string>;
 };
