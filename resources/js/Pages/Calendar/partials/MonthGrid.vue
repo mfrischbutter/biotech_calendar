@@ -121,7 +121,7 @@ function getTimeLabel(appt: Appointment): string {
                             >
                                 <span class="w-1.5 h-1.5 rounded-full shrink-0" :style="getStatusDotStyle(appt.status?.color ?? null)" />
                                 <span class="text-muted-foreground shrink-0 hidden md:inline">{{ getTimeLabel(appt) }}</span>
-                                <span class="truncate" :style="{ color: appt.status?.color ?? 'hsl(var(--muted-foreground))' }">
+                                <span class="truncate text-foreground">
                                     {{ appointmentLabel(appt) }}
                                 </span>
                             </div>

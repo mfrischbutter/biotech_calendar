@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -67,9 +68,9 @@ class User extends Authenticatable
         return $this->hasMany(Client::class);
     }
 
-    public function assignedAppointments(): HasMany
+    public function assignedAppointments(): BelongsToMany
     {
-        return $this->hasMany(Appointment::class, 'employee_id');
+        return $this->belongsToMany(Appointment::class, 'appointment_user')->withTimestamps();
     }
 
     public function hasPermission(string $permission): bool

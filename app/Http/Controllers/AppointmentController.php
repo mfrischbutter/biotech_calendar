@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Appointment;
 use App\Models\Client;
+use App\Models\Contract;
 use App\Models\Setting;
 use App\Models\Status;
 use App\Models\User;
@@ -56,7 +57,13 @@ class AppointmentController extends Controller
             ],
         };
 
-        $appointments = Appointment::with(['client:id,first_name,last_name,company_name,street,zip,city', 'employee:id,first_name,last_name', 'status:id,name,color', 'comments.user:id,first_name,last_name'])
+        $appointments = Appointment::with([
+            'contract:id,contract_number,title,kind,street,zip,city',
+            'contract.clients:id,first_name,last_name,company_name',
+            'workers:id,first_name,last_name',
+            'status:id,name,color',
+            'comments.user:id,first_name,last_name',
+        ])
             ->where(function ($q) use ($rangeStart, $rangeEnd) {
                 $q->whereBetween('start_at', [$rangeStart, $rangeEnd])
                     ->orWhereBetween('end_at', [$rangeStart, $rangeEnd])
@@ -68,18 +75,26 @@ class AppointmentController extends Controller
             ->orderBy('start_at')
             ->get();
 
-        $clients = Client::orderBy('last_name')->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'company_name', 'street', 'zip', 'city']);
+        $contracts = Contract::with('clients:id,first_name,last_name,company_name')
+            ->orderBy('title')
+            ->get(['id', 'contract_number', 'title', 'kind', 'street', 'zip', 'city']);
+
         $employees = User::where('company_id', $user->company_id)
             ->orderBy('last_name')->orderBy('first_name')
             ->get(['id', 'first_name', 'last_name', 'role']);
 
         $statuses = Status::orderBy('sort_order')->get(['id', 'name', 'color']);
 
+        $clients = Client::orderBy('last_name')
+            ->orderBy('first_name')
+            ->get(['id', 'first_name', 'last_name', 'company_name']);
+
         return Inertia::render('Calendar/Index', [
             'appointments' => $appointments,
-            'clients' => $clients,
+            'contracts' => $contracts,
             'employees' => $employees,
             'statuses' => $statuses,
+            'clients' => $clients,
             'currentDate' => $date->toDateString(),
             'view' => $view,
             'showWeekends' => $showWeekends,
@@ -94,20 +109,13 @@ class AppointmentController extends Controller
         abort_unless($request->user()->hasPermission('appointments.create'), 403);
 
         $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
-            'client_id' => ['nullable', 'exists:clients,id'],
-            'employee_id' => ['nullable', 'exists:users,id'],
+            'contract_id' => ['required', 'exists:contracts,id'],
+            'worker_ids' => ['nullable', 'array'],
+            'worker_ids.*' => ['integer', 'exists:users,id'],
             'start_at' => ['required', 'date'],
             'end_at' => ['required', 'date', 'after:start_at'],
             'status_id' => ['nullable', 'exists:statuses,id'],
-            'kind' => ['nullable', 'string', 'in:'.implode(',', Appointment::KINDS)],
             'notes' => ['nullable', 'string'],
-            'street' => ['nullable', 'string', 'max:255'],
-            'zip' => ['nullable', 'string', 'max:20'],
-            'city' => ['nullable', 'string', 'max:255'],
-            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
-            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
-            'place_id' => ['nullable', 'string', 'max:255'],
             'checklist' => ['nullable', 'array', 'max:50'],
             'checklist.*.text' => ['required', 'string', 'max:500'],
             'checklist.*.checked' => ['required', 'boolean'],
@@ -118,21 +126,14 @@ class AppointmentController extends Controller
             'recurrence_end' => ['nullable', 'date', 'after:start_at'],
         ]);
 
+        $workerIds = $validated['worker_ids'] ?? [];
+
         $baseData = [
-            'title' => $validated['title'],
-            'client_id' => $validated['client_id'] ?? null,
-            'employee_id' => $validated['employee_id'] ?? null,
+            'contract_id' => $validated['contract_id'],
             'start_at' => $validated['start_at'],
             'end_at' => $validated['end_at'],
             'status_id' => $validated['status_id'] ?? null,
-            'kind' => $validated['kind'] ?? null,
             'notes' => $validated['notes'] ?? null,
-            'street' => $validated['street'] ?? null,
-            'zip' => $validated['zip'] ?? null,
-            'city' => $validated['city'] ?? null,
-            'latitude' => $validated['latitude'] ?? null,
-            'longitude' => $validated['longitude'] ?? null,
-            'place_id' => $validated['place_id'] ?? null,
             'checklist' => $validated['checklist'] ?? null,
             'created_by' => $request->user()->id,
         ];
@@ -144,10 +145,12 @@ class AppointmentController extends Controller
                 'recurrence_interval' => $validated['recurrence_interval'] ?? null,
                 'recurrence_end' => $validated['recurrence_end'],
             ]);
+            $parent->workers()->sync($workerIds);
 
-            $this->generateOccurrences($parent, $baseData, $validated);
+            $this->generateOccurrences($parent, $baseData, $validated, $workerIds);
         } else {
-            Appointment::create($baseData);
+            $appointment = Appointment::create($baseData);
+            $appointment->workers()->sync($workerIds);
         }
 
         return back();
@@ -158,26 +161,26 @@ class AppointmentController extends Controller
         abort_unless($request->user()->hasPermission('appointments.edit'), 403);
 
         $validated = $request->validate([
-            'title' => ['sometimes', 'required', 'string', 'max:255'],
-            'client_id' => ['nullable', 'exists:clients,id'],
-            'employee_id' => ['nullable', 'exists:users,id'],
+            'contract_id' => ['sometimes', 'required', 'exists:contracts,id'],
+            'worker_ids' => ['nullable', 'array'],
+            'worker_ids.*' => ['integer', 'exists:users,id'],
             'start_at' => ['sometimes', 'required', 'date'],
             'end_at' => ['sometimes', 'required', 'date', 'after:start_at'],
             'status_id' => ['nullable', 'exists:statuses,id'],
-            'kind' => ['nullable', 'string', 'in:'.implode(',', Appointment::KINDS)],
             'notes' => ['nullable', 'string'],
-            'street' => ['nullable', 'string', 'max:255'],
-            'zip' => ['nullable', 'string', 'max:20'],
-            'city' => ['nullable', 'string', 'max:255'],
-            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
-            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
-            'place_id' => ['nullable', 'string', 'max:255'],
             'checklist' => ['nullable', 'array', 'max:50'],
             'checklist.*.text' => ['required', 'string', 'max:500'],
             'checklist.*.checked' => ['required', 'boolean'],
         ]);
 
-        $appointment->update($validated);
+        $workerIds = $validated['worker_ids'] ?? null;
+        $updateData = collect($validated)->except('worker_ids')->toArray();
+
+        $appointment->update($updateData);
+
+        if ($workerIds !== null) {
+            $appointment->workers()->sync($workerIds);
+        }
 
         return back();
     }
@@ -219,7 +222,7 @@ class AppointmentController extends Controller
         return back();
     }
 
-    private function generateOccurrences(Appointment $parent, array $baseData, array $validated): void
+    private function generateOccurrences(Appointment $parent, array $baseData, array $validated, array $workerIds): void
     {
         $startAt = Carbon::parse($validated['start_at']);
         $endAt = Carbon::parse($validated['end_at']);
@@ -246,12 +249,13 @@ class AppointmentController extends Controller
                 break;
             }
 
-            Appointment::create([
+            $occurrence = Appointment::create([
                 ...$baseData,
                 'start_at' => $current->copy(),
                 'end_at' => $current->copy()->addMinutes($duration),
                 'parent_id' => $parent->id,
             ]);
+            $occurrence->workers()->sync($workerIds);
 
             $count++;
         }

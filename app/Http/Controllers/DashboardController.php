@@ -28,8 +28,8 @@ class DashboardController extends Controller
         $thisMonthAppointments = Appointment::whereBetween('start_at', [$monthStart, $monthEnd])->count();
 
         $upcomingAppointments = Appointment::with([
-            'client:id,first_name,last_name,company_name',
-            'employee:id,first_name,last_name',
+            'contract:id,contract_number,title',
+            'workers:id,first_name,last_name',
             'status:id,name,color',
         ])
             ->whereBetween('start_at', [$now, $todayEnd])
@@ -39,7 +39,8 @@ class DashboardController extends Controller
 
         $recentActivity = ActivityLog::with([
             'user:id,first_name,last_name',
-            'appointment:id,title',
+            'appointment:id,contract_id',
+            'appointment.contract:id,title',
         ])
             ->where('action', '!=', 'comment_added')
             ->recent(7)
@@ -49,7 +50,8 @@ class DashboardController extends Controller
 
         $recentComments = ActivityLog::with([
             'user:id,first_name,last_name',
-            'appointment:id,title',
+            'appointment:id,contract_id',
+            'appointment.contract:id,title',
             'comment:id,body',
         ])
             ->where('action', 'comment_added')

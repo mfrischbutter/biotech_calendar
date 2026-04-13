@@ -35,16 +35,21 @@ const allRows = computed<EmployeeRow[]>(() => [
     ...props.employees.map(e => ({ id: e.id, name: e.name, unassigned: false })),
 ]);
 
-// Group appointments by employee id (null = unassigned)
+// Group appointments by worker id (appears in each worker's row; unassigned if no workers)
 const byEmployee = computed(() => {
     const map = new Map<number | null, Appointment[]>();
     map.set(null, []);
     for (const emp of props.employees) map.set(emp.id, []);
     for (const appt of props.appointments) {
-        const key = appt.employee?.id ?? null;
-        const list = map.get(key);
-        if (list) list.push(appt);
-        else map.set(key, [appt]);
+        if (appt.workers.length === 0) {
+            map.get(null)!.push(appt);
+        } else {
+            for (const w of appt.workers) {
+                const list = map.get(w.id);
+                if (list) list.push(appt);
+                else map.set(w.id, [appt]);
+            }
+        }
     }
     return map;
 });
@@ -237,7 +242,7 @@ function isDayDragTarget(appt: Appointment): boolean {
                         <AppointmentHoverCard v-for="appt in cellAppts(row.id, date)" :key="appt.id" :appointment="appt">
                             <div class="mb-1 cursor-pointer rounded border px-1.5 py-1 text-xs" :style="getStatusStyle(appt.status?.color ?? null)"
                                  :data-appointment-id="appt.id" draggable="true" @dragstart="onDragStart(appt, $event)" @dragend="onDragEnd" @click.stop="emit('appointmentClick', appt)">
-                                <div class="font-medium truncate">{{ appointmentLabel(appt) }}</div>
+                                <div class="font-medium truncate text-foreground">{{ appointmentLabel(appt) }}</div>
                                 <div class="opacity-70" style="font-size: 10px">{{ getTimeLabel(appt) }}</div>
                             </div>
                         </AppointmentHoverCard>
@@ -269,7 +274,7 @@ function isDayDragTarget(appt: Appointment): boolean {
                              :data-appointment-id="appt.id"
                              :style="{ ...apptDayStyle(appt), ...getStatusStyle(appt.status?.color ?? null), top: `${(dayLanesByRow.get(row.id)?.get(appt.id)?.lane ?? 0) * LANE_HEIGHT + 4}px`, height: `${LANE_HEIGHT - 4}px` }"
                              @mousedown="handleDayMouseDown(appt, row.id, $event)" @click.stop>
-                            <div class="font-medium truncate">{{ appointmentLabel(appt) }}</div>
+                            <div class="font-medium truncate text-foreground">{{ appointmentLabel(appt) }}</div>
                             <div class="opacity-70" style="font-size: 10px">{{ getTimeLabel(appt) }}</div>
                         </div>
                     </AppointmentHoverCard>
@@ -277,7 +282,7 @@ function isDayDragTarget(appt: Appointment): boolean {
                     <div v-if="dayDrag.active && dayDrag.targetEmpId === row.id && dayPreviewStyle()"
                          class="absolute z-30 pointer-events-none rounded border-l-4 px-1.5 py-1 text-xs opacity-80"
                          :style="{ ...dayPreviewStyle()!, ...getStatusStyle(dayDrag.appointment?.status?.color ?? null), top: '4px', bottom: '4px' }">
-                        <div class="font-medium truncate">{{ dayDrag.appointment ? appointmentLabel(dayDrag.appointment) : '' }}</div>
+                        <div class="font-medium truncate text-foreground">{{ dayDrag.appointment ? appointmentLabel(dayDrag.appointment) : '' }}</div>
                         <div class="opacity-70" style="font-size: 10px">{{ fmtMin(dayDrag.startMin) }} – {{ fmtMin(dayDrag.startMin + dayDrag.duration) }}</div>
                     </div>
                 </div>

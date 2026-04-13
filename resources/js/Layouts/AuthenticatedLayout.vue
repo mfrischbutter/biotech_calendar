@@ -42,6 +42,9 @@ const permissions = (user?.permissions ?? []) as string[];
 const navItems = [
     { name: t('Dashboard'), href: 'dashboard', icon: 'grid' },
     { name: t('Clients'), href: 'clients.index', icon: 'users' },
+    ...(user?.role === 'owner' || permissions.includes('contracts.view')
+        ? [{ name: t('Contracts'), href: 'contracts.index', icon: 'file-text' }]
+        : []),
     { name: t('Appointments'), href: 'calendar.index', icon: 'calendar' },
     ...(user?.role === 'owner'
         ? [{ name: t('Employees'), href: 'employees.index', icon: 'user-check' }]
@@ -162,6 +165,10 @@ function isActive(href: string | null): boolean {
                         <!-- Clients icon (building) -->
                         <svg v-if="item.icon === 'users'" xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>
+                        </svg>
+                        <!-- Contracts icon (file-text) -->
+                        <svg v-if="item.icon === 'file-text'" xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 12h4"/><path d="M10 16h4"/>
                         </svg>
                         <!-- Calendar icon -->
                         <svg v-if="item.icon === 'calendar'" xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

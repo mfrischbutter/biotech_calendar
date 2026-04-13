@@ -44,10 +44,10 @@ function formatTime(dateStr: string): string {
                         {{ formatTime(appointment.start_at) }}
                     </span>
                     <span class="min-w-0 flex-1 truncate text-sm font-medium">
-                        {{ appointment.title }}
+                        {{ appointment.contract?.title ?? '' }}
                     </span>
-                    <span v-if="appointment.client" class="shrink-0 truncate text-sm text-muted-foreground">
-                        {{ appointment.client.name }}
+                    <span v-if="appointment.workers.length > 0" class="shrink-0 truncate text-sm text-muted-foreground">
+                        {{ appointment.workers.map(w => w.name).join(', ') }}
                     </span>
                 </li>
             </ul>

@@ -131,7 +131,7 @@ const actionIcons: Record<string, string> = {
                                                 <Link
                                                     :href="appointmentUrl(activity)"
                                                     class="font-medium text-primary hover:underline"
-                                                >{{ activity.appointment.title }}</Link>
+                                                >{{ activity.appointment.contract?.title ?? '–' }}</Link>
                                             </TooltipTrigger>
                                             <TooltipContent>{{ t('Open in calendar') }}</TooltipContent>
                                         </Tooltip>
@@ -172,7 +172,7 @@ const actionIcons: Record<string, string> = {
                                                 <Link
                                                     :href="appointmentUrl(comment)"
                                                     class="font-medium text-primary hover:underline"
-                                                >{{ comment.appointment.title }}</Link>
+                                                >{{ comment.appointment.contract?.title ?? '–' }}</Link>
                                             </TooltipTrigger>
                                             <TooltipContent>{{ t('Open in calendar') }}</TooltipContent>
                                         </Tooltip>

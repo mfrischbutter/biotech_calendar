@@ -5,6 +5,7 @@ import { Card } from '@/Components/ui/card';
 import { Badge } from '@/Components/ui/badge';
 import { Avatar, AvatarFallback } from '@/Components/ui/avatar';
 import { Button } from '@/Components/ui/button';
+import { Input } from '@/Components/ui/input';
 import {
     Empty,
     EmptyContent,
@@ -32,19 +33,34 @@ import {
     TableHeader,
     TableRow,
 } from '@/Components/ui/table';
-import { ref } from 'vue';
-import type { Employee } from '@/types';
+import { ref, watch } from 'vue';
+import type { Employee, Paginated } from '@/types';
 import AddEmployeeDialog from './partials/AddEmployeeDialog.vue';
 import PermissionToggles from './partials/PermissionToggles.vue';
+import TablePagination from '@/Components/TablePagination.vue';
 import { useTrans } from '@/lib/use-trans';
 import { initials } from '@/lib/utils';
 
 const { t } = useTrans();
 
 const props = defineProps<{
-    employees: Employee[];
+    employees: Paginated<Employee>;
     availablePermissions: Record<string, string>;
+    filters: { search: string | null };
 }>();
+
+const search = ref(props.filters.search ?? '');
+let debounceTimer: ReturnType<typeof setTimeout>;
+
+watch(search, (value) => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+        router.get(route('employees.index'), { search: value || undefined }, {
+            preserveState: true,
+            preserveScroll: true,
+        });
+    }, 300);
+});
 
 const expandedId = ref<number | null>(null);
 
@@ -83,17 +99,26 @@ function deleteEmployee(employee: Employee) {
             </div>
         </template>
 
-        <Empty v-if="employees.length === 0" class="py-12">
+        <div class="mb-4">
+            <Input
+                v-model="search"
+                type="text"
+                :placeholder="t('Search employees...')"
+                class="max-w-sm"
+            />
+        </div>
+
+        <Empty v-if="employees.data.length === 0" class="py-12">
             <EmptyHeader>
                 <EmptyMedia variant="icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 </EmptyMedia>
-                <EmptyTitle>{{ t('Employees') }}</EmptyTitle>
+                <EmptyTitle>{{ search ? t('No employees found.') : t('Employees') }}</EmptyTitle>
                 <EmptyDescription>
-                    {{ t('No employees yet. Click "Add Employee" to get started.') }}
+                    {{ search ? t('Search employees...') : t('No employees yet. Click "Add Employee" to get started.') }}
                 </EmptyDescription>
             </EmptyHeader>
-            <EmptyContent>
+            <EmptyContent v-if="!search">
                 <AddEmployeeDialog :available-permissions="availablePermissions">
                     <Button size="sm">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -114,7 +139,7 @@ function deleteEmployee(employee: Employee) {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    <template v-for="employee in employees" :key="employee.id">
+                    <template v-for="employee in employees.data" :key="employee.id">
                         <TableRow
                             class="cursor-pointer"
                             @click="toggleExpand(employee.id)"
@@ -192,6 +217,7 @@ function deleteEmployee(employee: Employee) {
                     </template>
                 </TableBody>
             </Table>
+            <TablePagination :pagination="employees" />
         </Card>
     </AuthenticatedLayout>
 </template>

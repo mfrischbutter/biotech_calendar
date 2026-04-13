@@ -3,6 +3,7 @@ import { computed } from 'vue';
 export const permissionGroupLabels: Record<string, string> = {
     dashboard: 'Dashboard Access',
     clients: 'Clients',
+    contracts: 'Contracts Access',
     appointments: 'Appointments',
     treatments: 'Treatments & Protocols',
     invoices: 'Invoicing & Payments',

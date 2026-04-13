@@ -9,7 +9,7 @@ import { Button } from '@/Components/ui/button';
 import { getStatusDotStyle } from '@/lib/status-colors';
 import { localToISO } from '@/lib/date-utils';
 import { useTrans } from '@/lib/use-trans';
-import type { Appointment, Status } from '@/types';
+import type { Appointment, Contract, Status } from '@/types';
 import TimeGrid from './partials/TimeGrid.vue';
 import MonthGrid from './partials/MonthGrid.vue';
 import TeamGrid from './partials/TeamGrid.vue';
@@ -21,7 +21,8 @@ type CalendarView = 'day' | 'week' | 'month' | 'team-day' | 'team-week';
 
 const props = defineProps<{
     appointments: Appointment[];
-    clients: { id: number; first_name: string; last_name: string; company_name: string | null; name: string; street: string | null; zip: string | null; city: string | null }[];
+    contracts: Contract[];
+    clients: { id: number; first_name: string; last_name: string; company_name: string | null; name: string }[];
     employees: { id: number; first_name: string; last_name: string; name: string }[];
     statuses: Status[];
     currentDate: string;
@@ -140,7 +141,7 @@ function openEditDialog(appointment: Appointment) {
     editDialogOpen.value = true;
 }
 
-const defaultEmployeeId = ref<number | null>(null);
+const defaultWorkerIds = ref<number[]>([]);
 
 onMounted(() => {
     if (props.openAppointmentId) {
@@ -152,21 +153,16 @@ onMounted(() => {
 });
 
 function handleCreateAppointment(date: string, startTime: string, endTime: string, employeeId?: number | null) {
-    defaultEmployeeId.value = employeeId ?? null;
+    defaultWorkerIds.value = employeeId ? [employeeId] : [];
     openCreateDialog(date, startTime, endTime);
 }
 
 function buildAppointmentPayload(appointment: Appointment, overrides: Record<string, unknown>) {
     return {
-        title: appointment.title,
-        client_id: appointment.client?.id ?? null,
-        employee_id: appointment.employee?.id ?? null,
+        contract_id: appointment.contract?.id ?? null,
+        worker_ids: appointment.workers.map(w => w.id),
         status_id: appointment.status?.id ?? null,
-        kind: appointment.kind,
         notes: appointment.notes,
-        street: appointment.street,
-        zip: appointment.zip,
-        city: appointment.city,
         checklist: appointment.checklist,
         ...overrides,
     } as Record<string, FormDataConvertible>;
@@ -189,10 +185,11 @@ function handleResizeAppointment(appointment: Appointment, endTime: string) {
 }
 
 function handleTeamMoveAppointment(appointment: Appointment, date: string, startTime: string, endTime: string, employeeId: number | null) {
+    const workerIds = employeeId ? [employeeId] : [];
     router.put(route('appointments.update', appointment.id), buildAppointmentPayload(appointment, {
         start_at: localToISO(date, startTime),
         end_at: localToISO(date, endTime),
-        employee_id: employeeId,
+        worker_ids: workerIds,
     }), { preserveScroll: true });
 }
 
@@ -345,19 +342,21 @@ function switchTeamSub(sub: 'day' | 'week') {
         <!-- Create dialog -->
         <AppointmentFormDialog
             v-model:open="createDialogOpen"
+            :contracts="contracts"
             :clients="clients"
             :employees="employees"
             :statuses="statuses"
             :default-date="defaultDate"
             :default-start-time="defaultStartTime"
             :default-end-time="defaultEndTime"
-            :default-employee-id="defaultEmployeeId"
+            :default-worker-ids="defaultWorkerIds"
         />
 
         <!-- Edit dialog -->
         <AppointmentFormDialog
             v-if="selectedAppointment"
             v-model:open="editDialogOpen"
+            :contracts="contracts"
             :clients="clients"
             :employees="employees"
             :statuses="statuses"

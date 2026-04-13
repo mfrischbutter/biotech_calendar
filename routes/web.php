@@ -3,6 +3,7 @@
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\ContractController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ProfileController;
@@ -25,7 +26,10 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Kunden
-    Route::resource('clients', ClientController::class)->except(['show', 'create', 'edit']);
+    Route::resource('clients', ClientController::class)->except(['create', 'edit']);
+
+    // Aufträge
+    Route::resource('contracts', ContractController::class)->except(['show', 'create', 'edit']);
 
     // Kalender / Termine
     Route::get('/calendar', [AppointmentController::class, 'index'])->name('calendar.index');

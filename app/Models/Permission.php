@@ -27,6 +27,12 @@ class Permission extends Model
         'clients.edit' => 'Edit clients',
         'clients.delete' => 'Delete clients',
 
+        // Contracts
+        'contracts.view' => 'View contracts',
+        'contracts.create' => 'Create contracts',
+        'contracts.edit' => 'Edit contracts',
+        'contracts.delete' => 'Delete contracts',
+
         // Appointments
         'appointments.view' => 'View appointments',
         'appointments.create' => 'Create appointments',

@@ -11,20 +11,17 @@ function lightTint(hex: string, amount = 0.88): string {
 export function getStatusStyle(color: string | null): {
     backgroundColor: string;
     borderColor: string;
-    color: string;
 } {
     if (!color) {
         return {
             backgroundColor: 'hsl(var(--muted))',
             borderColor: 'hsl(var(--border))',
-            color: 'hsl(var(--muted-foreground))',
         };
     }
 
     return {
         backgroundColor: lightTint(color),
         borderColor: color,
-        color: color,
     };
 }
 

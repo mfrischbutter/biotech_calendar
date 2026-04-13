@@ -6,6 +6,8 @@ const KIND_PREFIXES: Record<string, string> = {
 };
 
 export function appointmentLabel(appt: Appointment): string {
-    const prefix = appt.kind ? KIND_PREFIXES[appt.kind] ?? '' : '';
-    return prefix ? `${prefix} ${appt.title}` : appt.title;
+    const title = appt.contract?.title ?? '';
+    const kind = appt.contract?.kind;
+    const prefix = kind ? KIND_PREFIXES[kind] ?? '' : '';
+    return prefix ? `${prefix} ${title}` : title;
 }

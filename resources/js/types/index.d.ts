@@ -70,6 +70,21 @@ export interface Client {
     notes: string | null;
 }
 
+export interface Contract {
+    id: number;
+    contract_number: string;
+    title: string;
+    kind: AppointmentKind | null;
+    description: string | null;
+    street: string | null;
+    zip: string | null;
+    city: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    place_id: string | null;
+    clients: { id: number; name: string; first_name: string; last_name: string; company_name: string | null }[];
+}
+
 export interface ChecklistItem {
     text: string;
     checked: boolean;
@@ -77,20 +92,21 @@ export interface ChecklistItem {
 
 export interface Appointment {
     id: number;
-    title: string;
-    client: { id: number; first_name: string; last_name: string; company_name: string | null; name: string; street: string | null; zip: string | null; city: string | null } | null;
-    employee: { id: number; first_name: string; last_name: string; name: string } | null;
+    contract: {
+        id: number;
+        contract_number: string;
+        title: string;
+        kind: AppointmentKind | null;
+        street: string | null;
+        zip: string | null;
+        city: string | null;
+        clients?: { id: number; first_name: string; last_name: string; company_name: string | null; name: string }[];
+    } | null;
+    workers: { id: number; first_name: string; last_name: string; name: string }[];
     start_at: string;
     end_at: string;
     status: { id: number; name: string; color: string } | null;
-    kind: AppointmentKind | null;
     notes: string | null;
-    street: string | null;
-    zip: string | null;
-    city: string | null;
-    latitude: number | null;
-    longitude: number | null;
-    place_id: string | null;
     checklist: ChecklistItem[] | null;
     recurrence_type: RecurrenceType | null;
     recurrence_interval: number | null;
@@ -114,12 +130,31 @@ export interface ActivityLog {
     appointment_id: number | null;
     user_id: number | null;
     user: { id: number; first_name: string; last_name: string } | null;
-    appointment: { id: number; title: string } | null;
+    appointment: { id: number; contract_id: number; contract: { id: number; title: string } | null } | null;
     comment: { id: number; body: string } | null;
     action: 'created' | 'updated' | 'deleted' | 'comment_added';
     changes: Record<string, { old: string | null; new: string | null }> | null;
     description: string | null;
     created_at: string;
+}
+
+export interface ClientStats {
+    totalContracts: number;
+    totalAppointments: number;
+    upcomingAppointments: number;
+    lastAppointment: string | null;
+    nextAppointment: string | null;
+}
+
+export interface ClientComment {
+    id: number;
+    appointment_id: number;
+    user_id: number | null;
+    user: { id: number; first_name: string; last_name: string } | null;
+    body: string;
+    created_at: string;
+    updated_at: string;
+    appointment: { id: number; contract_id: number; contract: { id: number; title: string } | null } | null;
 }
 
 export interface PlaceSuggestion {
@@ -135,6 +170,17 @@ export interface PlaceSuggestion {
 export interface SharedCompany {
     name: string;
     logo_url: string | null;
+}
+
+export interface Paginated<T> {
+    data: T[];
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    from: number | null;
+    to: number | null;
+    links: { url: string | null; label: string; active: boolean }[];
 }
 
 export type PageProps<

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Appointment extends Model
@@ -13,20 +14,11 @@ class Appointment extends Model
 
     protected $fillable = [
         'company_id',
-        'client_id',
-        'employee_id',
-        'title',
+        'contract_id',
         'start_at',
         'end_at',
         'status_id',
-        'kind',
         'notes',
-        'street',
-        'zip',
-        'city',
-        'latitude',
-        'longitude',
-        'place_id',
         'checklist',
         'created_by',
         'recurrence_type',
@@ -45,18 +37,16 @@ class Appointment extends Model
         ];
     }
 
-    public const KINDS = ['ohne_termin', 'kundentermin'];
-
     public const RECURRENCE_TYPES = ['weekly', 'biweekly', 'monthly', 'custom'];
 
-    public function client(): BelongsTo
+    public function contract(): BelongsTo
     {
-        return $this->belongsTo(Client::class);
+        return $this->belongsTo(Contract::class);
     }
 
-    public function employee(): BelongsTo
+    public function workers(): BelongsToMany
     {
-        return $this->belongsTo(User::class, 'employee_id');
+        return $this->belongsToMany(User::class, 'appointment_user')->withTimestamps();
     }
 
     public function creator(): BelongsTo

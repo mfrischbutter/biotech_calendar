@@ -12,24 +12,41 @@ class EmployeeController extends Controller
 {
     public function index(Request $request)
     {
-        $companyId = $request->user()->company_id;
+        $request->validate([
+            'search' => ['nullable', 'string', 'max:255'],
+        ]);
 
-        $employees = User::where('role', User::ROLE_EMPLOYEE)
+        $companyId = $request->user()->company_id;
+        $search = $request->input('search');
+
+        $paginated = User::where('role', User::ROLE_EMPLOYEE)
             ->where('company_id', $companyId)
+            ->when($search, function ($q) use ($search) {
+                $q->where(function ($q) use ($search) {
+                    $q->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
             ->with('permissions')
-            ->get()
-            ->map(fn (User $user) => [
-                'id' => $user->id,
-                'first_name' => $user->first_name,
-                'last_name' => $user->last_name,
-                'name' => $user->name,
-                'email' => $user->email,
-                'permissions' => $user->permissions->pluck('permission')->toArray(),
-            ]);
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->paginate(20)
+            ->withQueryString();
+
+        $paginated->getCollection()->transform(fn (User $user) => [
+            'id' => $user->id,
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            'name' => $user->name,
+            'email' => $user->email,
+            'permissions' => $user->permissions->pluck('permission')->toArray(),
+        ]);
 
         return Inertia::render('Employees/Index', [
-            'employees' => $employees,
+            'employees' => $paginated,
             'availablePermissions' => Permission::ALL,
+            'filters' => ['search' => $search],
         ]);
     }
 

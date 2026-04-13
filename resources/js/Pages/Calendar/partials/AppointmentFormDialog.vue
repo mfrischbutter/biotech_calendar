@@ -20,29 +20,25 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/Components/ui/alert-dialog';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/Components/ui/dropdown-menu';
 import { localToISO, isoToLocalParts } from '@/lib/date-utils';
+import { appointmentLabel } from '@/lib/appointment-label';
 import { useTrans } from '@/lib/use-trans';
-import type { Appointment, AppointmentKind, ChecklistItem, Status } from '@/types';
+import type { Appointment, ChecklistItem, Contract, Status } from '@/types';
 import AppointmentFormSections from './AppointmentFormSections.vue';
 import CommentsSection from './CommentsSection.vue';
 
 const { t } = useTrans();
 
 const props = defineProps<{
-    clients: { id: number; first_name: string; last_name: string; company_name: string | null; name: string; street: string | null; zip: string | null; city: string | null }[];
+    contracts: Contract[];
+    clients: { id: number; first_name: string; last_name: string; company_name: string | null; name: string }[];
     employees: { id: number; first_name: string; last_name: string; name: string }[];
     statuses: Status[];
     appointment?: Appointment;
     defaultDate?: string;
     defaultStartTime?: string;
     defaultEndTime?: string;
-    defaultEmployeeId?: number | null;
+    defaultWorkerIds?: number[];
 }>();
 
 const open = defineModel<boolean>('open', { default: false });
@@ -52,22 +48,14 @@ const initStart = props.appointment ? isoToLocalParts(props.appointment.start_at
 const initEnd = props.appointment ? isoToLocalParts(props.appointment.end_at) : null;
 
 const form = useForm({
-    title: props.appointment?.title ?? '',
-    client_id: props.appointment?.client?.id?.toString() ?? '',
-    employee_id: props.appointment?.employee?.id?.toString() ?? (props.defaultEmployeeId ? props.defaultEmployeeId.toString() : 'none'),
+    contract_id: props.appointment?.contract?.id?.toString() ?? '',
+    worker_ids: (props.appointment?.workers?.map(w => w.id) ?? (props.defaultWorkerIds ?? [])) as number[],
     start_date: initStart?.date ?? (props.defaultDate ?? ''),
     start_time: initStart?.time ?? (props.defaultStartTime ?? '09:00'),
     end_date: initStart?.date ?? (props.defaultDate ?? ''),
     end_time: initEnd?.time ?? (props.defaultEndTime ?? '10:00'),
     status_id: props.appointment?.status?.id?.toString() ?? 'none',
-    kind: props.appointment?.kind ?? 'none',
     notes: props.appointment?.notes ?? '',
-    street: props.appointment?.street ?? '',
-    zip: props.appointment?.zip ?? '',
-    city: props.appointment?.city ?? '',
-    latitude: props.appointment?.latitude ?? null,
-    longitude: props.appointment?.longitude ?? null,
-    place_id: props.appointment?.place_id ?? null,
     checklist: (props.appointment?.checklist ?? []) as ChecklistItem[],
     is_recurring: !!props.appointment?.recurrence_type || !!props.appointment?.parent_id,
     recurrence_type: props.appointment?.recurrence_type ?? 'weekly',
@@ -75,13 +63,17 @@ const form = useForm({
     recurrence_end: props.appointment?.recurrence_end ?? '',
 });
 
-const KINDS: { value: AppointmentKind; label: string; prefix: string }[] = [
-    { value: 'kundentermin', label: t('Client appointment'), prefix: 'T' },
-    { value: 'ohne_termin', label: t('Without appointment'), prefix: 'OT' },
-];
+const selectedContract = computed(() => {
+    if (!form.contract_id) return null;
+    return props.contracts.find(c => c.id.toString() === form.contract_id) ?? null;
+});
 
-const kindPrefix = computed(() => {
-    return KINDS.find((k) => k.value === form.kind)?.prefix ?? '';
+const headerLabel = computed(() => {
+    if (selectedContract.value) {
+        const c = selectedContract.value;
+        return c.title;
+    }
+    return '';
 });
 
 const sectionsRef = ref<InstanceType<typeof AppointmentFormSections>>();
@@ -107,11 +99,10 @@ function deleteAppointment(mode: 'single' | 'future' | 'series') {
 
 function takeSnapshot(): string {
     return JSON.stringify({
-        title: form.title, client_id: form.client_id, employee_id: form.employee_id,
+        contract_id: form.contract_id, worker_ids: form.worker_ids,
         start_date: form.start_date, start_time: form.start_time, end_date: form.end_date,
-        end_time: form.end_time, status_id: form.status_id, kind: form.kind,
-        notes: form.notes, street: form.street, zip: form.zip, city: form.city,
-        latitude: form.latitude, longitude: form.longitude, place_id: form.place_id,
+        end_time: form.end_time, status_id: form.status_id,
+        notes: form.notes,
         checklist: form.checklist, is_recurring: form.is_recurring,
         recurrence_type: form.recurrence_type, recurrence_interval: form.recurrence_interval,
         recurrence_end: form.recurrence_end,
@@ -145,22 +136,14 @@ function handleOpenChange(value: boolean) {
 function populateFromAppointment() {
     const s = props.appointment ? isoToLocalParts(props.appointment.start_at) : null;
     const e = props.appointment ? isoToLocalParts(props.appointment.end_at) : null;
-    form.title = props.appointment?.title ?? '';
-    form.client_id = props.appointment?.client?.id?.toString() ?? '';
-    form.employee_id = props.appointment?.employee?.id?.toString() ?? 'none';
+    form.contract_id = props.appointment?.contract?.id?.toString() ?? '';
+    form.worker_ids = props.appointment?.workers?.map(w => w.id) ?? [];
     form.start_date = s?.date ?? '';
     form.start_time = s?.time ?? '09:00';
     form.end_date = s?.date ?? '';
     form.end_time = e?.time ?? '10:00';
     form.status_id = props.appointment?.status?.id?.toString() ?? 'none';
-    form.kind = props.appointment?.kind ?? 'none';
     form.notes = props.appointment?.notes ?? '';
-    form.street = props.appointment?.street ?? '';
-    form.zip = props.appointment?.zip ?? '';
-    form.city = props.appointment?.city ?? '';
-    form.latitude = props.appointment?.latitude ?? null;
-    form.longitude = props.appointment?.longitude ?? null;
-    form.place_id = props.appointment?.place_id ?? null;
     form.checklist = (props.appointment?.checklist ?? []) as ChecklistItem[];
     form.is_recurring = !!props.appointment?.recurrence_type || !!props.appointment?.parent_id;
     form.recurrence_type = props.appointment?.recurrence_type ?? 'weekly';
@@ -179,7 +162,7 @@ watch(open, (value) => {
             form.start_time = props.defaultStartTime ?? '09:00';
             form.end_date = props.defaultDate ?? '';
             form.end_time = props.defaultEndTime ?? '10:00';
-            form.employee_id = props.defaultEmployeeId ? props.defaultEmployeeId.toString() : 'none';
+            form.worker_ids = props.defaultWorkerIds ?? [];
             nextTick(() => {
                 initialSnapshot.value = takeSnapshot();
                 sectionsRef.value?.autoResize();
@@ -198,20 +181,12 @@ watch(open, (value) => {
 
 function submit() {
     const payload: Record<string, unknown> = {
-        title: form.title,
-        client_id: form.client_id ? parseInt(form.client_id) : null,
-        employee_id: form.employee_id && form.employee_id !== 'none' ? parseInt(form.employee_id) : null,
+        contract_id: form.contract_id ? parseInt(form.contract_id) : null,
+        worker_ids: form.worker_ids,
         start_at: localToISO(form.start_date, form.start_time),
         end_at: localToISO(form.end_date, form.end_time),
         status_id: form.status_id && form.status_id !== 'none' ? parseInt(form.status_id) : null,
-        kind: form.kind && form.kind !== 'none' ? form.kind : null,
         notes: form.notes || null,
-        street: form.street || null,
-        zip: form.zip || null,
-        city: form.city || null,
-        latitude: form.latitude,
-        longitude: form.longitude,
-        place_id: form.place_id,
         checklist: form.checklist.length > 0 ? form.checklist : null,
     };
 
@@ -258,58 +233,26 @@ function submit() {
             <div class="flex flex-1 flex-col overflow-hidden">
                 <div class="no-scrollbar flex-1 overflow-y-auto px-4 pb-4">
                     <form id="appointment-form" @submit.prevent="submit">
-                        <!-- Title with Kind prefix -->
-                        <div class="mb-4 flex items-center gap-2">
-                            <DropdownMenu>
-                                <DropdownMenuTrigger as-child>
-                                    <button
-                                        type="button"
-                                        class="shrink-0 rounded border px-1.5 py-0.5 text-xs font-semibold text-muted-foreground hover:bg-muted transition-colors"
-                                        :class="kindPrefix ? 'border-border' : 'border-dashed border-muted-foreground/40'"
-                                    >
-                                        {{ kindPrefix || '...' }}
-                                    </button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start" class="w-48">
-                                    <DropdownMenuItem @click="form.kind = 'none'">
-                                        <span class="text-muted-foreground">{{ t('No selection') }}</span>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem v-for="k in KINDS" :key="k.value" @click="form.kind = k.value">
-                                        <span class="mr-2 inline-block w-6 text-center text-xs font-semibold text-muted-foreground">[{{ k.prefix }}]</span>
-                                        {{ k.label }}
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                            <input
-                                v-model="form.title"
-                                type="text"
-                                :placeholder="t('Appointment title')"
-                                required
-                                class="min-w-0 flex-1 bg-transparent text-lg font-medium border-0 outline-none ring-0 focus:outline-none focus:ring-0 p-0 text-foreground placeholder:text-muted-foreground"
-                            />
+                        <!-- Contract header -->
+                        <div v-if="headerLabel" class="mb-4">
+                            <p class="text-lg font-medium text-foreground leading-snug">{{ headerLabel }}</p>
                         </div>
-                        <p v-if="form.errors.title" class="mb-2 text-xs text-destructive">{{ form.errors.title }}</p>
 
                         <AppointmentFormSections
                             ref="sectionsRef"
+                            :contracts="contracts"
                             :clients="clients"
                             :employees="employees"
                             :statuses="statuses"
                             :is-editing="isEditing"
-                            v-model:client-id="form.client_id"
-                            v-model:employee-id="form.employee_id"
+                            v-model:contract-id="form.contract_id"
+                            v-model:worker-ids="form.worker_ids"
                             v-model:status-id="form.status_id"
                             v-model:start-date="form.start_date"
                             v-model:start-time="form.start_time"
                             v-model:end-date="form.end_date"
                             v-model:end-time="form.end_time"
                             v-model:notes="form.notes"
-                            v-model:street="form.street"
-                            v-model:zip="form.zip"
-                            v-model:city="form.city"
-                            v-model:latitude="form.latitude"
-                            v-model:longitude="form.longitude"
-                            v-model:place-id="form.place_id"
                             v-model:checklist="form.checklist"
                             v-model:is-recurring="form.is_recurring"
                             v-model:recurrence-type="form.recurrence_type"
@@ -339,7 +282,7 @@ function submit() {
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                     </Button>
                     <div v-else />
-                    <Button type="submit" form="appointment-form" :disabled="form.processing">
+                    <Button type="submit" form="appointment-form" :disabled="form.processing || sectionsRef?.hasValidationError">
                         {{ form.processing ? t('Saving...') : (isEditing ? t('Update') : t('Create appointment')) }}
                     </Button>
                 </DrawerFooter>

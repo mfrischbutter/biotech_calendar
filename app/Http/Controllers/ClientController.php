@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
+use App\Models\Appointment;
 use App\Models\Client;
+use App\Models\Comment;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -29,11 +33,84 @@ class ClientController extends Controller
             });
         }
 
-        $clients = $query->orderBy('last_name')->orderBy('first_name')->get();
+        $clients = $query->orderBy('last_name')->orderBy('first_name')
+            ->paginate(20)
+            ->withQueryString();
 
         return Inertia::render('Clients/Index', [
             'clients' => $clients,
             'filters' => ['search' => $search],
+        ]);
+    }
+
+    public function show(Request $request, Client $client)
+    {
+        abort_unless($request->user()->hasPermission('clients.view'), 403);
+
+        $client->load('contracts');
+
+        $contractIds = $client->contracts->pluck('id');
+
+        $now = Carbon::now();
+
+        $upcomingAppointments = $contractIds->isEmpty() ? collect() : Appointment::whereIn('contract_id', $contractIds)
+            ->where('start_at', '>=', $now)
+            ->with(['contract:id,contract_number,title,kind', 'workers:id,first_name,last_name', 'status:id,name,color'])
+            ->orderBy('start_at')
+            ->limit(20)
+            ->get();
+
+        $pastAppointments = $contractIds->isEmpty() ? collect() : Appointment::whereIn('contract_id', $contractIds)
+            ->where('start_at', '<', $now)
+            ->with(['contract:id,contract_number,title,kind', 'workers:id,first_name,last_name', 'status:id,name,color'])
+            ->orderByDesc('start_at')
+            ->limit(20)
+            ->get();
+
+        $appointmentIds = $contractIds->isEmpty() ? collect() : Appointment::whereIn('contract_id', $contractIds)->pluck('id');
+
+        $recentActivity = $appointmentIds->isEmpty() ? collect() : ActivityLog::whereIn('appointment_id', $appointmentIds)
+            ->where('action', '!=', 'comment_added')
+            ->with(['user:id,first_name,last_name', 'appointment:id,contract_id', 'appointment.contract:id,title'])
+            ->orderByDesc('created_at')
+            ->limit(20)
+            ->get();
+
+        $recentComments = $appointmentIds->isEmpty() ? collect() : Comment::whereIn('appointment_id', $appointmentIds)
+            ->with(['user:id,first_name,last_name', 'appointment:id,contract_id', 'appointment.contract:id,title'])
+            ->orderByDesc('created_at')
+            ->limit(20)
+            ->get();
+
+        $totalAppointments = $appointmentIds->count();
+        $upcomingCount = $contractIds->isEmpty() ? 0 : Appointment::whereIn('contract_id', $contractIds)
+            ->where('start_at', '>=', $now)
+            ->count();
+
+        $lastAppointment = $contractIds->isEmpty() ? null : Appointment::whereIn('contract_id', $contractIds)
+            ->where('start_at', '<', $now)
+            ->orderByDesc('start_at')
+            ->value('start_at');
+
+        $nextAppointment = $contractIds->isEmpty() ? null : Appointment::whereIn('contract_id', $contractIds)
+            ->where('start_at', '>=', $now)
+            ->orderBy('start_at')
+            ->value('start_at');
+
+        return Inertia::render('Clients/Show', [
+            'client' => $client,
+            'contracts' => $client->contracts,
+            'upcomingAppointments' => $upcomingAppointments,
+            'pastAppointments' => $pastAppointments,
+            'recentActivity' => $recentActivity,
+            'recentComments' => $recentComments,
+            'stats' => [
+                'totalContracts' => $client->contracts->count(),
+                'totalAppointments' => $totalAppointments,
+                'upcomingAppointments' => $upcomingCount,
+                'lastAppointment' => $lastAppointment?->toISOString(),
+                'nextAppointment' => $nextAppointment?->toISOString(),
+            ],
         ]);
     }
 

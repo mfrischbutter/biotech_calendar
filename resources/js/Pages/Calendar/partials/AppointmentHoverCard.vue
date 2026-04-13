@@ -16,8 +16,9 @@ const props = defineProps<{
 }>();
 
 const kindLabel = computed(() => {
-    if (!props.appointment.kind) return null;
-    return props.appointment.kind === 'kundentermin' ? t('Client appointment') : t('Without appointment');
+    const kind = props.appointment.contract?.kind;
+    if (!kind) return null;
+    return kind === 'kundentermin' ? t('Client appointment') : t('Without appointment');
 });
 
 const timeLabel = computed(() => {
@@ -32,15 +33,17 @@ const dateLabel = computed(() => {
 });
 
 const address = computed(() => {
-    const a = props.appointment;
-    const street = a.street || a.client?.street;
-    const zip = a.zip || a.client?.zip;
-    const city = a.city || a.client?.city;
+    const c = props.appointment.contract;
+    if (!c) return null;
     const parts = [
-        street,
-        [zip, city].filter(Boolean).join(' '),
+        c.street,
+        [c.zip, c.city].filter(Boolean).join(' '),
     ].filter(Boolean);
     return parts.length > 0 ? parts.join(', ') : null;
+});
+
+const clientNames = computed(() => {
+    return props.appointment.contract?.clients?.map(c => c.name).join(', ') ?? '';
 });
 </script>
 
@@ -66,10 +69,10 @@ const address = computed(() => {
                     {{ appointmentLabel(appointment) }}
                 </div>
 
-                <!-- Client -->
-                <div v-if="appointment.client" class="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <!-- Clients -->
+                <div v-if="clientNames" class="flex items-center gap-1.5 text-sm text-muted-foreground">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
-                    <span class="truncate">{{ appointment.client.name }}</span>
+                    <span class="truncate">{{ clientNames }}</span>
                 </div>
 
                 <!-- Address -->
@@ -92,10 +95,10 @@ const address = computed(() => {
                     <span class="text-muted-foreground">{{ timeLabel }}</span>
                 </div>
 
-                <!-- Employee -->
-                <div v-if="appointment.employee" class="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <!-- Workers -->
+                <div v-if="appointment.workers.length > 0" class="flex items-center gap-1.5 text-sm text-muted-foreground">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    <span>{{ appointment.employee.name }}</span>
+                    <span>{{ appointment.workers.map(w => w.name).join(', ') }}</span>
                 </div>
 
                 <!-- Series indicator -->
