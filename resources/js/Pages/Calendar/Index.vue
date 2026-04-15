@@ -6,6 +6,7 @@ import type { FormDataConvertible } from '@inertiajs/core';
 import { format, parseISO, addWeeks, subWeeks, addDays, subDays, addMonths, subMonths, startOfWeek } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { Button } from '@/Components/ui/button';
+import { Switch } from '@/Components/ui/switch';
 import { getStatusDotStyle } from '@/lib/status-colors';
 import { localToISO } from '@/lib/date-utils';
 import { useTrans } from '@/lib/use-trans';
@@ -13,6 +14,7 @@ import type { Appointment, Contract, Status } from '@/types';
 import TimeGrid from './partials/TimeGrid.vue';
 import MonthGrid from './partials/MonthGrid.vue';
 import TeamGrid from './partials/TeamGrid.vue';
+import TeamWeekDetailGrid from './partials/TeamWeekDetailGrid.vue';
 import AppointmentFormDialog from './partials/AppointmentFormDialog.vue';
 
 const { t } = useTrans();
@@ -196,6 +198,13 @@ function handleTeamMoveAppointment(appointment: Appointment, date: string, start
 const isTeamView = computed(() => props.view === 'team-day' || props.view === 'team-week');
 const teamSubView = computed(() => props.view === 'team-day' ? 'day' : 'week');
 
+const DETAIL_STORAGE_KEY = 'biotech-team-week-detailed';
+const teamWeekDetailed = ref(localStorage.getItem(DETAIL_STORAGE_KEY) === 'true');
+function toggleDetailed(val: boolean) {
+    teamWeekDetailed.value = val;
+    localStorage.setItem(DETAIL_STORAGE_KEY, String(val));
+}
+
 const mainViews: { key: CalendarView; label: string }[] = [
     { key: 'day', label: t('Day') },
     { key: 'week', label: t('Week') },
@@ -279,6 +288,12 @@ function switchTeamSub(sub: 'day' | 'week') {
                         </button>
                     </div>
 
+                    <!-- Detailed view toggle (team-week only) -->
+                    <label v-if="view === 'team-week'" class="flex items-center gap-1.5 text-xs text-muted-foreground md:text-sm">
+                        <Switch :checked="teamWeekDetailed" @update:checked="toggleDetailed" />
+                        {{ t('Detailed') }}
+                    </label>
+
                     <Button size="sm" class="ml-auto md:ml-0 md:size-default" @click="openCreateDialog()">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         <span class="hidden md:inline">{{ t('New Appointment') }}</span>
@@ -301,9 +316,22 @@ function switchTeamSub(sub: 'day' | 'week') {
 
         <!-- Calendar content -->
         <div class="h-[calc(100vh-260px)] md:h-[calc(100vh-200px)]">
-            <!-- Team view -->
+            <!-- Team week detailed view -->
+            <TeamWeekDetailGrid
+                v-if="view === 'team-week' && teamWeekDetailed"
+                :appointments="appointments"
+                :employees="employees"
+                :dates="gridDates"
+                :start-hour="startHour"
+                :end-hour="endHour"
+                @appointment-click="openEditDialog"
+                @create-appointment="handleCreateAppointment"
+                @move-appointment="handleTeamMoveAppointment"
+            />
+
+            <!-- Team view (normal) -->
             <TeamGrid
-                v-if="isTeamView"
+                v-else-if="isTeamView"
                 :appointments="appointments"
                 :employees="employees"
                 :dates="gridDates"
