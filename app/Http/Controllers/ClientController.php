@@ -135,12 +135,12 @@ class ClientController extends Controller
             'place_id' => ['nullable', 'string', 'max:255'],
         ]);
 
-        Client::create([
+        $client = Client::create([
             ...$validated,
             'user_id' => $request->user()->id,
         ]);
 
-        return back();
+        return redirect()->route('clients.show', $client->id);
     }
 
     public function update(Request $request, Client $client)

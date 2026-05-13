@@ -113,6 +113,20 @@ export interface Appointment {
     recurrence_end: string | null;
     parent_id: number | null;
     comments?: Comment[];
+    attachments?: AppointmentAttachment[];
+}
+
+export interface AppointmentAttachment {
+    id: number;
+    appointment_id: number;
+    comment_id: number | null;
+    user_id: number | null;
+    user?: { id: number; first_name: string; last_name: string } | null;
+    original_name: string;
+    mime_type: string | null;
+    size: number;
+    url: string;
+    created_at: string;
 }
 
 export interface Comment {
@@ -123,6 +137,7 @@ export interface Comment {
     body: string;
     created_at: string;
     updated_at: string;
+    attachments?: AppointmentAttachment[];
 }
 
 export interface ActivityLog {

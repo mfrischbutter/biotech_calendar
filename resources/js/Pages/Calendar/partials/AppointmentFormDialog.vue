@@ -24,8 +24,11 @@ import { localToISO, isoToLocalParts } from '@/lib/date-utils';
 import { appointmentLabel } from '@/lib/appointment-label';
 import { useTrans } from '@/lib/use-trans';
 import type { Appointment, ChecklistItem, Contract, Status } from '@/types';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/Components/ui/tabs';
 import AppointmentFormSections from './AppointmentFormSections.vue';
 import CommentsSection from './CommentsSection.vue';
+import DocumentsSection from './DocumentsSection.vue';
+import AppointmentDeleteDialog from './AppointmentDeleteDialog.vue';
 
 const { t } = useTrans();
 
@@ -80,6 +83,20 @@ const sectionsRef = ref<InstanceType<typeof AppointmentFormSections>>();
 const confirmDiscardOpen = ref(false);
 const confirmDeleteOpen = ref(false);
 const initialSnapshot = ref('');
+const activeTab = ref<'details' | 'comments' | 'documents'>('details');
+
+const documents = computed(() =>
+    (props.appointment?.attachments ?? []).filter(a => a.comment_id === null),
+);
+const commentCount = computed(() => props.appointment?.comments?.length ?? 0);
+const documentCount = computed(() => {
+    const direct = documents.value.length;
+    const fromComments = (props.appointment?.comments ?? []).reduce(
+        (acc, c) => acc + (c.attachments?.length ?? 0),
+        0,
+    );
+    return direct + fromComments;
+});
 
 const isRecurringSeries = computed(() =>
     !!props.appointment && (!!props.appointment.recurrence_type || !!props.appointment.parent_id),
@@ -153,6 +170,7 @@ function populateFromAppointment() {
 
 watch(open, (value) => {
     if (value) {
+        activeTab.value = 'details';
         if (isEditing.value) {
             populateFromAppointment();
             initialSnapshot.value = takeSnapshot();
@@ -231,61 +249,127 @@ function submit() {
             </DrawerHeader>
 
             <div class="flex flex-1 flex-col overflow-hidden">
-                <div class="no-scrollbar flex-1 overflow-y-auto px-4 pb-4">
-                    <form id="appointment-form" @submit.prevent="submit">
-                        <!-- Contract header -->
-                        <div v-if="headerLabel" class="mb-4">
-                            <p class="text-lg font-medium text-foreground leading-snug">{{ headerLabel }}</p>
+                <Tabs
+                    v-if="isEditing && appointment"
+                    v-model="activeTab"
+                    class="flex flex-1 flex-col overflow-hidden"
+                >
+                    <div class="border-b px-4 pb-2">
+                        <TabsList class="grid w-full grid-cols-3">
+                            <TabsTrigger value="details">{{ t('Details') }}</TabsTrigger>
+                            <TabsTrigger value="comments" class="gap-1.5">
+                                {{ t('Comments') }}
+                                <span
+                                    v-if="commentCount"
+                                    class="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-muted-foreground/15 px-1 text-[10px] font-medium"
+                                >{{ commentCount }}</span>
+                            </TabsTrigger>
+                            <TabsTrigger value="documents" class="gap-1.5">
+                                {{ t('Documents') }}
+                                <span
+                                    v-if="documentCount"
+                                    class="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-muted-foreground/15 px-1 text-[10px] font-medium"
+                                >{{ documentCount }}</span>
+                            </TabsTrigger>
+                        </TabsList>
+                    </div>
+
+                    <TabsContent value="details" class="flex flex-1 flex-col overflow-hidden data-[state=inactive]:hidden">
+                        <div class="no-scrollbar flex-1 overflow-y-auto px-4 pb-4 pt-4">
+                            <form id="appointment-form" @submit.prevent="submit">
+                                <div v-if="headerLabel" class="mb-4">
+                                    <p class="text-lg font-medium text-foreground leading-snug">{{ headerLabel }}</p>
+                                </div>
+
+                                <AppointmentFormSections
+                                    ref="sectionsRef"
+                                    :contracts="contracts"
+                                    :clients="clients"
+                                    :employees="employees"
+                                    :statuses="statuses"
+                                    :is-editing="isEditing"
+                                    v-model:contract-id="form.contract_id"
+                                    v-model:worker-ids="form.worker_ids"
+                                    v-model:status-id="form.status_id"
+                                    v-model:start-date="form.start_date"
+                                    v-model:start-time="form.start_time"
+                                    v-model:end-date="form.end_date"
+                                    v-model:end-time="form.end_time"
+                                    v-model:notes="form.notes"
+                                    v-model:checklist="form.checklist"
+                                    v-model:is-recurring="form.is_recurring"
+                                    v-model:recurrence-type="form.recurrence_type"
+                                    v-model:recurrence-interval="form.recurrence_interval"
+                                    v-model:recurrence-end="form.recurrence_end"
+                                    :errors="(form.errors as Record<string, string>)"
+                                />
+                            </form>
                         </div>
 
-                        <AppointmentFormSections
-                            ref="sectionsRef"
-                            :contracts="contracts"
-                            :clients="clients"
-                            :employees="employees"
-                            :statuses="statuses"
-                            :is-editing="isEditing"
-                            v-model:contract-id="form.contract_id"
-                            v-model:worker-ids="form.worker_ids"
-                            v-model:status-id="form.status_id"
-                            v-model:start-date="form.start_date"
-                            v-model:start-time="form.start_time"
-                            v-model:end-date="form.end_date"
-                            v-model:end-time="form.end_time"
-                            v-model:notes="form.notes"
-                            v-model:checklist="form.checklist"
-                            v-model:is-recurring="form.is_recurring"
-                            v-model:recurrence-type="form.recurrence_type"
-                            v-model:recurrence-interval="form.recurrence_interval"
-                            v-model:recurrence-end="form.recurrence_end"
-                            :errors="(form.errors as Record<string, string>)"
-                        />
-                    </form>
+                        <DrawerFooter class="flex !flex-row !justify-between border-t">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                class="h-8 w-8 rounded-full border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                data-testid="delete-appointment"
+                                @click="confirmDeleteOpen = true"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                            </Button>
+                            <Button type="submit" form="appointment-form" :disabled="form.processing || sectionsRef?.hasValidationError">
+                                {{ form.processing ? t('Saving...') : t('Update') }}
+                            </Button>
+                        </DrawerFooter>
+                    </TabsContent>
 
-                    <CommentsSection
-                        v-if="isEditing && appointment"
-                        :appointment-id="appointment.id"
-                        :comments="appointment.comments ?? []"
-                    />
-                </div>
+                    <TabsContent value="comments" class="flex flex-1 flex-col overflow-hidden data-[state=inactive]:hidden">
+                        <CommentsSection :appointment-id="appointment.id" :comments="appointment.comments ?? []" />
+                    </TabsContent>
 
-                <DrawerFooter class="flex !flex-row !justify-between border-t">
-                    <Button
-                        v-if="isEditing"
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        class="h-8 w-8 rounded-full border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        data-testid="delete-appointment"
-                        @click="confirmDeleteOpen = true"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                    </Button>
-                    <div v-else />
-                    <Button type="submit" form="appointment-form" :disabled="form.processing || sectionsRef?.hasValidationError">
-                        {{ form.processing ? t('Saving...') : (isEditing ? t('Update') : t('Create appointment')) }}
-                    </Button>
-                </DrawerFooter>
+                    <TabsContent value="documents" class="flex flex-1 flex-col overflow-hidden data-[state=inactive]:hidden">
+                        <DocumentsSection :appointment-id="appointment.id" :documents="documents" :comments="appointment.comments ?? []" />
+                    </TabsContent>
+                </Tabs>
+
+                <template v-else>
+                    <div class="no-scrollbar flex-1 overflow-y-auto px-4 pb-4">
+                        <form id="appointment-form" @submit.prevent="submit">
+                            <div v-if="headerLabel" class="mb-4">
+                                <p class="text-lg font-medium text-foreground leading-snug">{{ headerLabel }}</p>
+                            </div>
+
+                            <AppointmentFormSections
+                                ref="sectionsRef"
+                                :contracts="contracts"
+                                :clients="clients"
+                                :employees="employees"
+                                :statuses="statuses"
+                                :is-editing="isEditing"
+                                v-model:contract-id="form.contract_id"
+                                v-model:worker-ids="form.worker_ids"
+                                v-model:status-id="form.status_id"
+                                v-model:start-date="form.start_date"
+                                v-model:start-time="form.start_time"
+                                v-model:end-date="form.end_date"
+                                v-model:end-time="form.end_time"
+                                v-model:notes="form.notes"
+                                v-model:checklist="form.checklist"
+                                v-model:is-recurring="form.is_recurring"
+                                v-model:recurrence-type="form.recurrence_type"
+                                v-model:recurrence-interval="form.recurrence_interval"
+                                v-model:recurrence-end="form.recurrence_end"
+                                :errors="(form.errors as Record<string, string>)"
+                            />
+                        </form>
+                    </div>
+
+                    <DrawerFooter class="flex !flex-row !justify-end border-t">
+                        <Button type="submit" form="appointment-form" :disabled="form.processing || sectionsRef?.hasValidationError">
+                            {{ form.processing ? t('Saving...') : t('Create appointment') }}
+                        </Button>
+                    </DrawerFooter>
+                </template>
             </div>
         </DrawerContent>
     </Drawer>
@@ -294,9 +378,7 @@ function submit() {
         <AlertDialogContent>
             <AlertDialogHeader>
                 <AlertDialogTitle>{{ t('Discard changes?') }}</AlertDialogTitle>
-                <AlertDialogDescription>
-                    {{ t('You have unsaved changes. Are you sure you want to discard them?') }}
-                </AlertDialogDescription>
+                <AlertDialogDescription>{{ t('You have unsaved changes. Are you sure you want to discard them?') }}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel>{{ t('Cancel') }}</AlertDialogCancel>
@@ -305,47 +387,9 @@ function submit() {
         </AlertDialogContent>
     </AlertDialog>
 
-    <AlertDialog v-model:open="confirmDeleteOpen">
-        <AlertDialogContent @pointer-down-outside="confirmDeleteOpen = false">
-            <AlertDialogHeader>
-                <AlertDialogTitle>{{ t('Delete Appointment') }}?</AlertDialogTitle>
-                <AlertDialogDescription>
-                    {{ isRecurringSeries
-                        ? t('This appointment is part of a series. How would you like to proceed?')
-                        : t('This appointment will be permanently deleted. This action cannot be undone.')
-                    }}
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter class="flex-col sm:flex-col gap-2">
-                <div v-if="isRecurringSeries" class="flex flex-col gap-2 w-full">
-                    <AlertDialogAction
-                        class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        @click="deleteAppointment('single')"
-                    >
-                        {{ t('Delete This Only') }}
-                    </AlertDialogAction>
-                    <AlertDialogAction
-                        class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        @click="deleteAppointment('future')"
-                    >
-                        {{ t('Delete All Future Appointments') }}
-                    </AlertDialogAction>
-                    <AlertDialogAction
-                        class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        @click="deleteAppointment('series')"
-                    >
-                        {{ t('Delete Entire Series') }}
-                    </AlertDialogAction>
-                </div>
-                <AlertDialogAction
-                    v-else
-                    class="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full"
-                    @click="deleteAppointment('single')"
-                >
-                    {{ t('Delete') }}
-                </AlertDialogAction>
-                <AlertDialogCancel class="w-full">{{ t('Cancel') }}</AlertDialogCancel>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-    </AlertDialog>
+    <AppointmentDeleteDialog
+        v-model:open="confirmDeleteOpen"
+        :is-recurring-series="isRecurringSeries"
+        @delete="deleteAppointment"
+    />
 </template>

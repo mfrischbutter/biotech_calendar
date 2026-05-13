@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\Appointment;
+use App\Models\AppointmentAttachment;
 use App\Models\Comment;
 use Illuminate\Http\Request;
 
@@ -12,13 +13,36 @@ class CommentController extends Controller
     public function store(Request $request, Appointment $appointment)
     {
         $validated = $request->validate([
-            'body' => ['required', 'string', 'max:1000'],
+            'body' => ['nullable', 'string', 'max:1000'],
+            'files' => ['nullable', 'array'],
+            'files.*' => ['file', 'max:10240'],
         ]);
+
+        $hasBody = ! empty(trim($validated['body'] ?? ''));
+        $hasFiles = ! empty($validated['files'] ?? []);
+
+        if (! $hasBody && ! $hasFiles) {
+            return back()->withErrors(['body' => __('A message or attachment is required.')]);
+        }
 
         $comment = $appointment->comments()->create([
             'user_id' => $request->user()->id,
-            'body' => $validated['body'],
+            'body' => $validated['body'] ?? '',
         ]);
+
+        foreach ($validated['files'] ?? [] as $file) {
+            $path = $file->store("appointments/{$appointment->id}/comments", 'local');
+
+            AppointmentAttachment::create([
+                'appointment_id' => $appointment->id,
+                'comment_id' => $comment->id,
+                'user_id' => $request->user()->id,
+                'original_name' => $file->getClientOriginalName(),
+                'path' => $path,
+                'mime_type' => $file->getMimeType(),
+                'size' => $file->getSize(),
+            ]);
+        }
 
         ActivityLog::create([
             'appointment_id' => $appointment->id,

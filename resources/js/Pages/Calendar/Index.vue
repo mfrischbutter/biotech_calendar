@@ -37,7 +37,12 @@ const props = defineProps<{
 
 const createDialogOpen = ref(false);
 const editDialogOpen = ref(false);
-const selectedAppointment = ref<Appointment | undefined>();
+const selectedAppointmentId = ref<number | null>(null);
+const selectedAppointment = computed<Appointment | undefined>(() =>
+    selectedAppointmentId.value
+        ? props.appointments.find(a => a.id === selectedAppointmentId.value)
+        : undefined,
+);
 const defaultDate = ref('');
 const defaultStartTime = ref('');
 const defaultEndTime = ref('');
@@ -133,13 +138,13 @@ function openCreateDialog(date?: string, startTime?: string, endTime?: string) {
     defaultDate.value = date || props.currentDate;
     defaultStartTime.value = startTime || '09:00';
     defaultEndTime.value = endTime || '10:00';
-    selectedAppointment.value = undefined;
+    selectedAppointmentId.value = null;
     createDialogOpen.value = true;
 }
 
 function openEditDialog(appointment: Appointment) {
     if (drawerCloseGuard) return;
-    selectedAppointment.value = appointment;
+    selectedAppointmentId.value = appointment.id;
     editDialogOpen.value = true;
 }
 

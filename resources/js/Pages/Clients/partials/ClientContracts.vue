@@ -75,7 +75,7 @@ function formatAddress(c: { street: string | null; zip: string | null; city: str
                         <span v-else class="text-muted-foreground">–</span>
                     </TableCell>
                     <TableCell class="text-right">
-                        <Link :href="route('contracts.index', { search: contract.contract_number })">
+                        <Link :href="route('contracts.show', contract.id)">
                             <Button variant="ghost" size="sm">{{ t('View') }}</Button>
                         </Link>
                     </TableCell>

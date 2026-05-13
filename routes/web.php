@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\ContractController;
@@ -29,7 +30,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('clients', ClientController::class)->except(['create', 'edit']);
 
     // Aufträge
-    Route::resource('contracts', ContractController::class)->except(['show', 'create', 'edit']);
+    Route::resource('contracts', ContractController::class)->except(['create', 'edit']);
 
     // Kalender / Termine
     Route::get('/calendar', [AppointmentController::class, 'index'])->name('calendar.index');
@@ -40,6 +41,11 @@ Route::middleware('auth')->group(function () {
     // Comments
     Route::post('/appointments/{appointment}/comments', [CommentController::class, 'store'])->name('comments.store');
     Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
+
+    // Attachments / Documents
+    Route::post('/appointments/{appointment}/attachments', [AttachmentController::class, 'store'])->name('attachments.store');
+    Route::get('/attachments/{attachment}', [AttachmentController::class, 'show'])->name('attachments.show');
+    Route::delete('/attachments/{attachment}', [AttachmentController::class, 'destroy'])->name('attachments.destroy');
 
     // Settings
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');

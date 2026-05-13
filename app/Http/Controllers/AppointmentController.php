@@ -63,6 +63,8 @@ class AppointmentController extends Controller
             'workers:id,first_name,last_name',
             'status:id,name,color',
             'comments.user:id,first_name,last_name',
+            'comments.attachments',
+            'attachments.user:id,first_name,last_name',
         ])
             ->where(function ($q) use ($rangeStart, $rangeEnd) {
                 $q->whereBetween('start_at', [$rangeStart, $rangeEnd])

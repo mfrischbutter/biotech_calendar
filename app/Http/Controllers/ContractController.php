@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Appointment;
 use App\Models\Client;
 use App\Models\Contract;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -73,7 +75,60 @@ class ContractController extends Controller
             $contract->clients()->sync($validated['client_ids']);
         }
 
-        return back();
+        return redirect()->route('contracts.show', $contract->id);
+    }
+
+    public function show(Request $request, Contract $contract)
+    {
+        abort_unless($request->user()->hasPermission('contracts.view'), 403);
+
+        $contract->load('clients:id,first_name,last_name,company_name');
+
+        $now = Carbon::now();
+
+        $upcomingAppointments = Appointment::where('contract_id', $contract->id)
+            ->where('start_at', '>=', $now)
+            ->with(['workers:id,first_name,last_name', 'status:id,name,color'])
+            ->orderBy('start_at')
+            ->limit(20)
+            ->get();
+
+        $pastAppointments = Appointment::where('contract_id', $contract->id)
+            ->where('start_at', '<', $now)
+            ->with(['workers:id,first_name,last_name', 'status:id,name,color'])
+            ->orderByDesc('start_at')
+            ->limit(20)
+            ->get();
+
+        $totalAppointments = Appointment::where('contract_id', $contract->id)->count();
+        $upcomingCount = Appointment::where('contract_id', $contract->id)
+            ->where('start_at', '>=', $now)
+            ->count();
+        $lastAppointment = Appointment::where('contract_id', $contract->id)
+            ->where('start_at', '<', $now)
+            ->orderByDesc('start_at')
+            ->value('start_at');
+        $nextAppointment = Appointment::where('contract_id', $contract->id)
+            ->where('start_at', '>=', $now)
+            ->orderBy('start_at')
+            ->value('start_at');
+
+        $clients = Client::orderBy('last_name')
+            ->orderBy('first_name')
+            ->get(['id', 'first_name', 'last_name', 'company_name']);
+
+        return Inertia::render('Contracts/Show', [
+            'contract' => $contract,
+            'clients' => $clients,
+            'upcomingAppointments' => $upcomingAppointments,
+            'pastAppointments' => $pastAppointments,
+            'stats' => [
+                'totalAppointments' => $totalAppointments,
+                'upcomingAppointments' => $upcomingCount,
+                'lastAppointment' => $lastAppointment?->toISOString(),
+                'nextAppointment' => $nextAppointment?->toISOString(),
+            ],
+        ]);
     }
 
     public function update(Request $request, Contract $contract)

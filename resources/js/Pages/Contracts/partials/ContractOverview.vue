@@ -4,16 +4,25 @@ import { Separator } from '@/Components/ui/separator';
 import { useTrans } from '@/lib/use-trans';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
-import type { Client, ClientStats } from '@/types';
-import ClientContactCard from './ClientContactCard.vue';
-import ClientAddressCard from './ClientAddressCard.vue';
-import ClientNotesCard from './ClientNotesCard.vue';
+import type { Contract } from '@/types';
+import ContractDetailsCard from './ContractDetailsCard.vue';
+import ContractClientsCard from './ContractClientsCard.vue';
+import ContractAddressCard from './ContractAddressCard.vue';
+import ContractDescriptionCard from './ContractDescriptionCard.vue';
 
 const { t } = useTrans();
 
+type ClientOption = { id: number; first_name: string; last_name: string; company_name: string | null; name: string };
+
 defineProps<{
-    client: Client;
-    stats: ClientStats;
+    contract: Contract;
+    clients: ClientOption[];
+    stats: {
+        totalAppointments: number;
+        upcomingAppointments: number;
+        lastAppointment: string | null;
+        nextAppointment: string | null;
+    };
 }>();
 
 function formatDate(dateStr: string | null): string {
@@ -25,9 +34,10 @@ function formatDate(dateStr: string | null): string {
 <template>
     <div class="grid gap-4 md:grid-cols-3">
         <div class="space-y-4 md:col-span-2">
-            <ClientContactCard :client="client" />
-            <ClientAddressCard :client="client" />
-            <ClientNotesCard :client="client" />
+            <ContractDetailsCard :contract="contract" />
+            <ContractClientsCard :contract="contract" :clients="clients" />
+            <ContractAddressCard :contract="contract" />
+            <ContractDescriptionCard :contract="contract" />
         </div>
 
         <div class="space-y-4">
@@ -36,11 +46,6 @@ function formatDate(dateStr: string | null): string {
                     <CardTitle class="text-base">{{ t('Statistics') }}</CardTitle>
                 </CardHeader>
                 <CardContent class="space-y-3">
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm text-muted-foreground">{{ t('Contracts') }}</span>
-                        <span class="text-sm font-medium">{{ stats.totalContracts }}</span>
-                    </div>
-                    <Separator />
                     <div class="flex items-center justify-between">
                         <span class="text-sm text-muted-foreground">{{ t('Total Appointments') }}</span>
                         <span class="text-sm font-medium">{{ stats.totalAppointments }}</span>

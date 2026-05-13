@@ -64,6 +64,10 @@ function deleteContract(contract: Contract) {
     });
 }
 
+function openContract(contract: Contract) {
+    router.visit(route('contracts.show', contract.id));
+}
+
 function formatAddress(c: { street: string | null; zip: string | null; city: string | null }): string {
     const parts: string[] = [];
     if (c.street) parts.push(c.street);
@@ -139,7 +143,12 @@ const KIND_LABELS: Record<string, string> = {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    <TableRow v-for="contract in contracts.data" :key="contract.id">
+                    <TableRow
+                        v-for="contract in contracts.data"
+                        :key="contract.id"
+                        class="cursor-pointer"
+                        @click="openContract(contract)"
+                    >
                         <TableCell class="font-mono text-sm">{{ contract.contract_number }}</TableCell>
                         <TableCell class="font-medium">{{ contract.title }}</TableCell>
                         <TableCell>
@@ -158,11 +167,8 @@ const KIND_LABELS: Record<string, string> = {
                             <span v-if="formatAddress(contract)">{{ formatAddress(contract) }}</span>
                             <span v-else class="text-muted-foreground">–</span>
                         </TableCell>
-                        <TableCell class="text-right">
+                        <TableCell class="text-right" @click.stop>
                             <div class="flex items-center justify-end gap-2">
-                                <ContractFormDrawer :contract="contract" :clients="clients">
-                                    <Button variant="ghost" size="sm">{{ t('Edit') }}</Button>
-                                </ContractFormDrawer>
                                 <AlertDialog>
                                     <AlertDialogTrigger as-child>
                                         <Button variant="ghost" size="sm" class="text-destructive hover:text-destructive">

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import { Card } from '@/Components/ui/card';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
@@ -34,7 +34,7 @@ import {
     AlertDialogTrigger,
 } from '@/Components/ui/alert-dialog';
 import type { Client, Paginated } from '@/types';
-import ClientFormDrawer from './partials/ClientFormDrawer.vue';
+import NewClientDialog from './partials/NewClientDialog.vue';
 import TablePagination from '@/Components/TablePagination.vue';
 
 const { t } = useTrans();
@@ -62,6 +62,10 @@ function deleteClient(client: Client) {
         preserveScroll: true,
     });
 }
+
+function openClient(client: Client) {
+    router.visit(route('clients.show', client.id));
+}
 </script>
 
 <template>
@@ -78,9 +82,9 @@ function deleteClient(client: Client) {
                         {{ t('Manage and search your client database.') }}
                     </p>
                 </div>
-                <ClientFormDrawer>
+                <NewClientDialog>
                     <Button>{{ t('New Client') }}</Button>
-                </ClientFormDrawer>
+                </NewClientDialog>
             </div>
         </template>
 
@@ -104,12 +108,12 @@ function deleteClient(client: Client) {
                 </EmptyDescription>
             </EmptyHeader>
             <EmptyContent v-if="!search">
-                <ClientFormDrawer>
+                <NewClientDialog>
                     <Button size="sm">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         {{ t('New Client') }}
                     </Button>
-                </ClientFormDrawer>
+                </NewClientDialog>
             </EmptyContent>
         </Empty>
 
@@ -125,14 +129,17 @@ function deleteClient(client: Client) {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    <TableRow v-for="client in clients.data" :key="client.id">
+                    <TableRow
+                        v-for="client in clients.data"
+                        :key="client.id"
+                        class="cursor-pointer"
+                        @click="openClient(client)"
+                    >
                         <TableCell>
-                            <Link :href="route('clients.show', client.id)" class="block">
-                                <div class="font-medium text-primary hover:underline">{{ client.name }}</div>
-                                <div v-if="client.billing_name" class="text-sm text-muted-foreground">
-                                    {{ client.billing_name }}
-                                </div>
-                            </Link>
+                            <div class="font-medium">{{ client.name }}</div>
+                            <div v-if="client.billing_name" class="text-sm text-muted-foreground">
+                                {{ client.billing_name }}
+                            </div>
                         </TableCell>
                         <TableCell>
                             <span v-if="client.city">
@@ -146,11 +153,8 @@ function deleteClient(client: Client) {
                         <TableCell>
                             {{ client.email || '–' }}
                         </TableCell>
-                        <TableCell class="text-right">
+                        <TableCell class="text-right" @click.stop>
                             <div class="flex items-center justify-end gap-2">
-                                <ClientFormDrawer :client="client">
-                                    <Button variant="ghost" size="sm">{{ t('Edit') }}</Button>
-                                </ClientFormDrawer>
                                 <AlertDialog>
                                     <AlertDialogTrigger as-child>
                                         <Button variant="ghost" size="sm" class="text-destructive hover:text-destructive">
