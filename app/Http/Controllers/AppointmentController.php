@@ -228,8 +228,8 @@ class AppointmentController extends Controller
     {
         $startAt = Carbon::parse($validated['start_at']);
         $endAt = Carbon::parse($validated['end_at']);
-        $duration = $startAt->diffInMinutes($endAt);
-        $recurrenceEnd = Carbon::parse($validated['recurrence_end']);
+        $duration = (int) abs($startAt->diffInMinutes($endAt));
+        $recurrenceEnd = Carbon::parse($validated['recurrence_end'])->endOfDay();
 
         $current = $startAt->copy();
         $count = 0;

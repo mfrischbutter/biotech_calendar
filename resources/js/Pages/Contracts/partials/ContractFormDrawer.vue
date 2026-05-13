@@ -98,6 +98,7 @@ const isEditing = !!props.contract;
 
 const confirmDiscardOpen = ref(false);
 const initialSnapshot = ref('');
+const skipDirtyOnClose = ref(false);
 
 function takeSnapshot(): string {
     return JSON.stringify({
@@ -128,12 +129,16 @@ function requestClose() {
 }
 
 function forceClose() {
+    skipDirtyOnClose.value = true;
     open.value = false;
 }
 
 function handleOpenChange(value: boolean) {
     if (value) {
         open.value = true;
+    } else if (skipDirtyOnClose.value) {
+        skipDirtyOnClose.value = false;
+        open.value = false;
     } else {
         requestClose();
     }
@@ -169,6 +174,7 @@ watch(open, (value) => {
         } else {
             form.reset();
         }
+        skipDirtyOnClose.value = false;
     }
 });
 
@@ -225,13 +231,17 @@ function submit() {
     if (isEditing) {
         form.transform(() => payload).put(route('contracts.update', props.contract!.id), {
             preserveScroll: true,
-            onSuccess: () => { open.value = false; },
+            onSuccess: () => {
+                skipDirtyOnClose.value = true;
+                open.value = false;
+            },
         });
     } else {
         form.transform(() => payload).post(route('contracts.store'), {
             preserveScroll: true,
             onSuccess: () => {
                 emit('created', form.contract_number);
+                skipDirtyOnClose.value = true;
                 open.value = false;
             },
         });

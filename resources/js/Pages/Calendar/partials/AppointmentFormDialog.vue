@@ -83,6 +83,7 @@ const sectionsRef = ref<InstanceType<typeof AppointmentFormSections>>();
 const confirmDiscardOpen = ref(false);
 const confirmDeleteOpen = ref(false);
 const initialSnapshot = ref('');
+const skipDirtyOnClose = ref(false);
 const activeTab = ref<'details' | 'comments' | 'documents'>('details');
 
 const documents = computed(() =>
@@ -110,7 +111,10 @@ function deleteAppointment(mode: 'single' | 'future' | 'series') {
             delete_future: mode === 'future',
         },
         preserveScroll: true,
-        onSuccess: () => { open.value = false; },
+        onSuccess: () => {
+            skipDirtyOnClose.value = true;
+            open.value = false;
+        },
     });
 }
 
@@ -139,12 +143,16 @@ function requestClose() {
 }
 
 function forceClose() {
+    skipDirtyOnClose.value = true;
     open.value = false;
 }
 
 function handleOpenChange(value: boolean) {
     if (value) {
         open.value = true;
+    } else if (skipDirtyOnClose.value) {
+        skipDirtyOnClose.value = false;
+        open.value = false;
     } else {
         requestClose();
     }
@@ -173,19 +181,15 @@ watch(open, (value) => {
         activeTab.value = 'details';
         if (isEditing.value) {
             populateFromAppointment();
-            initialSnapshot.value = takeSnapshot();
-            nextTick(() => sectionsRef.value?.autoResize());
         } else {
             form.start_date = props.defaultDate ?? '';
             form.start_time = props.defaultStartTime ?? '09:00';
             form.end_date = props.defaultDate ?? '';
             form.end_time = props.defaultEndTime ?? '10:00';
             form.worker_ids = props.defaultWorkerIds ?? [];
-            nextTick(() => {
-                initialSnapshot.value = takeSnapshot();
-                sectionsRef.value?.autoResize();
-            });
         }
+        initialSnapshot.value = takeSnapshot();
+        nextTick(() => sectionsRef.value?.autoResize());
     }
     if (!value && initialSnapshot.value) {
         form.clearErrors();
@@ -194,6 +198,7 @@ watch(open, (value) => {
         } else {
             form.reset();
         }
+        skipDirtyOnClose.value = false;
     }
 }, { immediate: true });
 
@@ -217,12 +222,18 @@ function submit() {
     if (isEditing.value) {
         form.transform(() => payload).put(route('appointments.update', props.appointment!.id), {
             preserveScroll: true,
-            onSuccess: () => { open.value = false; },
+            onSuccess: () => {
+                skipDirtyOnClose.value = true;
+                open.value = false;
+            },
         });
     } else {
         form.transform(() => payload).post(route('appointments.store'), {
             preserveScroll: true,
-            onSuccess: () => { open.value = false; },
+            onSuccess: () => {
+                skipDirtyOnClose.value = true;
+                open.value = false;
+            },
         });
     }
 }
