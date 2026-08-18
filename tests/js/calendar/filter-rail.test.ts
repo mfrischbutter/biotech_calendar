@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import CalendarFilterRail from '@/Pages/Calendar/partials/CalendarFilterRail.vue';
+import FilterPill from '@/Components/FilterPill.vue';
 import { useCalendarQuery } from '@/lib/use-calendar-query';
 import { mountComponent, setAuthedOwner, makeStatus } from '../helpers';
 import { inertiaRouterMock } from '../setup';
@@ -19,6 +20,8 @@ const noFilters: CalendarFilters = { employees: [], statuses: [], unassigned: fa
 
 function mountRail(filters: Partial<CalendarFilters> = {}) {
     const merged = { ...noFilters, ...filters };
+
+    // The pill menus portal to the body, so teleport has to render for real.
     return mountComponent(CalendarFilterRail, {
         props: {
             employees,
@@ -27,50 +30,154 @@ function mountRail(filters: Partial<CalendarFilters> = {}) {
             hasFilters:
                 merged.employees.length > 0 || merged.statuses.length > 0 || merged.unassigned || merged.conflicts,
         },
+        global: { stubs: { teleport: false } },
+        attachTo: document.body,
     });
+}
+
+/** Open one pill's menu through its `open` model; jsdom cannot synthesise reka's pointer event. */
+async function openPill(wrapper: ReturnType<typeof mountRail>, testid: string) {
+    const pill = wrapper
+        .findAllComponents(FilterPill)
+        .find((candidate) => candidate.props('testid') === testid);
+
+    // The rail leaves `open` unbound, so the model's own ref is what has to move.
+    (pill?.vm as unknown as { open: boolean }).open = true;
+    await wrapper.vm.$nextTick();
+}
+
+function item(testid: string): HTMLElement | null {
+    return document.body.querySelector(`[data-testid="${testid}"]`);
 }
 
 describe('CalendarFilterRail', () => {
     beforeEach(() => setAuthedOwner());
 
-    it('replaces the legend with one checkbox per person and per status', () => {
+    it('collapses the whole team and every status into two pills', () => {
         const wrapper = mountRail();
 
-        expect(wrapper.find('[data-testid="filter-employee-7"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="filter-employee-9"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="filter-unassigned"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="filter-status-31"]').exists()).toBe(true);
-        expect(wrapper.find('[data-testid="filter-status-32"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="filter-employees"]').exists()).toBe(true);
+        expect(wrapper.find('[data-testid="filter-statuses"]').exists()).toBe(true);
+
+        // Nothing is unfolded until someone asks for it.
+        expect(wrapper.find('[data-testid="filter-employee-7"]').exists()).toBe(false);
+        expect(wrapper.find('[data-testid="filter-status-31"]').exists()).toBe(false);
+
+        wrapper.unmount();
     });
 
-    it('shows which filters are on', () => {
-        const wrapper = mountRail({ employees: [9], unassigned: true });
+    it('names the unfiltered state instead of showing an empty control', () => {
+        const wrapper = mountRail();
 
-        expect(wrapper.get('[data-testid="filter-employee-9"]').attributes('aria-checked')).toBe('true');
-        expect(wrapper.get('[data-testid="filter-employee-7"]').attributes('aria-checked')).toBe('false');
-        expect(wrapper.get('[data-testid="filter-unassigned"]').attributes('aria-checked')).toBe('true');
+        expect(wrapper.get('[data-testid="filter-employees"]').text()).toContain('All employees');
+        expect(wrapper.get('[data-testid="filter-statuses"]').text()).toContain('All statuses');
+        expect(wrapper.get('[data-testid="filter-employees"]').attributes('data-active')).toBe('false');
+
+        wrapper.unmount();
+    });
+
+    it('reads back a single selection by name rather than as a count', () => {
+        const wrapper = mountRail({ employees: [9] });
+        const pill = wrapper.get('[data-testid="filter-employees"]');
+
+        expect(pill.text()).toContain('Max Kern');
+        expect(pill.attributes('data-active')).toBe('true');
+        expect(wrapper.find('[data-testid="filter-employees-count"]').exists()).toBe(false);
+
+        wrapper.unmount();
+    });
+
+    it('falls back to a count once more than one thing is picked', () => {
+        const wrapper = mountRail({ employees: [7, 9], unassigned: true });
+        const pill = wrapper.get('[data-testid="filter-employees"]');
+
+        expect(pill.text()).toContain('Employee');
+        expect(wrapper.get('[data-testid="filter-employees-count"]').text()).toBe('3');
+
+        wrapper.unmount();
+    });
+
+    it('counts the unassigned row towards the people pill', () => {
+        const wrapper = mountRail({ unassigned: true });
+
+        expect(wrapper.get('[data-testid="filter-employees"]').text()).toContain('Unassigned');
+
+        wrapper.unmount();
+    });
+
+    it('lists every person, the unassigned row and every status once unfolded', async () => {
+        const wrapper = mountRail();
+        await openPill(wrapper, 'filter-employees');
+
+        expect(item('filter-employee-7')).not.toBeNull();
+        expect(item('filter-employee-9')).not.toBeNull();
+        expect(item('filter-unassigned')).not.toBeNull();
+
+        await openPill(wrapper, 'filter-statuses');
+        expect(item('filter-status-31')).not.toBeNull();
+        expect(item('filter-status-32')).not.toBeNull();
+
+        wrapper.unmount();
+    });
+
+    it('marks the entries that are on', async () => {
+        const wrapper = mountRail({ employees: [9], unassigned: true });
+        await openPill(wrapper, 'filter-employees');
+
+        expect(item('filter-employee-9')?.getAttribute('aria-checked')).toBe('true');
+        expect(item('filter-employee-7')?.getAttribute('aria-checked')).toBe('false');
+        expect(item('filter-unassigned')?.getAttribute('aria-checked')).toBe('true');
+
+        wrapper.unmount();
     });
 
     it('emits a toggle for the person that was clicked', async () => {
         const wrapper = mountRail();
-        await wrapper.get('[data-testid="filter-employee-9"]').trigger('click');
+        await openPill(wrapper, 'filter-employees');
+
+        item('filter-employee-9')?.click();
+        await wrapper.vm.$nextTick();
 
         expect(wrapper.emitted('toggleEmployee')).toEqual([[9]]);
+        wrapper.unmount();
     });
 
     it('emits a toggle for the status that was clicked', async () => {
         const wrapper = mountRail();
-        await wrapper.get('[data-testid="filter-status-31"]').trigger('click');
+        await openPill(wrapper, 'filter-statuses');
+
+        item('filter-status-31')?.click();
+        await wrapper.vm.$nextTick();
 
         expect(wrapper.emitted('toggleStatus')).toEqual([[31]]);
+        wrapper.unmount();
+    });
+
+    it('offers a per-pill clear only while that pill is narrowing anything', async () => {
+        const idle = mountRail();
+        await openPill(idle, 'filter-statuses');
+        expect(item('filter-statuses-clear')).toBeNull();
+        idle.unmount();
+
+        const wrapper = mountRail({ statuses: [31] });
+        await openPill(wrapper, 'filter-statuses');
+        item('filter-statuses-clear')?.click();
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.emitted('clearStatuses')).toHaveLength(1);
+        wrapper.unmount();
     });
 
     it('offers a reset only once something is filtered', async () => {
-        expect(mountRail().find('[data-testid="filter-reset"]').exists()).toBe(false);
+        const idle = mountRail();
+        expect(idle.find('[data-testid="filter-reset"]').exists()).toBe(false);
+        idle.unmount();
 
         const wrapper = mountRail({ statuses: [31] });
         await wrapper.get('[data-testid="filter-reset"]').trigger('click');
         expect(wrapper.emitted('reset')).toHaveLength(1);
+
+        wrapper.unmount();
     });
 });
 
@@ -124,6 +231,18 @@ describe('useCalendarQuery', () => {
 
         expect(lastVisit()).toEqual({ view: 'month', date: '2026-04-08', statuses: [31], unassigned: 1 });
         expect(localStorage.getItem('biotech-calendar-view')).toBe('month');
+    });
+
+    it('empties one pill without disturbing the other', () => {
+        query({ employees: [7], statuses: [31], unassigned: true }).clearEmployees();
+
+        expect(lastVisit()).toEqual({ view: 'week', date: '2026-04-08', statuses: [31] });
+    });
+
+    it('empties the status pill on its own', () => {
+        query({ employees: [7], statuses: [31, 32] }).clearStatuses();
+
+        expect(lastVisit()).toEqual({ view: 'week', date: '2026-04-08', employees: [7] });
     });
 
     it('drops every filter on reset', () => {

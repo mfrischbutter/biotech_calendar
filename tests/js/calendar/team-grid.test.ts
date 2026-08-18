@@ -28,7 +28,7 @@ const totals: CalendarTotals = {
 
 function mountTeam(appointments: Appointment[], overrides: Record<string, unknown> = {}) {
     return mountComponent(TeamGrid, {
-        props: { appointments, employees, dates: DATES, totals, ...overrides },
+        props: { appointments, employees, showUnassigned: true, dates: DATES, totals, ...overrides },
     });
 }
 
@@ -100,6 +100,33 @@ describe('TeamGrid', () => {
         const card = wrapper.get('[data-appointment-id="4"]');
 
         expect(card.text().indexOf('Baeckerei Bergmann')).toBeLessThan(card.text().indexOf('Nachkontrolle'));
+    });
+
+    it('drops the unassigned row when the filter did not ask for it', () => {
+        const wrapper = mountTeam([], { showUnassigned: false });
+        const rowHeaders = wrapper.findAll('tbody td:first-child');
+
+        expect(rowHeaders[0].text()).toContain('Anna Berg');
+        expect(wrapper.text()).not.toContain('Unassigned');
+    });
+
+    it('draws a row only for the people it was handed', () => {
+        const wrapper = mountTeam([], { employees: [employees[0]], showUnassigned: false });
+
+        expect(wrapper.findAll('tbody tr')).toHaveLength(1);
+        expect(wrapper.text()).not.toContain('Max Kern');
+    });
+
+    /*
+     * A job shared by a filtered-in and a filtered-out technician still belongs
+     * on the board once — in the row that survived, not silently duplicated or
+     * dropped along with the other person.
+     */
+    it('keeps a shared job in the surviving row', () => {
+        const shared = makeAppointment({ id: 1, date: '2026-04-06', workers: [anna, max] });
+        const wrapper = mountTeam([shared], { employees: [employees[0]], showUnassigned: false });
+
+        expect(wrapper.findAll('[data-appointment-id="1"]')).toHaveLength(1);
     });
 
     it('offers a scroll affordance once the days run past the edge', async () => {

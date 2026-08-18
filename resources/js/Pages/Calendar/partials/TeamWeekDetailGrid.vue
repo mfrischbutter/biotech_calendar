@@ -16,7 +16,10 @@ interface EmployeeRow { id: number | null; name: string; unassigned: boolean }
 
 const props = defineProps<{
     appointments: Appointment[];
+    /** Only the people the assignee filter left standing. */
     employees: CalendarEmployee[];
+    /** Whether the row for work nobody owns belongs on the board. */
+    showUnassigned: boolean;
     dates: string[];
     startHour: number;
     endHour: number;
@@ -35,7 +38,7 @@ const cellHeight = computed(() => totalHours.value * HOUR_HEIGHT);
 const hours = computed(() => Array.from({ length: totalHours.value }, (_, i) => props.startHour + i));
 
 const allRows = computed<EmployeeRow[]>(() => [
-    { id: null, name: t('Unassigned'), unassigned: true },
+    ...(props.showUnassigned ? [{ id: null, name: t('Unassigned'), unassigned: true }] : []),
     ...props.employees.map(e => ({ id: e.id, name: e.name, unassigned: false })),
 ]);
 

@@ -20,7 +20,10 @@ interface EmployeeRow {
 
 const props = defineProps<{
     appointments: Appointment[];
+    /** Only the people the assignee filter left standing. */
     employees: CalendarEmployee[];
+    /** Whether the row for work nobody owns belongs on the board. */
+    showUnassigned: boolean;
     dates: string[];
     totals: CalendarTotals;
     conflicts?: ConflictMap;
@@ -35,12 +38,14 @@ const emit = defineEmits<{
 const today = format(new Date(), 'yyyy-MM-dd');
 
 const allRows = computed<EmployeeRow[]>(() => [
-    { id: null, name: t('Unassigned'), unassigned: true },
+    ...(props.showUnassigned ? [{ id: null, name: t('Unassigned'), unassigned: true }] : []),
     ...props.employees.map((e) => ({ id: e.id, name: e.name, unassigned: false })),
 ]);
 
 // An appointment shows up in every assigned technician's row; work nobody owns
 // lands in the unassigned row at the top, where it is impossible to miss.
+// A worker with no row on this board — filtered out, but sharing a job with
+// someone who was not — is skipped rather than given a bucket nobody reads.
 const byEmployee = computed(() => {
     const map = new Map<number | null, Appointment[]>();
     map.set(null, []);
@@ -50,9 +55,7 @@ const byEmployee = computed(() => {
             map.get(null)!.push(appt);
         } else {
             for (const worker of appt.workers) {
-                const list = map.get(worker.id);
-                if (list) list.push(appt);
-                else map.set(worker.id, [appt]);
+                map.get(worker.id)?.push(appt);
             }
         }
     }

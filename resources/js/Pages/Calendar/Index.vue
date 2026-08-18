@@ -10,6 +10,7 @@ import {
     CALENDAR_DENSITY_STORAGE_KEY,
     CALENDAR_VIEW_STORAGE_KEY,
 } from '@/lib/use-calendar-query';
+import { calendarBoardRows } from '@/lib/calendar-rows';
 import { useAppointmentDialogs } from '@/lib/use-appointment-dialogs';
 import { useCalendarAppointments } from '@/lib/use-calendar-appointments';
 import { useCalendarShortcuts } from '@/lib/use-calendar-shortcuts';
@@ -82,6 +83,9 @@ const loading = usePageLoading();
 
 /** What the grids draw: server truth, plus any drag the server has not answered yet. */
 const shownAppointments = computed(() => props.appointments.map(mutations.effective));
+
+/** Which people the team board draws a row for under the current filter. */
+const board = computed(() => calendarBoardRows(props.employees, props.filters));
 
 // ---------------------------------------------------------------------------
 // Dialogs and keyboard — every shortcut mirrors a button visible on screen
@@ -202,6 +206,8 @@ function handleDayClick(date: string) {
             @toggle-employee="query.toggleEmployee"
             @toggle-status="query.toggleStatus"
             @toggle-unassigned="query.toggleUnassigned"
+            @clear-employees="query.clearEmployees"
+            @clear-statuses="query.clearStatuses"
             @reset="query.resetFilters"
         />
 
@@ -217,7 +223,8 @@ function handleDayClick(date: string) {
             <TeamWeekDetailGrid
                 v-if="isTeamView && isDetailed"
                 :appointments="shownAppointments"
-                :employees="employees"
+                :employees="board.employees"
+                :show-unassigned="board.showUnassigned"
                 :dates="gridDates"
                 :start-hour="startHour"
                 :end-hour="endHour"
@@ -230,7 +237,8 @@ function handleDayClick(date: string) {
             <TeamGrid
                 v-else-if="isTeamView"
                 :appointments="shownAppointments"
-                :employees="employees"
+                :employees="board.employees"
+                :show-unassigned="board.showUnassigned"
                 :dates="gridDates"
                 :totals="totals"
                 :conflicts="conflicts"

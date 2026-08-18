@@ -23,6 +23,9 @@ export interface UseCalendarQuery {
     toggleUnassigned: () => void;
     toggleConflicts: () => void;
     setDensity: (density: CalendarDensity) => void;
+    /** Empties one filter pill without touching the others. */
+    clearEmployees: () => void;
+    clearStatuses: () => void;
     resetFilters: () => void;
 }
 
@@ -141,6 +144,18 @@ export function useCalendarQuery(source: CalendarQuerySource): UseCalendarQuery 
         visit({ density, replace: true });
     }
 
+    /** The people pill owns the unassigned row too, so clearing it drops both. */
+    function clearEmployees(): void {
+        filters.value.employees = [];
+        filters.value.unassigned = false;
+        visit({ replace: true });
+    }
+
+    function clearStatuses(): void {
+        filters.value.statuses = [];
+        visit({ replace: true });
+    }
+
     function resetFilters(): void {
         filters.value = { employees: [], statuses: [], unassigned: false, conflicts: false };
         visit({ replace: true });
@@ -163,6 +178,8 @@ export function useCalendarQuery(source: CalendarQuerySource): UseCalendarQuery 
         toggleUnassigned,
         toggleConflicts,
         setDensity,
+        clearEmployees,
+        clearStatuses,
         resetFilters,
     };
 }

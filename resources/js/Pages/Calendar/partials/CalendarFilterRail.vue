@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { Checkbox } from '@/Components/ui/checkbox';
-import { Label } from '@/Components/ui/label';
-import { Separator } from '@/Components/ui/separator';
+import { computed } from 'vue';
+import { Check } from 'lucide-vue-next';
+import FilterPill from '@/Components/FilterPill.vue';
+import { DropdownMenuItem, DropdownMenuSeparator } from '@/Components/ui/dropdown-menu';
 import { getStatusDotStyle } from '@/lib/status-colors';
 import { useTrans } from '@/lib/use-trans';
 import type { CalendarEmployee, CalendarFilters, Status } from '@/types';
@@ -19,6 +20,8 @@ const emit = defineEmits<{
     toggleEmployee: [id: number];
     toggleStatus: [id: number];
     toggleUnassigned: [];
+    clearEmployees: [];
+    clearStatuses: [];
     reset: [];
 }>();
 
@@ -29,74 +32,101 @@ function employeeChecked(id: number): boolean {
 function statusChecked(id: number): boolean {
     return props.filters.statuses.includes(id);
 }
+
+/*
+ * What each pill reads. The unassigned row is an assignee like any other, so it
+ * counts towards the people pill rather than earning a control of its own.
+ */
+const selectedEmployees = computed(() => {
+    const names = props.employees.filter((e) => employeeChecked(e.id)).map((e) => e.name);
+
+    return props.filters.unassigned ? [...names, t('Unassigned')] : names;
+});
+
+const selectedStatuses = computed(() =>
+    props.statuses.filter((status) => statusChecked(status.id)).map((status) => status.name),
+);
 </script>
 
 <template>
     <!--
-        This rail replaced a static status legend. It costs the same strip of
-        screen but answers the question the legend only decorated: show me this
-        person's day, or everything still unconfirmed.
+        Every person and every status used to sit in this strip as a bare
+        checkbox, which grew three rows deep and read as noise rather than as a
+        control. They collapse into one pill per dimension: the pill states the
+        current answer ("Alle Mitarbeiter", "Lisa Bauer", "Status 3") and only
+        unfolds the full list when someone actually wants to narrow the board.
     -->
     <div
         data-testid="calendar-filter-rail"
-        class="mb-2 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border bg-background px-3 py-2 md:mb-3"
+        class="mb-2 flex flex-wrap items-center gap-2 md:mb-3"
     >
-        <span class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            {{ t('Employee') }}
-        </span>
-
-        <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <div v-for="employee in employees" :key="employee.id" class="flex items-center gap-1.5">
-                <Checkbox
-                    :id="`filter-employee-${employee.id}`"
-                    :data-testid="`filter-employee-${employee.id}`"
-                    :model-value="employeeChecked(employee.id)"
-                    @update:model-value="emit('toggleEmployee', employee.id)"
+        <FilterPill
+            :label="t('Employee')"
+            :idle-label="t('All employees')"
+            :selected="selectedEmployees"
+            testid="filter-employees"
+            @clear="emit('clearEmployees')"
+        >
+            <DropdownMenuItem
+                v-for="employee in employees"
+                :key="employee.id"
+                class="gap-2"
+                :data-testid="`filter-employee-${employee.id}`"
+                :aria-checked="employeeChecked(employee.id)"
+                @select.prevent="emit('toggleEmployee', employee.id)"
+            >
+                <Check
+                    class="h-3.5 w-3.5 shrink-0 text-navy"
+                    :class="employeeChecked(employee.id) ? 'opacity-100' : 'opacity-0'"
                 />
-                <Label :for="`filter-employee-${employee.id}`" class="cursor-pointer text-xs font-normal">
-                    {{ employee.name }}
-                </Label>
-            </div>
+                <span class="truncate">{{ employee.name }}</span>
+            </DropdownMenuItem>
 
-            <div class="flex items-center gap-1.5">
-                <Checkbox
-                    id="filter-unassigned"
-                    data-testid="filter-unassigned"
-                    :model-value="filters.unassigned"
-                    @update:model-value="emit('toggleUnassigned')"
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem
+                class="gap-2"
+                data-testid="filter-unassigned"
+                :aria-checked="filters.unassigned"
+                @select.prevent="emit('toggleUnassigned')"
+            >
+                <Check
+                    class="h-3.5 w-3.5 shrink-0 text-navy"
+                    :class="filters.unassigned ? 'opacity-100' : 'opacity-0'"
                 />
-                <Label for="filter-unassigned" class="cursor-pointer text-xs font-normal italic text-muted-foreground">
-                    {{ t('Unassigned') }}
-                </Label>
-            </div>
-        </div>
+                <span class="italic text-muted-foreground">{{ t('Unassigned') }}</span>
+            </DropdownMenuItem>
+        </FilterPill>
 
-        <Separator orientation="vertical" class="hidden h-5 md:block" />
-
-        <span class="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            {{ t('Status') }}
-        </span>
-
-        <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <div v-for="status in statuses" :key="status.id" class="flex items-center gap-1.5">
-                <Checkbox
-                    :id="`filter-status-${status.id}`"
-                    :data-testid="`filter-status-${status.id}`"
-                    :model-value="statusChecked(status.id)"
-                    @update:model-value="emit('toggleStatus', status.id)"
+        <FilterPill
+            :label="t('Status')"
+            :idle-label="t('All statuses')"
+            :selected="selectedStatuses"
+            testid="filter-statuses"
+            @clear="emit('clearStatuses')"
+        >
+            <DropdownMenuItem
+                v-for="status in statuses"
+                :key="status.id"
+                class="gap-2"
+                :data-testid="`filter-status-${status.id}`"
+                :aria-checked="statusChecked(status.id)"
+                @select.prevent="emit('toggleStatus', status.id)"
+            >
+                <Check
+                    class="h-3.5 w-3.5 shrink-0 text-navy"
+                    :class="statusChecked(status.id) ? 'opacity-100' : 'opacity-0'"
                 />
-                <Label :for="`filter-status-${status.id}`" class="flex cursor-pointer items-center gap-1.5 text-xs font-normal">
-                    <span class="h-2 w-2 rounded-full" :style="getStatusDotStyle(status.color)" />
-                    {{ status.name }}
-                </Label>
-            </div>
-        </div>
+                <span class="h-2 w-2 shrink-0 rounded-full" :style="getStatusDotStyle(status.color)" />
+                <span class="truncate">{{ status.name }}</span>
+            </DropdownMenuItem>
+        </FilterPill>
 
         <button
             v-if="hasFilters"
             type="button"
             data-testid="filter-reset"
-            class="ml-auto text-xs font-medium text-navy underline-offset-2 hover:underline"
+            class="text-xs font-medium text-navy underline-offset-2 hover:underline"
             @click="emit('reset')"
         >
             {{ t('Reset filters') }}
