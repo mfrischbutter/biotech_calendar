@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Appointment;
 use App\Models\Company;
 use App\Models\Contract;
+use App\Models\Notification;
 use App\Models\Status;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -211,6 +212,171 @@ class DashboardTest extends TestCase
 
         $this->assertSame([], $this->props()['schedule']);
         $this->assertSame(0, $this->props()['attention']['unassigned']);
+    }
+
+    public function test_work_that_finished_today_but_is_still_open_reads_as_past(): void
+    {
+        // 10:00-11:00, now = 12:00, still in an ACTIVE stage: over, but not done.
+        $this->appointment('2026-04-08 10:00', 60, $this->makeStatus(Status::STAGE_ACTIVE), [$this->markus->id]);
+
+        $this->assertSame('past', $this->props()['schedule'][0]['items'][0]['state']);
+    }
+
+    public function test_the_unassigned_window_starts_today_and_ends_on_sunday(): void
+    {
+        $this->appointment('2026-04-07 09:00'); // yesterday — already missed, not "this week's gap"
+        $this->appointment('2026-04-12 09:00'); // Sunday — the last day counted
+        $this->appointment('2026-04-13 09:00'); // next Monday — next week's problem
+
+        $this->assertSame(1, $this->props()['attention']['unassigned']);
+    }
+
+    public function test_work_older_than_three_months_has_stopped_being_actionable(): void
+    {
+        $this->appointment('2025-12-01 09:00'); // 4 months back
+        $this->appointment('2026-03-01 09:00'); // inside the window
+
+        $this->assertSame(1, $this->props()['attention']['overdue']);
+    }
+
+    public function test_unread_conflict_notifications_are_counted_as_attention(): void
+    {
+        $appointment = $this->appointment('2026-04-08 09:00', 60, null, [$this->markus->id]);
+
+        $conflict = Notification::withoutGlobalScope('company')->create([
+            'company_id' => $this->company->id,
+            'user_id' => $this->owner->id,
+            'type' => Notification::TYPE_CONFLICT,
+            'appointment_id' => $appointment->id,
+            'data' => [],
+        ]);
+        // A different type, and someone else's conflict, must not be counted.
+        Notification::withoutGlobalScope('company')->create([
+            'company_id' => $this->company->id,
+            'user_id' => $this->owner->id,
+            'type' => Notification::TYPE_ASSIGNED,
+            'appointment_id' => $appointment->id,
+            'data' => [],
+        ]);
+        Notification::withoutGlobalScope('company')->create([
+            'company_id' => $this->company->id,
+            'user_id' => $this->markus->id,
+            'type' => Notification::TYPE_CONFLICT,
+            'appointment_id' => $appointment->id,
+            'data' => [],
+        ]);
+
+        $this->assertSame(1, $this->props()['attention']['conflicts']);
+
+        $conflict->forceFill(['read_at' => now()])->save();
+
+        $this->assertSame(0, $this->props()['attention']['conflicts'], 'Reading it clears it.');
+    }
+
+    public function test_average_utilisation_is_the_mean_across_everyone_carrying_work(): void
+    {
+        $lisa = User::factory()->create([
+            'company_id' => $this->company->id, 'first_name' => 'Lisa', 'last_name' => 'Bauer',
+        ]);
+
+        $this->appointment('2026-04-08 09:00', 4 * 60, null, [$this->markus->id]);  // 10%
+        $this->appointment('2026-04-09 09:00', 12 * 60, null, [$lisa->id]);         // 30%
+
+        // Nobody with an empty week drags the mean down — the strip is about load.
+        $this->assertSame(20, $this->props()['attention']['utilisation']);
+    }
+
+    public function test_utilisation_is_zero_when_nothing_is_booked(): void
+    {
+        $this->assertSame(0, $this->props()['attention']['utilisation']);
+    }
+
+    public function test_the_attention_feed_shows_unread_notifications_newest_first(): void
+    {
+        $appointment = $this->appointment('2026-04-08 09:00', 60, null, [$this->markus->id]);
+
+        foreach ([['older', '2026-04-08 08:00'], ['newer', '2026-04-08 10:00']] as [$excerpt, $at]) {
+            Notification::withoutGlobalScope('company')->create([
+                'company_id' => $this->company->id,
+                'user_id' => $this->owner->id,
+                'actor_id' => $this->markus->id,
+                'type' => Notification::TYPE_MENTION,
+                'appointment_id' => $appointment->id,
+                'data' => ['excerpt' => $excerpt],
+            ])->forceFill(['created_at' => Carbon::parse($at)])->save();
+        }
+
+        $feed = $this->props()['notifications'];
+
+        $this->assertSame(['newer', 'older'], array_column($feed, 'excerpt'));
+        $this->assertSame('Markus Weber', $feed[0]['actor']);
+        $this->assertStringContainsString('appointment='.$appointment->id, $feed[0]['url']);
+    }
+
+    public function test_the_attention_feed_leaves_out_what_has_been_read(): void
+    {
+        $appointment = $this->appointment('2026-04-08 09:00', 60, null, [$this->markus->id]);
+
+        Notification::withoutGlobalScope('company')->create([
+            'company_id' => $this->company->id,
+            'user_id' => $this->owner->id,
+            'type' => Notification::TYPE_MENTION,
+            'appointment_id' => $appointment->id,
+            'data' => [],
+            'read_at' => now(),
+        ]);
+
+        $this->assertSame([], $this->props()['notifications']);
+    }
+
+    public function test_recent_activity_reports_who_changed_what(): void
+    {
+        // AppointmentObserver writes the log, so this exercises the real path
+        // rather than hand-inserting a row.
+        $this->actingAs($this->markus);
+        $this->appointment('2026-04-09 09:00');
+
+        $activity = $this->props()['recentActivity'];
+
+        $this->assertNotEmpty($activity, 'Creating an appointment leaves a trace.');
+        $this->assertSame('created', $activity[0]['action']);
+        $this->assertSame('Markus Weber', $activity[0]['user']);
+    }
+
+    public function test_every_aggregate_stops_at_the_company_boundary(): void
+    {
+        $other = Company::factory()->create();
+        $otherOwner = User::factory()->create(['company_id' => $other->id, 'role' => User::ROLE_OWNER]);
+        $otherContract = Contract::factory()->create(['company_id' => $other->id]);
+        $otherStatus = Status::factory()->stage(Status::STAGE_READY_TO_INVOICE)->create(['company_id' => $other->id]);
+
+        $theirs = Appointment::factory()->at('2026-04-08 09:00', 240)->create([
+            'company_id' => $other->id,
+            'contract_id' => $otherContract->id,
+            'created_by' => $otherOwner->id,
+            'status_id' => $otherStatus->id,
+        ]);
+        $theirs->workers()->sync([$otherOwner->id]);
+
+        $past = Appointment::factory()->at('2026-04-01 09:00')->create([
+            'company_id' => $other->id,
+            'contract_id' => $otherContract->id,
+            'created_by' => $otherOwner->id,
+        ]);
+        $past->workers()->sync([$otherOwner->id]);
+
+        $props = $this->props();
+
+        $this->assertSame([], $props['schedule']);
+        $this->assertSame([], $props['workload']);
+        $this->assertSame(0, $props['attention']['unassigned']);
+        $this->assertSame(0, $props['attention']['overdue']);
+        $this->assertSame(0, $props['attention']['readyToInvoice']);
+        $this->assertSame(0, $props['attention']['utilisation']);
+        $this->assertSame(
+            [0, 0, 0, 0],
+            collect($props['pipeline'])->pluck('count')->all(),
+        );
     }
 
     public function test_the_payload_shape_matches_the_golden_file(): void

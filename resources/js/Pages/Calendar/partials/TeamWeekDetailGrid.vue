@@ -2,9 +2,10 @@
 import { computed, ref } from 'vue';
 import { format, parseISO } from 'date-fns';
 import { de } from 'date-fns/locale';
-import type { Appointment } from '@/types';
+import { RotateCw } from 'lucide-vue-next';
+import type { Appointment, CalendarEmployee, ConflictMap } from '@/types';
 import { useTrans } from '@/lib/use-trans';
-import { appointmentLabel } from '@/lib/appointment-label';
+import { appointmentClientName, appointmentService, isRecurring } from '@/lib/appointment-label';
 import { getStatusStyle } from '@/lib/status-colors';
 import AppointmentHoverCard from './AppointmentHoverCard.vue';
 import { localMinutes, isoToLocalParts } from '@/lib/date-utils';
@@ -15,10 +16,11 @@ interface EmployeeRow { id: number | null; name: string; unassigned: boolean }
 
 const props = defineProps<{
     appointments: Appointment[];
-    employees: { id: number; first_name: string; last_name: string; name: string }[];
+    employees: CalendarEmployee[];
     dates: string[];
     startHour: number;
     endHour: number;
+    conflicts?: ConflictMap;
 }>();
 
 const emit = defineEmits<{
@@ -80,6 +82,12 @@ function getTimeLabel(appt: Appointment): string {
     return `${isoToLocalParts(appt.start_at).time} – ${isoToLocalParts(appt.end_at).time}`;
 }
 
+const today = format(new Date(), 'yyyy-MM-dd');
+
+function isConflicted(appt: Appointment): boolean {
+    return (props.conflicts?.[appt.id]?.length ?? 0) > 0;
+}
+
 function formatDayHeader(date: string): string {
     return format(parseISO(date), 'EEE d. MMM', { locale: de });
 }
@@ -132,7 +140,9 @@ function handleDblClick(empId: number | null, date: string, e: MouseEvent) {
                     {{ t('Employee') }}
                 </div>
                 <div class="w-14 shrink-0 border-r bg-background" />
-                <div v-for="date in dates" :key="date" class="flex-1 min-w-[10rem] border-r p-2 text-center text-xs font-medium text-muted-foreground md:text-sm last:border-r-0">
+                <div v-for="date in dates" :key="date"
+                     class="flex-1 min-w-[10rem] border-r p-2 text-center text-xs font-medium text-muted-foreground md:text-sm last:border-r-0"
+                     :class="date === today ? 'bg-navy-wash/50 text-navy' : ''">
                     {{ formatDayHeader(date) }}
                 </div>
             </div>
@@ -157,7 +167,7 @@ function handleDblClick(empId: number | null, date: string, e: MouseEvent) {
                 <div v-for="date in dates" :key="date"
                      class="flex-1 min-w-[10rem] border-r last:border-r-0 relative"
                      :style="{ height: `${cellHeight}px` }"
-                     :class="isDragOver(row.id, date) ? 'bg-primary/5' : ''"
+                     :class="[isDragOver(row.id, date) ? 'bg-primary/5' : '', date === today ? 'bg-navy-wash/20' : '']"
                      @dragover="onDragOver(row.id, date, $event)"
                      @dragleave="dragOverCell = null"
                      @drop="onDrop(row.id, date, $event)"
@@ -170,13 +180,22 @@ function handleDblClick(empId: number | null, date: string, e: MouseEvent) {
                     <!-- Appointments -->
                     <AppointmentHoverCard v-for="appt in cellAppts(row.id, date)" :key="appt.id" :appointment="appt">
                         <div class="absolute rounded-md border-l-[4px] px-2 py-1 overflow-hidden cursor-pointer transition-shadow hover:shadow-md"
+                             :class="[
+                                 isConflicted(appt) ? 'ring-2 ring-inset ring-danger' : '',
+                                 appt.workers.length === 0 ? 'outline-dashed outline-2 outline-offset-[-3px] outline-navy-edge' : '',
+                             ]"
                              :style="getApptCardStyle(appt)"
                              :data-appointment-id="appt.id"
+                             :data-conflict="isConflicted(appt) ? 'true' : undefined"
                              draggable="true"
                              @dragstart="onDragStart(appt, $event)"
                              @dragend="onDragEnd"
                              @click.stop="emit('appointmentClick', appt)">
-                            <div class="font-medium text-xs truncate text-foreground">{{ appointmentLabel(appt) }}</div>
+                            <div class="flex items-center gap-1">
+                                <span class="font-medium text-xs truncate text-foreground">{{ appointmentClientName(appt) || appointmentService(appt) }}</span>
+                                <RotateCw v-if="isRecurring(appt)" class="h-2.5 w-2.5 shrink-0 text-muted-foreground" data-testid="recurring-marker" />
+                            </div>
+                            <div class="text-[11px] text-muted-foreground truncate">{{ appointmentService(appt) }}</div>
                             <div class="text-[11px] text-muted-foreground truncate">{{ getTimeLabel(appt) }}</div>
                         </div>
                     </AppointmentHoverCard>

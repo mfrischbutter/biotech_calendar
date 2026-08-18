@@ -106,6 +106,7 @@ export function makeAppointment(
         title?: string;
         workers?: User[];
         status?: Status | null;
+        clients?: Client[];
     } = {},
 ): Appointment {
     const {
@@ -116,11 +117,12 @@ export function makeAppointment(
         title = 'Routinekontrolle',
         workers = [],
         status = null,
+        clients = [makeClient({ id: 800 + id })],
     } = opts;
 
     return {
         id,
-        contract: { id: 900 + id, contract_number: `A-${900 + id}`, title },
+        contract: { id: 900 + id, contract_number: `A-${900 + id}`, title, clients },
         start_at: `${date}T${start}:00`,
         end_at: `${date}T${end}:00`,
         status,

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToCompany;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -93,5 +94,34 @@ class Appointment extends Model
     public function isParent(): bool
     {
         return $this->parent_id === null && $this->recurrence_type !== null;
+    }
+
+    /**
+     * Whether editing this appointment could affect siblings — true for the
+     * series parent and for every generated occurrence.
+     */
+    public function belongsToSeries(): bool
+    {
+        return $this->parent_id !== null || $this->recurrence_type !== null;
+    }
+
+    /** The id the whole series hangs off: the parent's own id. */
+    public function seriesRootId(): int
+    {
+        return $this->parent_id ?? $this->id;
+    }
+
+    /**
+     * Parent plus every occurrence, in chronological order.
+     *
+     * @return Collection<int, self>
+     */
+    public function seriesMembers(): Collection
+    {
+        $rootId = $this->seriesRootId();
+
+        return self::where(function ($query) use ($rootId) {
+            $query->where('id', $rootId)->orWhere('parent_id', $rootId);
+        })->orderBy('start_at')->get();
     }
 }

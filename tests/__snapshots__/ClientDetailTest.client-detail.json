@@ -1,0 +1,123 @@
+{
+    "facts": {
+        "since": "2026-03-02T09:00:00.000000Z",
+        "address": "Sendlinger Str. 45, 80331 Muenchen",
+        "map_url": "https://www.google.com/maps/dir/?api=1&destination=Sendlinger%20Str.%2045%2C%2080331%20Muenchen",
+        "access_notes": null,
+        "badges": [
+            {
+                "key": "active_contract",
+                "tone": "success"
+            },
+            {
+                "key": "new_client",
+                "tone": "navy"
+            },
+            {
+                "key": "kundentermin",
+                "tone": "muted"
+            }
+        ],
+        "stats": {
+            "contracts": 1,
+            "open_contracts": 1,
+            "appointments": 2,
+            "upcoming": 1,
+            "last": "2026-04-01T10:00:00.000000Z",
+            "next": "2026-04-10T08:00:00.000000Z"
+        },
+        "next_appointment": {
+            "id": "<id>",
+            "title": "Routinekontrolle",
+            "contract_number": "A-1000",
+            "start_at": "2026-04-10T08:00:00.000000Z",
+            "end_at": "2026-04-10T09:00:00.000000Z",
+            "workers": [],
+            "status": {
+                "name": "Erste Massnahme",
+                "color": "#F59E0B",
+                "stage": "active"
+            },
+            "url": "http://localhost/calendar?appointment=<id>"
+        },
+        "series": null
+    },
+    "timeline": [
+        {
+            "id": "appointment-<id>",
+            "type": "appointment",
+            "action": null,
+            "at": "2026-04-10T08:00:00.000000Z",
+            "title": "Routinekontrolle",
+            "excerpt": null,
+            "actor": null,
+            "url": "http://localhost/calendar?appointment=<id>",
+            "status": {
+                "name": "Erste Massnahme",
+                "color": "#F59E0B",
+                "stage": "active"
+            },
+            "fields": []
+        },
+        {
+            "id": "document-<id>",
+            "type": "document",
+            "action": null,
+            "at": "2026-04-07T11:00:00.000000Z",
+            "title": "Protokoll.pdf",
+            "excerpt": "Routinekontrolle",
+            "actor": "Bjoern Wilhelmsen",
+            "url": "http://localhost/attachments/<id>",
+            "status": null,
+            "fields": []
+        },
+        {
+            "id": "comment-<id>",
+            "type": "comment",
+            "action": null,
+            "at": "2026-04-06T14:00:00.000000Z",
+            "title": "Routinekontrolle",
+            "excerpt": "Koederboxen im Lager kontrolliert.",
+            "actor": "Bjoern Wilhelmsen",
+            "url": "http://localhost/calendar?appointment=<id>",
+            "status": null,
+            "fields": []
+        },
+        {
+            "id": "appointment-<id>",
+            "type": "appointment",
+            "action": null,
+            "at": "2026-04-01T10:00:00.000000Z",
+            "title": "Routinekontrolle",
+            "excerpt": null,
+            "actor": null,
+            "url": "http://localhost/calendar?appointment=<id>",
+            "status": null,
+            "fields": []
+        },
+        {
+            "id": "activity-<id>",
+            "type": "activity",
+            "action": "created",
+            "at": "2026-03-02T10:00:00.000000Z",
+            "title": "Routinekontrolle",
+            "excerpt": null,
+            "actor": "Bjoern Wilhelmsen",
+            "url": "http://localhost/calendar?appointment=<id>",
+            "status": null,
+            "fields": []
+        },
+        {
+            "id": "activity-<id>",
+            "type": "activity",
+            "action": "created",
+            "at": "2026-03-02T09:00:00.000000Z",
+            "title": "Routinekontrolle",
+            "excerpt": null,
+            "actor": "Bjoern Wilhelmsen",
+            "url": "http://localhost/calendar?appointment=<id>",
+            "status": null,
+            "fields": []
+        }
+    ]
+}

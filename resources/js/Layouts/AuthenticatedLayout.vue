@@ -12,11 +12,13 @@ import {
     Search as SearchIcon,
 } from 'lucide-vue-next';
 import { useTrans } from '@/lib/use-trans';
+import { usePermissions } from '@/lib/use-permissions';
 import { initials } from '@/lib/utils';
 import { Button } from '@/Components/ui/button';
 import { Avatar, AvatarFallback } from '@/Components/ui/avatar';
 import GlobalSearch from '@/Components/GlobalSearch.vue';
 import NotificationBell from '@/Components/NotificationBell.vue';
+import { Toaster } from '@/Components/ui/sonner';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -49,11 +51,7 @@ onUnmounted(() => removeNavigateListener());
 
 const user = page.props.auth.user;
 const company = page.props.companyBranding as { name: string; logo_url: string | null } | null;
-const permissions = (user?.permissions ?? []) as string[];
-
-function may(permission: string): boolean {
-    return user?.role === 'owner' || permissions.includes(permission);
-}
+const { may } = usePermissions();
 
 const navItems = computed(() => [
     { name: t('Dashboard'), href: 'dashboard', icon: LayoutGrid, show: true },
@@ -196,5 +194,8 @@ function isActive(href: string): boolean {
                 <slot />
             </main>
         </div>
+
+        <!-- Bottom right keeps confirmations out of the way of the toolbars -->
+        <Toaster position="bottom-right" :duration="5000" close-button />
     </div>
 </template>

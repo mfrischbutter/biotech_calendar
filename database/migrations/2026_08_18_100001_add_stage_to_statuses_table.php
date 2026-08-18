@@ -23,7 +23,9 @@ return new class extends Migration
         $map = [
             'Block – noch nicht bestätigt' => Status::STAGE_UNCONFIRMED,
             'Für Fakturierung bereit' => Status::STAGE_READY_TO_INVOICE,
+            'Bereit zur Abrechnung' => Status::STAGE_READY_TO_INVOICE,
             'Fakturiert' => Status::STAGE_INVOICED,
+            'Abgerechnet' => Status::STAGE_INVOICED,
             'Maßnahme Storniert' => Status::STAGE_CANCELLED,
         ];
 

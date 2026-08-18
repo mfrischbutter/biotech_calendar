@@ -4,16 +4,7 @@ import { useForm, router } from '@inertiajs/vue3';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from '@/Components/ui/alert-dialog';
+import ConfirmDeleteDialog from '@/Components/ConfirmDeleteDialog.vue';
 import {
     Empty,
     EmptyContent,
@@ -231,20 +222,12 @@ const canEdit = computed(() => {
             </EmptyContent>
         </Empty>
 
-        <!-- Delete confirmation -->
-        <AlertDialog :open="!!deleteTarget" @update:open="(v: boolean) => { if (!v) deleteTarget = null }">
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>{{ t('Delete Status') }}?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        {{ t('This status will be removed. Appointments using this status will keep their data but lose the status reference.') }}
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>{{ t('Cancel') }}</AlertDialogCancel>
-                    <AlertDialogAction @click="executeDelete">{{ t('Delete') }}</AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+        <ConfirmDeleteDialog
+            :open="!!deleteTarget"
+            :title="`${t('Delete Status')}?`"
+            :description="t('This status will be removed. Appointments using this status will keep their data but lose the status reference.')"
+            @update:open="(open: boolean) => { if (!open) deleteTarget = null }"
+            @confirm="executeDelete"
+        />
     </div>
 </template>

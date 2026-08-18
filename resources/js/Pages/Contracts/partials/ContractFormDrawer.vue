@@ -19,16 +19,7 @@ import {
     DrawerHeader,
     DrawerTitle,
 } from '@/Components/ui/drawer';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from '@/Components/ui/alert-dialog';
+import ConfirmDiscardDialog from '@/Components/ConfirmDiscardDialog.vue';
 import {
     Popover,
     PopoverContent,
@@ -398,18 +389,5 @@ function submit() {
         </DrawerContent>
     </Drawer>
 
-    <AlertDialog v-model:open="confirmDiscardOpen">
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle>{{ t('Discard changes?') }}</AlertDialogTitle>
-                <AlertDialogDescription>
-                    {{ t('You have unsaved changes. Are you sure you want to discard them?') }}
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel>{{ t('Cancel') }}</AlertDialogCancel>
-                <AlertDialogAction @click="forceClose">{{ t('Discard') }}</AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmDiscardDialog v-model:open="confirmDiscardOpen" @discard="forceClose" />
 </template>

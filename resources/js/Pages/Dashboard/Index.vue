@@ -1,17 +1,19 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { format, parseISO } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { Plus } from 'lucide-vue-next';
+import { Plus, RefreshCw } from 'lucide-vue-next';
 import { Button } from '@/Components/ui/button';
+import { usePageLoading } from '@/lib/use-page-loading';
 import { useTrans } from '@/lib/use-trans';
 import AttentionCards from './partials/AttentionCards.vue';
 import PipelineStrip from './partials/PipelineStrip.vue';
 import TodaySchedule from './partials/TodaySchedule.vue';
 import AttentionPanel from './partials/AttentionPanel.vue';
 import WorkloadPanel from './partials/WorkloadPanel.vue';
+import DashboardSkeleton from './partials/DashboardSkeleton.vue';
 import type {
     AttentionCounts,
     AttentionNotification,
@@ -31,6 +33,13 @@ const props = defineProps<{
     workload: WorkloadRow[];
     notifications: AttentionNotification[];
 }>();
+
+const loading = usePageLoading();
+
+/** A dispatch board goes stale within the hour; this is the cheap way back. */
+function refresh(): void {
+    router.reload();
+}
 
 const greeting = computed(() => {
     const hour = new Date().getHours();
@@ -66,16 +75,31 @@ const summary = computed(() =>
                     <h2 class="text-xl font-semibold leading-tight text-foreground">{{ greeting }}</h2>
                     <p class="mt-1 text-sm text-muted-foreground">{{ summary }}</p>
                 </div>
-                <Button as-child>
-                    <Link :href="route('calendar.index', { new: 1 })">
-                        <Plus class="h-4 w-4" aria-hidden="true" />
-                        {{ t('New Appointment') }}
-                    </Link>
-                </Button>
+                <div class="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        data-testid="dashboard-refresh"
+                        :aria-label="t('Refresh')"
+                        :title="t('Refresh')"
+                        :disabled="loading"
+                        @click="refresh"
+                    >
+                        <RefreshCw class="h-4 w-4" :class="loading ? 'animate-spin' : ''" aria-hidden="true" />
+                    </Button>
+                    <Button as-child>
+                        <Link :href="route('calendar.index', { new: 1 })">
+                            <Plus class="h-4 w-4" aria-hidden="true" />
+                            {{ t('New Appointment') }}
+                        </Link>
+                    </Button>
+                </div>
             </div>
         </template>
 
-        <div class="space-y-6">
+        <DashboardSkeleton v-if="loading" />
+
+        <div v-else class="space-y-6">
             <AttentionCards :attention="attention" />
 
             <section>

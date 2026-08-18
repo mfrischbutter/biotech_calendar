@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Appointment;
+use App\Models\Comment;
 use App\Models\Company;
 use App\Models\Contract;
 use App\Models\Notification;
@@ -228,5 +229,115 @@ class NotificationServiceTest extends TestCase
         $users = $this->service->resolveMentions('@Markus Weber', $this->company->id);
 
         $this->assertSame([$this->markus->id], $users->pluck('id')->all());
+    }
+
+    /* ---------------- comments ---------------- */
+
+    private function comment(Appointment $appointment, User $author, string $body): Comment
+    {
+        return Comment::create([
+            'company_id' => $appointment->company_id,
+            'appointment_id' => $appointment->id,
+            'user_id' => $author->id,
+            'body' => $body,
+        ]);
+    }
+
+    public function test_a_comment_notifies_the_assigned_workers_and_the_creator_but_not_the_author(): void
+    {
+        // Owner created the appointment; Markus is assigned; Lisa writes the comment.
+        $appointment = $this->appointment();
+        $appointment->workers()->sync([$this->markus->id]);
+
+        $this->service->commentPosted(
+            $this->comment($appointment->fresh(), $this->lisa, 'Zugang war heute verschlossen.'),
+            $this->lisa
+        );
+
+        $rows = Notification::withoutGlobalScope('company')->get();
+
+        $this->assertEqualsCanonicalizing(
+            [$this->markus->id, $this->owner->id],
+            $rows->pluck('user_id')->all()
+        );
+        $this->assertSame([Notification::TYPE_COMMENT], $rows->pluck('type')->unique()->all());
+        $this->assertNotContains($this->lisa->id, $rows->pluck('user_id')->all());
+    }
+
+    public function test_someone_both_mentioned_and_assigned_is_told_once_and_specifically(): void
+    {
+        $appointment = $this->appointment();
+        $appointment->workers()->sync([$this->markus->id]);
+
+        $this->service->commentPosted(
+            $this->comment($appointment->fresh(), $this->lisa, '@Markus Weber bitte nachfassen'),
+            $this->lisa
+        );
+
+        $forMarkus = Notification::withoutGlobalScope('company')
+            ->where('user_id', $this->markus->id)->get();
+
+        $this->assertCount(1, $forMarkus);
+        $this->assertSame(Notification::TYPE_MENTION, $forMarkus->first()->type);
+    }
+
+    public function test_the_authors_own_comment_never_notifies_them_even_as_creator(): void
+    {
+        // Owner both created the appointment and writes the comment, and nobody
+        // else is assigned — so there is no one left to tell.
+        $appointment = $this->appointment();
+
+        $this->service->commentPosted(
+            $this->comment($appointment->fresh(), $this->owner, 'Notiz an mich selbst'),
+            $this->owner
+        );
+
+        $this->assertSame(0, Notification::withoutGlobalScope('company')->count());
+    }
+
+    public function test_a_comment_on_nothing_is_ignored(): void
+    {
+        $appointment = $this->appointment();
+        $comment = $this->comment($appointment->fresh(), $this->lisa, 'Hallo');
+        $appointment->delete();
+
+        $this->service->commentPosted($comment->fresh() ?? $comment, $this->lisa);
+
+        $this->assertSame(0, Notification::withoutGlobalScope('company')->count());
+    }
+
+    public function test_a_long_comment_is_shortened_to_a_readable_excerpt(): void
+    {
+        $appointment = $this->appointment();
+        $appointment->workers()->sync([$this->markus->id]);
+
+        $body = str_repeat('a', 200);
+        $this->service->commentPosted(
+            $this->comment($appointment->fresh(), $this->lisa, $body),
+            $this->lisa
+        );
+
+        $excerpt = Notification::withoutGlobalScope('company')
+            ->where('user_id', $this->markus->id)->first()->data['excerpt'];
+
+        $this->assertSame(120, mb_strlen($excerpt));
+        $this->assertStringEndsWith('…', $excerpt);
+        $this->assertSame(str_repeat('a', 119).'…', $excerpt);
+    }
+
+    public function test_a_short_comment_is_carried_whole_with_its_whitespace_collapsed(): void
+    {
+        $appointment = $this->appointment();
+        $appointment->workers()->sync([$this->markus->id]);
+
+        $this->service->commentPosted(
+            $this->comment($appointment->fresh(), $this->lisa, "  Tuer\n\n  war   offen  "),
+            $this->lisa
+        );
+
+        $excerpt = Notification::withoutGlobalScope('company')
+            ->where('user_id', $this->markus->id)->first()->data['excerpt'];
+
+        $this->assertSame('Tuer war offen', $excerpt);
     }
 }

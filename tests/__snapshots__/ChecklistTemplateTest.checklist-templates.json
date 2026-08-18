@@ -1,0 +1,26 @@
+{
+    "settings": {
+        "checklistTemplates": [
+            {
+                "id": "<id>",
+                "name": "Erstbegehung",
+                "kind": null,
+                "items": [
+                    "Objekt begehen"
+                ]
+            }
+        ]
+    },
+    "calendar": {
+        "checklistTemplates": [
+            {
+                "id": "<id>",
+                "name": "Erstbegehung",
+                "kind": null,
+                "items": [
+                    "Objekt begehen"
+                ]
+            }
+        ]
+    }
+}

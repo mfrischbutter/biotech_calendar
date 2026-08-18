@@ -1,0 +1,436 @@
+{
+    "appointments": [
+        {
+            "id": "<id>",
+            "company_id": "<company_id>",
+            "contract_id": "<contract_id>",
+            "start_at": "2026-04-08T09:00:00.000000Z",
+            "end_at": "2026-04-08T10:00:00.000000Z",
+            "status_id": "<status_id>",
+            "notes": null,
+            "checklist": null,
+            "created_by": "<created_by>",
+            "recurrence_type": null,
+            "recurrence_interval": null,
+            "recurrence_end": null,
+            "parent_id": null,
+            "created_at": "2026-04-08T12:00:00.000000Z",
+            "updated_at": "2026-04-08T12:00:00.000000Z",
+            "contract": {
+                "id": "<id>",
+                "contract_number": "A-1000",
+                "title": "Routinekontrolle",
+                "kind": "kundentermin",
+                "street": "Hauptstr. 1",
+                "zip": "80331",
+                "city": "Muenchen",
+                "clients": [
+                    {
+                        "id": "<id>",
+                        "first_name": "Klaus",
+                        "last_name": "Bergmann",
+                        "company_name": "Baeckerei Bergmann",
+                        "name": "Klaus Bergmann",
+                        "pivot": {
+                            "contract_id": "<contract_id>",
+                            "client_id": "<client_id>",
+                            "created_at": "2026-04-08T12:00:00.000000Z",
+                            "updated_at": "2026-04-08T12:00:00.000000Z"
+                        }
+                    }
+                ]
+            },
+            "workers": [
+                {
+                    "id": "<id>",
+                    "first_name": "Anna",
+                    "last_name": "Berg",
+                    "name": "Anna Berg",
+                    "pivot": {
+                        "appointment_id": "<appointment_id>",
+                        "user_id": "<user_id>",
+                        "created_at": "2026-04-08T12:00:00.000000Z",
+                        "updated_at": "2026-04-08T12:00:00.000000Z"
+                    }
+                }
+            ],
+            "status": {
+                "id": "<id>",
+                "name": "Offen",
+                "color": "#3b82f6"
+            },
+            "comments": [],
+            "attachments": []
+        },
+        {
+            "id": "<id>",
+            "company_id": "<company_id>",
+            "contract_id": "<contract_id>",
+            "start_at": "2026-04-08T09:30:00.000000Z",
+            "end_at": "2026-04-08T10:30:00.000000Z",
+            "status_id": "<status_id>",
+            "notes": null,
+            "checklist": null,
+            "created_by": "<created_by>",
+            "recurrence_type": null,
+            "recurrence_interval": null,
+            "recurrence_end": null,
+            "parent_id": null,
+            "created_at": "2026-04-08T12:00:00.000000Z",
+            "updated_at": "2026-04-08T12:00:00.000000Z",
+            "contract": {
+                "id": "<id>",
+                "contract_number": "A-1000",
+                "title": "Routinekontrolle",
+                "kind": "kundentermin",
+                "street": "Hauptstr. 1",
+                "zip": "80331",
+                "city": "Muenchen",
+                "clients": [
+                    {
+                        "id": "<id>",
+                        "first_name": "Klaus",
+                        "last_name": "Bergmann",
+                        "company_name": "Baeckerei Bergmann",
+                        "name": "Klaus Bergmann",
+                        "pivot": {
+                            "contract_id": "<contract_id>",
+                            "client_id": "<client_id>",
+                            "created_at": "2026-04-08T12:00:00.000000Z",
+                            "updated_at": "2026-04-08T12:00:00.000000Z"
+                        }
+                    }
+                ]
+            },
+            "workers": [
+                {
+                    "id": "<id>",
+                    "first_name": "Anna",
+                    "last_name": "Berg",
+                    "name": "Anna Berg",
+                    "pivot": {
+                        "appointment_id": "<appointment_id>",
+                        "user_id": "<user_id>",
+                        "created_at": "2026-04-08T12:00:00.000000Z",
+                        "updated_at": "2026-04-08T12:00:00.000000Z"
+                    }
+                }
+            ],
+            "status": {
+                "id": "<id>",
+                "name": "In Arbeit",
+                "color": "#22c55e"
+            },
+            "comments": [],
+            "attachments": []
+        },
+        {
+            "id": "<id>",
+            "company_id": "<company_id>",
+            "contract_id": "<contract_id>",
+            "start_at": "2026-04-08T11:00:00.000000Z",
+            "end_at": "2026-04-08T12:00:00.000000Z",
+            "status_id": "<status_id>",
+            "notes": null,
+            "checklist": null,
+            "created_by": "<created_by>",
+            "recurrence_type": null,
+            "recurrence_interval": null,
+            "recurrence_end": null,
+            "parent_id": null,
+            "created_at": "2026-04-08T12:00:00.000000Z",
+            "updated_at": "2026-04-08T12:00:00.000000Z",
+            "contract": {
+                "id": "<id>",
+                "contract_number": "A-1000",
+                "title": "Routinekontrolle",
+                "kind": "kundentermin",
+                "street": "Hauptstr. 1",
+                "zip": "80331",
+                "city": "Muenchen",
+                "clients": [
+                    {
+                        "id": "<id>",
+                        "first_name": "Klaus",
+                        "last_name": "Bergmann",
+                        "company_name": "Baeckerei Bergmann",
+                        "name": "Klaus Bergmann",
+                        "pivot": {
+                            "contract_id": "<contract_id>",
+                            "client_id": "<client_id>",
+                            "created_at": "2026-04-08T12:00:00.000000Z",
+                            "updated_at": "2026-04-08T12:00:00.000000Z"
+                        }
+                    }
+                ]
+            },
+            "workers": [
+                {
+                    "id": "<id>",
+                    "first_name": "Max",
+                    "last_name": "Kern",
+                    "name": "Max Kern",
+                    "pivot": {
+                        "appointment_id": "<appointment_id>",
+                        "user_id": "<user_id>",
+                        "created_at": "2026-04-08T12:00:00.000000Z",
+                        "updated_at": "2026-04-08T12:00:00.000000Z"
+                    }
+                }
+            ],
+            "status": {
+                "id": "<id>",
+                "name": "In Arbeit",
+                "color": "#22c55e"
+            },
+            "comments": [],
+            "attachments": []
+        },
+        {
+            "id": "<id>",
+            "company_id": "<company_id>",
+            "contract_id": "<contract_id>",
+            "start_at": "2026-04-08T14:00:00.000000Z",
+            "end_at": "2026-04-08T15:00:00.000000Z",
+            "status_id": null,
+            "notes": null,
+            "checklist": null,
+            "created_by": "<created_by>",
+            "recurrence_type": null,
+            "recurrence_interval": null,
+            "recurrence_end": null,
+            "parent_id": null,
+            "created_at": "2026-04-08T12:00:00.000000Z",
+            "updated_at": "2026-04-08T12:00:00.000000Z",
+            "contract": {
+                "id": "<id>",
+                "contract_number": "A-1000",
+                "title": "Routinekontrolle",
+                "kind": "kundentermin",
+                "street": "Hauptstr. 1",
+                "zip": "80331",
+                "city": "Muenchen",
+                "clients": [
+                    {
+                        "id": "<id>",
+                        "first_name": "Klaus",
+                        "last_name": "Bergmann",
+                        "company_name": "Baeckerei Bergmann",
+                        "name": "Klaus Bergmann",
+                        "pivot": {
+                            "contract_id": "<contract_id>",
+                            "client_id": "<client_id>",
+                            "created_at": "2026-04-08T12:00:00.000000Z",
+                            "updated_at": "2026-04-08T12:00:00.000000Z"
+                        }
+                    }
+                ]
+            },
+            "workers": [],
+            "status": null,
+            "comments": [],
+            "attachments": []
+        },
+        {
+            "id": "<id>",
+            "company_id": "<company_id>",
+            "contract_id": "<contract_id>",
+            "start_at": "2026-04-09T10:00:00.000000Z",
+            "end_at": "2026-04-09T12:00:00.000000Z",
+            "status_id": "<status_id>",
+            "notes": null,
+            "checklist": null,
+            "created_by": "<created_by>",
+            "recurrence_type": null,
+            "recurrence_interval": null,
+            "recurrence_end": null,
+            "parent_id": null,
+            "created_at": "2026-04-08T12:00:00.000000Z",
+            "updated_at": "2026-04-08T12:00:00.000000Z",
+            "contract": {
+                "id": "<id>",
+                "contract_number": "A-1000",
+                "title": "Routinekontrolle",
+                "kind": "kundentermin",
+                "street": "Hauptstr. 1",
+                "zip": "80331",
+                "city": "Muenchen",
+                "clients": [
+                    {
+                        "id": "<id>",
+                        "first_name": "Klaus",
+                        "last_name": "Bergmann",
+                        "company_name": "Baeckerei Bergmann",
+                        "name": "Klaus Bergmann",
+                        "pivot": {
+                            "contract_id": "<contract_id>",
+                            "client_id": "<client_id>",
+                            "created_at": "2026-04-08T12:00:00.000000Z",
+                            "updated_at": "2026-04-08T12:00:00.000000Z"
+                        }
+                    }
+                ]
+            },
+            "workers": [
+                {
+                    "id": "<id>",
+                    "first_name": "Max",
+                    "last_name": "Kern",
+                    "name": "Max Kern",
+                    "pivot": {
+                        "appointment_id": "<appointment_id>",
+                        "user_id": "<user_id>",
+                        "created_at": "2026-04-08T12:00:00.000000Z",
+                        "updated_at": "2026-04-08T12:00:00.000000Z"
+                    }
+                }
+            ],
+            "status": {
+                "id": "<id>",
+                "name": "In Arbeit",
+                "color": "#22c55e"
+            },
+            "comments": [],
+            "attachments": []
+        }
+    ],
+    "contracts": [
+        {
+            "id": "<id>",
+            "contract_number": "A-1000",
+            "title": "Routinekontrolle",
+            "kind": "kundentermin",
+            "street": "Hauptstr. 1",
+            "zip": "80331",
+            "city": "Muenchen",
+            "clients": [
+                {
+                    "id": "<id>",
+                    "first_name": "Klaus",
+                    "last_name": "Bergmann",
+                    "company_name": "Baeckerei Bergmann",
+                    "name": "Klaus Bergmann",
+                    "pivot": {
+                        "contract_id": "<contract_id>",
+                        "client_id": "<client_id>",
+                        "created_at": "2026-04-08T12:00:00.000000Z",
+                        "updated_at": "2026-04-08T12:00:00.000000Z"
+                    }
+                }
+            ]
+        }
+    ],
+    "employees": [
+        {
+            "id": "<id>",
+            "first_name": "Anna",
+            "last_name": "Berg",
+            "role": "employee",
+            "name": "Anna Berg"
+        },
+        {
+            "id": "<id>",
+            "first_name": "Max",
+            "last_name": "Kern",
+            "role": "employee",
+            "name": "Max Kern"
+        },
+        {
+            "id": "<id>",
+            "first_name": "Bjoern",
+            "last_name": "Wilhelmsen",
+            "role": "owner",
+            "name": "Bjoern Wilhelmsen"
+        }
+    ],
+    "statuses": [
+        {
+            "id": "<id>",
+            "name": "Offen",
+            "color": "#3b82f6"
+        },
+        {
+            "id": "<id>",
+            "name": "In Arbeit",
+            "color": "#22c55e"
+        }
+    ],
+    "clients": [
+        {
+            "id": "<id>",
+            "first_name": "Klaus",
+            "last_name": "Bergmann",
+            "company_name": "Baeckerei Bergmann",
+            "name": "Klaus Bergmann"
+        }
+    ],
+    "currentDate": "2026-04-08",
+    "view": "team-week",
+    "showWeekends": false,
+    "startHour": 0,
+    "endHour": 24,
+    "openAppointmentId": null,
+    "filters": {
+        "employees": [],
+        "statuses": [],
+        "unassigned": false,
+        "conflicts": false
+    },
+    "conflictCount": 2,
+    "totals": {
+        "perEmployee": [
+            {
+                "id": null,
+                "appointments": 1,
+                "minutes": 60
+            },
+            {
+                "id": "<id>",
+                "appointments": 2,
+                "minutes": 120
+            },
+            {
+                "id": "<id>",
+                "appointments": 2,
+                "minutes": 180
+            }
+        ],
+        "perDay": [
+            {
+                "date": "2026-04-06",
+                "appointments": 0,
+                "minutes": 0
+            },
+            {
+                "date": "2026-04-07",
+                "appointments": 0,
+                "minutes": 0
+            },
+            {
+                "date": "2026-04-08",
+                "appointments": 4,
+                "minutes": 240
+            },
+            {
+                "date": "2026-04-09",
+                "appointments": 1,
+                "minutes": 120
+            },
+            {
+                "date": "2026-04-10",
+                "appointments": 0,
+                "minutes": 0
+            },
+            {
+                "date": "2026-04-11",
+                "appointments": 0,
+                "minutes": 0
+            },
+            {
+                "date": "2026-04-12",
+                "appointments": 0,
+                "minutes": 0
+            }
+        ]
+    }
+}

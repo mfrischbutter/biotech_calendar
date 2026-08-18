@@ -3,7 +3,7 @@
     "groups": [
         {
             "key": "clients",
-            "label": "Clients",
+            "label": "Kunden",
             "items": [
                 {
                     "id": "<id>",
@@ -16,7 +16,7 @@
         },
         {
             "key": "contracts",
-            "label": "Contracts",
+            "label": "Aufträge",
             "items": [
                 {
                     "id": "<id>",
@@ -29,26 +29,26 @@
         },
         {
             "key": "appointments",
-            "label": "Appointments",
+            "label": "Termine",
             "items": [
                 {
                     "id": "<id>",
                     "type": "appointment",
                     "title": "Routinekontrolle Bergmann",
-                    "subtitle": "Wed, 8. Apr 2026 · 09:00",
+                    "subtitle": "Mi., 8. Apr 2026 · 09:00",
                     "url": "http://localhost/calendar?appointment=<id>"
                 }
             ]
         },
         {
             "key": "actions",
-            "label": "Actions",
+            "label": "Aktionen",
             "items": [
                 {
                     "id": "new-appointment-client-<id>",
                     "type": "action",
-                    "title": "New appointment for Klaus Bergmann",
-                    "subtitle": "Opens the calendar with this client preselected",
+                    "title": "Neuer Termin für Klaus Bergmann",
+                    "subtitle": "Öffnet den Kalender mit diesem Kunden",
                     "url": "http://localhost/calendar?new=<id>&client=<id>",
                     "icon": "calendar-plus"
                 }

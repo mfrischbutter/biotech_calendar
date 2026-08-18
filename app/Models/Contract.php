@@ -21,6 +21,7 @@ class Contract extends Model
         'title',
         'kind',
         'description',
+        'access_notes',
         'street',
         'zip',
         'city',

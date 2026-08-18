@@ -1,16 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { format, parseISO } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { useCalendarDrag } from '@/lib/use-calendar-drag';
-import { localMinutes } from '@/lib/date-utils';
 import { getStatusStyle } from '@/lib/status-colors';
-import { computeOverlapLayout } from '@/lib/overlap-layout';
+import { useTimeGridLayout } from '@/lib/use-time-grid-layout';
 import { useTrans } from '@/lib/use-trans';
 import { appointmentLabel } from '@/lib/appointment-label';
 import AppointmentHoverCard from './AppointmentHoverCard.vue';
-import type { Appointment } from '@/types';
-import type { DayLayout } from '@/lib/overlap-layout';
+import TimeGridEvent from './TimeGridEvent.vue';
+import type { Appointment, ConflictMap } from '@/types';
 
 const { t } = useTrans();
 
@@ -20,6 +19,7 @@ const props = defineProps<{
     showDayHeader?: boolean;
     startHour?: number;
     endHour?: number;
+    conflicts?: ConflictMap;
 }>();
 
 const emit = defineEmits<{
@@ -27,6 +27,7 @@ const emit = defineEmits<{
     createAppointment: [date: string, startTime: string, endTime: string];
     moveAppointment: [appointment: Appointment, date: string, startTime: string, endTime: string];
     resizeAppointment: [appointment: Appointment, endTime: string];
+    expandDay: [date: string];
 }>();
 
 const HOUR_HEIGHT = 60;
@@ -34,7 +35,15 @@ const START_HOUR = computed(() => props.startHour ?? 0);
 const END_HOUR = computed(() => props.endHour ?? 24);
 const hours = computed(() => Array.from({ length: END_HOUR.value - START_HOUR.value }, (_, i) => START_HOUR.value + i));
 
-const { drag, startCreate, startMove, startResize, onMouseMove, endDrag, formatMinutes, getDragPreviewStyle, getDragTimeLabel } = useCalendarDrag(HOUR_HEIGHT, START_HOUR);
+const { drag, startCreate, startMove, startResize, onMouseMove, endDrag, formatMinutes, getDragPreviewStyle, getDragTimeLabel } =
+    useCalendarDrag(HOUR_HEIGHT, START_HOUR);
+
+const { visibleByDay, overflowByDay, minutesOf, positionStyle, overflowStyle, isShort } = useTimeGridLayout({
+    appointments: () => props.appointments,
+    dates: () => props.dates,
+    startHour: () => START_HOUR.value,
+    hourHeight: HOUR_HEIGHT,
+});
 
 const scrollContainer = ref<HTMLElement | null>(null);
 const columnRefs = ref<Record<string, HTMLElement>>({});
@@ -58,59 +67,6 @@ const days = computed(() =>
 );
 
 // ---------------------------------------------------------------------------
-// Optimistic overrides
-// ---------------------------------------------------------------------------
-interface OptimisticPosition {
-    dayDate: string;
-    startMinutes: number;
-    endMinutes: number;
-}
-const optimistic = ref<Map<number, OptimisticPosition>>(new Map());
-
-watch(() => props.appointments, () => {
-    optimistic.value.clear();
-});
-
-function getOptimisticDay(appt: Appointment): string {
-    const ov = optimistic.value.get(appt.id);
-    if (ov) return ov.dayDate;
-    const d = new Date(appt.start_at);
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-}
-
-const appointmentsByDay = computed(() => {
-    const byDay: Record<string, Appointment[]> = {};
-    for (const d of props.dates) {
-        byDay[d] = [];
-    }
-    for (const appt of props.appointments) {
-        const dayKey = getOptimisticDay(appt);
-        if (byDay[dayKey]) {
-            byDay[dayKey].push(appt);
-        }
-    }
-    return byDay;
-});
-
-const layoutByDay = computed(() => {
-    const result: Record<string, DayLayout> = {};
-    const optPositions = new Map<number, { startMinutes: number; endMinutes: number }>();
-    for (const [id, ov] of optimistic.value) {
-        optPositions.set(id, { startMinutes: ov.startMinutes, endMinutes: ov.endMinutes });
-    }
-    for (const date of props.dates) {
-        result[date] = computeOverlapLayout(
-            appointmentsByDay.value[date] || [],
-            optPositions,
-        );
-    }
-    return result;
-});
-
-// ---------------------------------------------------------------------------
 // Current time indicator
 // ---------------------------------------------------------------------------
 const now = ref(new Date());
@@ -120,8 +76,7 @@ onMounted(() => {
     timeInterval = setInterval(() => { now.value = new Date(); }, 60000);
     nextTick(() => {
         if (scrollContainer.value) {
-            const scrollTo = Math.max(0, (START_HOUR.value) * HOUR_HEIGHT - 20);
-            scrollContainer.value.scrollTop = scrollTo;
+            scrollContainer.value.scrollTop = Math.max(0, START_HOUR.value * HOUR_HEIGHT - 20);
         }
     });
     document.addEventListener('mousemove', handleGlobalMouseMove);
@@ -143,61 +98,24 @@ const currentTimeVisible = computed(() => {
 });
 
 // ---------------------------------------------------------------------------
-// Appointment positioning
+// Card presentation
 // ---------------------------------------------------------------------------
-function getAppointmentStyle(appt: Appointment, dayDate: string) {
-    const ov = optimistic.value.get(appt.id);
-    let startMin: number, endMin: number;
-    if (ov) {
-        startMin = ov.startMinutes;
-        endMin = ov.endMinutes;
-    } else {
-        startMin = localMinutes(appt.start_at);
-        endMin = localMinutes(appt.end_at);
-    }
-    const duration = endMin - startMin;
-    const top = ((startMin - START_HOUR.value * 60) / 60) * HOUR_HEIGHT;
-    const height = Math.max((duration / 60) * HOUR_HEIGHT, 22);
-
-    const layout = layoutByDay.value[dayDate]?.slots.get(appt.id);
-    if (layout && layout.totalColumns > 1) {
-        const colWidth = 100 / layout.totalColumns;
-        const left = layout.column * colWidth;
-        const width = layout.columnSpan * colWidth;
-        return {
-            top: `${top}px`,
-            height: `${height}px`,
-            left: `calc(${left}% + 4px)`,
-            right: `calc(${100 - left - width}% + 4px)`,
-            zIndex: `${10 + layout.column}`,
-        };
-    }
-    return { top: `${top}px`, height: `${height}px`, left: '4px', right: '4px' };
-}
-
-function isShort(appt: Appointment): boolean {
-    const ov = optimistic.value.get(appt.id);
-    if (ov) return (ov.endMinutes - ov.startMinutes) <= 30;
-    return (new Date(appt.end_at).getTime() - new Date(appt.start_at).getTime()) / 60000 <= 30;
+function isConflicted(appt: Appointment): boolean {
+    return (props.conflicts?.[appt.id]?.length ?? 0) > 0;
 }
 
 function getTimeLabel(appt: Appointment): string {
-    const ov = optimistic.value.get(appt.id);
-    if (ov) return `${formatMinutes(ov.startMinutes)} – ${formatMinutes(ov.endMinutes)}`;
-    return `${format(new Date(appt.start_at), 'HH:mm')} – ${format(new Date(appt.end_at), 'HH:mm')}`;
+    const { start, end } = minutesOf(appt);
+    return `${formatMinutes(start)} – ${formatMinutes(end)}`;
 }
 
 function apptCardStyle(appt: Appointment, dayDate: string) {
-    const tagStyle = getStatusStyle(appt.status?.color ?? null);
+    const statusStyle = getStatusStyle(appt.status?.color ?? null);
     return {
-        ...getAppointmentStyle(appt, dayDate),
-        backgroundColor: tagStyle.backgroundColor,
-        borderLeftColor: tagStyle.borderColor,
+        ...positionStyle(appt, dayDate),
+        backgroundColor: statusStyle.backgroundColor,
+        borderLeftColor: statusStyle.borderColor,
     };
-}
-
-function apptTitleColor(_appt: Appointment): string {
-    return 'hsl(var(--foreground))';
 }
 
 // ---------------------------------------------------------------------------
@@ -243,15 +161,11 @@ function handleGlobalMouseMove(e: MouseEvent) {
 }
 
 function handleGlobalMouseUp() {
-    // Capture appointment before endDrag resets state
     const clickedAppointment = drag.value.active && drag.value.mode === 'move' ? drag.value.appointment : null;
 
     const result = endDrag();
     if (!result) {
-        // No drag movement — treat as a click
-        if (clickedAppointment) {
-            emit('appointmentClick', clickedAppointment);
-        }
+        if (clickedAppointment) emit('appointmentClick', clickedAppointment);
         return;
     }
 
@@ -261,70 +175,58 @@ function handleGlobalMouseUp() {
     if (result.mode === 'create') {
         emit('createAppointment', result.dayDate, formatMinutes(result.startMinutes), formatMinutes(result.endMinutes));
     } else if (result.mode === 'move' && result.appointment) {
-        optimistic.value.set(result.appointment.id, {
-            dayDate: result.dayDate,
-            startMinutes: result.startMinutes,
-            endMinutes: result.endMinutes,
-        });
+        // The page applies the move optimistically and hands the block back
+        // already in its new place, so nothing is tracked here.
         emit('moveAppointment', result.appointment, result.dayDate, formatMinutes(result.startMinutes), formatMinutes(result.endMinutes));
     } else if (result.mode === 'resize' && result.appointment) {
-        const startMin = localMinutes(result.appointment.start_at);
-        optimistic.value.set(result.appointment.id, {
-            dayDate: getOptimisticDay(result.appointment),
-            startMinutes: startMin,
-            endMinutes: result.endMinutes,
-        });
         emit('resizeAppointment', result.appointment, formatMinutes(result.endMinutes));
     }
 }
 
-function handleAppointmentClick(e: MouseEvent, appt: Appointment) {
+function handleAppointmentClick(appt: Appointment) {
     if (suppressClick.value) return;
     emit('appointmentClick', appt);
 }
 
 function isDragTarget(appt: Appointment) {
-    return drag.value.active && drag.value.totalMovement >= 4 && (drag.value.mode === 'move' || drag.value.mode === 'resize') && drag.value.appointment?.id === appt.id;
+    return drag.value.active && drag.value.totalMovement >= 4
+        && (drag.value.mode === 'move' || drag.value.mode === 'resize')
+        && drag.value.appointment?.id === appt.id;
 }
 
 function dragPreviewStyle() {
     const base = getDragPreviewStyle();
     if (!base) return null;
     if (drag.value.mode !== 'create' && drag.value.appointment) {
-        const tagStyle = getStatusStyle(drag.value.appointment.status?.color ?? null);
-        return { ...base, backgroundColor: tagStyle.backgroundColor, borderLeftColor: tagStyle.borderColor, opacity: '0.8' };
+        const statusStyle = getStatusStyle(drag.value.appointment.status?.color ?? null);
+        return { ...base, backgroundColor: statusStyle.backgroundColor, borderLeftColor: statusStyle.borderColor, opacity: '0.8' };
     }
     return base;
 }
 </script>
 
 <template>
-    <div
-        class="flex flex-col h-full rounded-lg border bg-background overflow-hidden"
-        :class="{ 'select-none': drag.active }"
-    >
+    <div class="flex h-full flex-col overflow-hidden rounded-lg border bg-background" :class="{ 'select-none': drag.active }">
         <!-- Day headers -->
         <div
             v-if="showDayHeader !== false"
-            class="grid border-b bg-background shrink-0"
+            class="grid shrink-0 border-b bg-background"
             :style="{ gridTemplateColumns: `56px repeat(${dates.length}, 1fr)` }"
         >
             <div class="border-r" />
             <div
                 v-for="day in days"
                 :key="day.date"
-                class="py-2 text-center border-r last:border-r-0"
+                class="border-r py-2 text-center last:border-r-0"
+                :class="day.isToday ? 'bg-navy-wash/60' : ''"
             >
-                <div
-                    class="text-[11px] font-medium tracking-wide"
-                    :class="day.isToday ? 'text-primary' : 'text-muted-foreground'"
-                >
+                <div class="text-[11px] font-medium tracking-wide" :class="day.isToday ? 'text-navy' : 'text-muted-foreground'">
                     {{ day.dayLabel }}
                 </div>
                 <div
-                    class="mt-0.5 inline-flex items-center justify-center text-base leading-none font-normal md:text-[26px]"
+                    class="mt-0.5 inline-flex items-center justify-center text-base font-normal leading-none md:text-[26px]"
                     :class="day.isToday
-                        ? 'bg-primary text-primary-foreground rounded-full w-[30px] h-[30px] md:w-[46px] md:h-[46px]'
+                        ? 'h-[30px] w-[30px] rounded-full bg-navy text-navy-foreground md:h-[46px] md:w-[46px]'
                         : 'text-foreground'"
                 >
                     {{ day.dayNum }}
@@ -334,22 +236,11 @@ function dragPreviewStyle() {
 
         <!-- Scrollable time grid -->
         <div ref="scrollContainer" class="flex-1 overflow-y-auto overflow-x-hidden">
-            <div
-                class="grid relative"
-                :style="{ gridTemplateColumns: `56px repeat(${dates.length}, 1fr)` }"
-            >
+            <div class="relative grid" :style="{ gridTemplateColumns: `56px repeat(${dates.length}, 1fr)` }">
                 <!-- Time gutter -->
                 <div class="border-r">
-                    <div
-                        v-for="hour in hours"
-                        :key="hour"
-                        class="relative"
-                        :style="{ height: `${HOUR_HEIGHT}px` }"
-                    >
-                        <span
-                            v-if="hour !== START_HOUR"
-                            class="absolute -top-[9px] right-2 text-[11px] text-muted-foreground select-none"
-                        >
+                    <div v-for="hour in hours" :key="hour" class="relative" :style="{ height: `${HOUR_HEIGHT}px` }">
+                        <span v-if="hour !== START_HOUR" class="absolute -top-[9px] right-2 select-none text-[11px] text-muted-foreground">
                             {{ String(hour).padStart(2, '0') }}:00
                         </span>
                     </div>
@@ -361,83 +252,71 @@ function dragPreviewStyle() {
                     :key="day.date"
                     :ref="(el) => setColumnRef(day.date, el as HTMLElement)"
                     class="relative border-r last:border-r-0"
+                    :class="day.isToday ? 'bg-navy-wash/30' : ''"
                     @mousedown="handleMouseDown($event, day.date)"
                 >
                     <!-- Hour lines -->
-                    <div
-                        v-for="hour in hours"
-                        :key="hour"
-                        class="border-b border-border/50"
-                        :style="{ height: `${HOUR_HEIGHT}px` }"
-                    >
+                    <div v-for="hour in hours" :key="hour" class="border-b border-border/50" :style="{ height: `${HOUR_HEIGHT}px` }">
                         <div class="h-1/2 border-b border-border/25" />
                     </div>
 
                     <!-- Current time indicator -->
                     <div
                         v-if="day.isToday && currentTimeVisible"
-                        class="absolute left-0 right-0 z-20 pointer-events-none"
+                        data-testid="current-time-line"
+                        class="pointer-events-none absolute left-0 right-0 z-20"
                         :style="currentTimeStyle"
                     >
                         <div class="relative">
-                            <div class="absolute -left-[5px] -top-[5px] w-[10px] h-[10px] rounded-full bg-red-500" />
-                            <div class="h-[2px] bg-red-500" />
+                            <div class="absolute -left-[5px] -top-[5px] h-[10px] w-[10px] rounded-full bg-danger" />
+                            <div class="h-[2px] bg-danger" />
                         </div>
                     </div>
 
                     <!-- Appointments -->
                     <AppointmentHoverCard
-                        v-for="appt in appointmentsByDay[day.date]"
+                        v-for="appt in visibleByDay[day.date]"
                         :key="appt.id"
                         :appointment="appt"
                         :disabled="drag.active"
                     >
-                        <div
-                            :data-appointment-id="appt.id"
-                            class="absolute rounded-md overflow-hidden border-l-[4px]"
-                            :class="[
-                                isDragTarget(appt) ? 'opacity-0 !z-0' : '',
-                                drag.active && drag.totalMovement >= 4 ? 'pointer-events-none' : 'cursor-pointer transition-shadow hover:shadow-md',
-                            ]"
-                            :style="apptCardStyle(appt, day.date)"
-                            @mousedown.stop="handleAppointmentMouseDown($event, appt, day.date)"
-                            @click.stop="handleAppointmentClick($event, appt)"
-                        >
-                            <div class="px-2 py-1 h-full" :class="isShort(appt) ? 'flex items-center gap-2' : ''">
-                                <div
-                                    class="font-medium text-xs truncate"
-                                    :style="{ color: apptTitleColor(appt) }"
-                                >
-                                    {{ appointmentLabel(appt) }}
-                                </div>
-                                <div v-if="!isShort(appt)" class="text-[11px] text-muted-foreground truncate">
-                                    {{ getTimeLabel(appt) }}
-                                </div>
-                                <div v-if="!isShort(appt) && appt.workers.length > 0" class="text-[11px] text-muted-foreground truncate">
-                                    {{ appt.workers.map(w => w.name).join(', ') }}
-                                </div>
-                                <div v-if="!isShort(appt) && (appt.parent_id !== null || appt.recurrence_type !== null)" class="text-[10px] text-muted-foreground flex items-center gap-0.5">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-                                    {{ t('Series') }}
-                                </div>
-                            </div>
-                            <!-- Resize handle -->
-                            <div
-                                class="absolute bottom-0 left-0 right-0 h-2 cursor-s-resize hover:bg-black/10 rounded-b-md"
-                                @mousedown.stop="handleResizeMouseDown($event, appt, day.date)"
-                            />
-                        </div>
+                        <TimeGridEvent
+                            :appointment="appt"
+                            :box-style="apptCardStyle(appt, day.date)"
+                            :conflicted="isConflicted(appt)"
+                            :short="isShort(appt)"
+                            :time-label="getTimeLabel(appt)"
+                            :dragging="isDragTarget(appt)"
+                            :interactive="!(drag.active && drag.totalMovement >= 4)"
+                            @select="handleAppointmentClick(appt)"
+                            @move-start="handleAppointmentMouseDown($event, appt, day.date)"
+                            @resize-start="handleResizeMouseDown($event, appt, day.date)"
+                        />
                     </AppointmentHoverCard>
+
+                    <!-- Collapsed tail: a readable block beats a complete but illegible one -->
+                    <button
+                        v-for="group in overflowByDay[day.date]"
+                        :key="group.key"
+                        type="button"
+                        data-testid="overflow-chip"
+                        class="absolute z-30 rounded-full border border-navy-edge bg-navy-wash px-2 py-0.5 text-[10px] font-semibold text-navy shadow-sm transition-colors hover:bg-navy hover:text-navy-foreground"
+                        :style="overflowStyle(group)"
+                        @mousedown.stop
+                        @click.stop="emit('expandDay', day.date)"
+                    >
+                        +{{ group.count }} {{ t('more') }}
+                    </button>
 
                     <!-- Drag preview ghost -->
                     <div
                         v-if="drag.active && drag.dayDate === day.date && dragPreviewStyle()"
-                        class="absolute rounded-md z-30 pointer-events-none border-l-[4px] shadow-lg"
-                        :class="drag.mode === 'create' ? 'bg-primary/15 border-primary' : ''"
+                        class="pointer-events-none absolute z-30 rounded-md border-l-[4px] shadow-lg"
+                        :class="drag.mode === 'create' ? 'border-primary bg-primary/15' : ''"
                         :style="{ ...dragPreviewStyle()!, left: '4px', right: '4px' }"
                     >
                         <div class="px-2 py-1 text-xs">
-                            <div v-if="drag.appointment" class="font-medium truncate" :style="{ color: apptTitleColor(drag.appointment) }">
+                            <div v-if="drag.appointment" class="truncate font-medium text-foreground">
                                 {{ appointmentLabel(drag.appointment) }}
                             </div>
                             <div class="font-medium" :class="drag.mode === 'create' ? 'text-primary' : 'text-muted-foreground'">

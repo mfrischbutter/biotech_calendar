@@ -29,3 +29,36 @@ export function isoToLocalParts(dateStr: string): { date: string; time: string }
 export function localDateString(dateStr: string): string {
     return isoToLocalParts(dateStr).date;
 }
+
+/** Short, list-friendly German date, e.g. "12. Aug 2026". Null-safe. */
+export function shortDate(dateStr: string | null): string | null {
+    if (!dateStr) return null;
+
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return null;
+
+    return d.toLocaleDateString('de-DE', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+/**
+ * Month and year, e.g. "März 2024" — how long a record has been around, which
+ * is the resolution both detail headers want ("Kunde seit …"). Null-safe.
+ */
+export function monthAndYear(dateStr: string | null | undefined): string | null {
+    if (!dateStr) return null;
+
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return null;
+
+    return d.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+}
+
+/** Local time of day, e.g. "14:30". Empty string for an unusable input. */
+export function hourMinute(dateStr: string | null | undefined): string {
+    if (!dateStr) return '';
+
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return '';
+
+    return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+}

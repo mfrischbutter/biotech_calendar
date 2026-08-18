@@ -15,5 +15,9 @@ export default defineConfig({
         setupFiles: ['./tests/js/setup.ts'],
         include: ['tests/js/**/*.test.ts'],
         css: false,
+        // The calendar and timeline bucket timestamps by *local* calendar date.
+        // Without a pinned zone the same fixture lands on a different day east
+        // of UTC+2 and the grouping tests fail for no reason of their own.
+        env: { TZ: 'Europe/Berlin' },
     },
 });

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Appointment;
+use App\Models\ChecklistTemplate;
 use App\Models\Client;
 use App\Models\Company;
 use App\Models\Permission;
@@ -54,8 +55,8 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Erste Maßnahme', 'color' => '#a8d8b9'],
             ['name' => 'Folgemaßnahme', 'color' => '#3b82f6'],
             ['name' => 'Digitale Überwachung', 'color' => '#f59e0b'],
-            ['name' => 'Für Fakturierung bereit', 'color' => '#22c55e'],
-            ['name' => 'Fakturiert', 'color' => '#94a3b8'],
+            ['name' => 'Bereit zur Abrechnung', 'color' => '#22c55e'],
+            ['name' => 'Abgerechnet', 'color' => '#94a3b8'],
             ['name' => 'Wiedervorlage', 'color' => '#ef4444'],
             ['name' => 'Maßnahme Storniert', 'color' => '#374151'],
         ];
@@ -65,6 +66,32 @@ class DatabaseSeeder extends Seeder
                 'company_id' => $company->id,
                 'name' => $t['name'],
                 'color' => $t['color'],
+                'sort_order' => $i,
+            ]);
+        }
+
+        // --- Checklist templates ---
+        $templateData = [
+            ['name' => 'Routinekontrolle', 'kind' => 'kundentermin', 'items' => [
+                'Köderboxen prüfen', 'Befall dokumentieren', 'Fotos anfertigen', 'Kunde informieren',
+            ]],
+            ['name' => 'Erstbegehung', 'kind' => 'kundentermin', 'items' => [
+                'Objekt begehen', 'Befallsherde markieren', 'Maßnahmenplan abstimmen',
+            ]],
+            ['name' => 'Monitoring ohne Termin', 'kind' => 'ohne_termin', 'items' => [
+                'Monitore auslesen', 'Daten übertragen',
+            ]],
+            ['name' => 'Abschluss', 'kind' => null, 'items' => [
+                'Material aufräumen', 'Bericht hochladen',
+            ]],
+        ];
+
+        foreach ($templateData as $i => $tpl) {
+            ChecklistTemplate::create([
+                'company_id' => $company->id,
+                'name' => $tpl['name'],
+                'kind' => $tpl['kind'],
+                'items' => $tpl['items'],
                 'sort_order' => $i,
             ]);
         }
@@ -140,7 +167,16 @@ class DatabaseSeeder extends Seeder
             ['Frau', 'Ingrid', 'Wagner', null, null, 'Nymphenburger Str. 51', '80636', 'München', '+49 89 445566', null],
         ];
 
-        foreach ($clientData as $c) {
+        // Site access details for the addresses that have one — the technician
+        // reads these before ringing the bell.
+        $accessNotes = [
+            0 => 'Zugang über den Hof, Tor mit Code 4711. Backstube ab 4:30 Uhr besetzt.',
+            1 => 'An der Rezeption melden, Schlüssel für Keller und Wäscherei dort hinterlegt.',
+            4 => 'Schlüsseltresor rechts neben Tor 3, Code 2580. Hofhund läuft frei — vorher anrufen.',
+            5 => 'Nur nach 15:00 Uhr, wenn keine Kinder mehr im Haus sind. Leitung: Frau Krause.',
+        ];
+
+        foreach ($clientData as $index => $c) {
             $clients[] = Client::create([
                 'company_id' => $company->id,
                 'user_id' => $owner->id,
@@ -154,6 +190,7 @@ class DatabaseSeeder extends Seeder
                 'city' => $c[7],
                 'phone' => $c[8],
                 'email' => $c[9],
+                'access_notes' => $accessNotes[$index] ?? null,
             ]);
         }
 
@@ -231,7 +268,7 @@ class DatabaseSeeder extends Seeder
             'Dokumentation KW-Berichte',
             $mon->copy()->setTime(14, 0),
             $mon->copy()->setTime(16, 0),
-            null, $owner, $statuses['Für Fakturierung bereit'],
+            null, $owner, $statuses['Bereit zur Abrechnung'],
             'Wochenberichte der letzten KW zusammenfassen und an Kunden versenden.',
         );
 
@@ -335,14 +372,14 @@ class DatabaseSeeder extends Seeder
             'Teammeeting Wochenplanung',
             $tue->copy()->setTime(8, 30),
             $tue->copy()->setTime(9, 30),
-            null, $owner, $statuses['Für Fakturierung bereit'],
+            null, $owner, $statuses['Bereit zur Abrechnung'],
         );
 
         $appt(
             'Teammeeting Wochenplanung',
             $tue->copy()->setTime(8, 30),
             $tue->copy()->setTime(9, 30),
-            null, $lisa, $statuses['Für Fakturierung bereit'],
+            null, $lisa, $statuses['Bereit zur Abrechnung'],
         );
 
         $appt(
@@ -373,7 +410,7 @@ class DatabaseSeeder extends Seeder
             'Dokumentation Bella Vista',
             $tue->copy()->setTime(14, 0),
             $tue->copy()->setTime(15, 0),
-            $koch, $lisa, $statuses['Für Fakturierung bereit'],
+            $koch, $lisa, $statuses['Bereit zur Abrechnung'],
         );
 
         // UNASSIGNED Tuesday
@@ -543,7 +580,7 @@ class DatabaseSeeder extends Seeder
             'Abschlusskontrolle Gaststätte Hirsch',
             $fri->copy()->setTime(8, 0),
             $fri->copy()->setTime(9, 0),
-            $schuster, $jonas, $statuses['Fakturiert'],
+            $schuster, $jonas, $statuses['Abgerechnet'],
             'Schabenbehandlung erfolgreich. Abschlussdokumentation.',
         );
 
@@ -564,7 +601,7 @@ class DatabaseSeeder extends Seeder
             'Dokumentation + Wochenbericht',
             $fri->copy()->setTime(10, 0),
             $fri->copy()->setTime(12, 0),
-            null, $owner, $statuses['Für Fakturierung bereit'],
+            null, $owner, $statuses['Bereit zur Abrechnung'],
             'KW-Bericht zusammenstellen, Fotos sortieren.',
         );
 
@@ -680,7 +717,7 @@ class DatabaseSeeder extends Seeder
             'Teammeeting Wochenplanung',
             $tue2->copy()->setTime(8, 30),
             $tue2->copy()->setTime(9, 30),
-            null, $owner, $statuses['Für Fakturierung bereit'],
+            null, $owner, $statuses['Bereit zur Abrechnung'],
         );
 
         $appt(
@@ -760,7 +797,7 @@ class DatabaseSeeder extends Seeder
             'Ameisenbekämpfung Wagner — Abschluss',
             $wed2->copy()->setTime(9, 0),
             $wed2->copy()->setTime(10, 0),
-            $wagner, $lisa, $statuses['Fakturiert'],
+            $wagner, $lisa, $statuses['Abgerechnet'],
             'Letzte Kontrolle, Behandlung abgeschlossen.',
         );
 
@@ -775,7 +812,7 @@ class DatabaseSeeder extends Seeder
             'Angebotserstellung Monitoringvertrag',
             $wed2->copy()->setTime(14, 0),
             $wed2->copy()->setTime(16, 0),
-            null, $owner, $statuses['Für Fakturierung bereit'],
+            null, $owner, $statuses['Bereit zur Abrechnung'],
             'Monitoringvertrag für Supermarkt Braun finalisieren.',
         );
 
@@ -850,14 +887,14 @@ class DatabaseSeeder extends Seeder
             'Dokumentation + Wochenbericht',
             $fri2->copy()->setTime(10, 0),
             $fri2->copy()->setTime(12, 0),
-            null, $owner, $statuses['Für Fakturierung bereit'],
+            null, $owner, $statuses['Bereit zur Abrechnung'],
         );
 
         $appt(
             'Abschlusskontrolle Zimmermann — Marder',
             $fri2->copy()->setTime(8, 0),
             $fri2->copy()->setTime(9, 30),
-            $zimmermann, $lisa, $statuses['Fakturiert'],
+            $zimmermann, $lisa, $statuses['Abgerechnet'],
             'Marder gefangen und umgesiedelt. Eingang abgedichtet.',
         );
 

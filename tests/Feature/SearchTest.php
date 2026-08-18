@@ -116,7 +116,9 @@ class SearchTest extends TestCase
         $actions = $this->groupItems($this->search('Bergmann'), 'actions');
 
         $titles = array_column($actions, 'title');
-        $this->assertContains('New appointment for Klaus Bergmann', $titles);
+        // German: SearchController renders this copy server-side, and every user
+        // of this app reads it in German.
+        $this->assertContains('Neuer Termin für Klaus Bergmann', $titles);
     }
 
     public function test_employees_only_see_what_their_permissions_allow(): void
@@ -166,10 +168,11 @@ class SearchTest extends TestCase
     {
         $payload = $this->search('Bergmann');
 
-        // URLs and generated action slugs embed database ids, which vary per run.
+        // The trait masks ids and URLs; search additionally mints string ids for
+        // its action rows ("client-14"), which embed a database id of their own.
         array_walk_recursive($payload, function (&$value, $key) {
-            if ($key === 'url' || ($key === 'id' && is_string($value))) {
-                $value = preg_replace('/\d+/', '<id>', (string) $value);
+            if ($key === 'id' && is_string($value)) {
+                $value = preg_replace('/\d+/', '<id>', $value);
             }
         });
 

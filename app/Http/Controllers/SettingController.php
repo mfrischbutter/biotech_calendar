@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ChecklistTemplate;
 use App\Models\Company;
 use App\Models\Setting;
 use App\Models\Status;
@@ -11,6 +12,11 @@ use Inertia\Inertia;
 
 class SettingController extends Controller
 {
+    /** Formats the branding upload zone advertises and the server accepts. */
+    public const LOGO_FORMATS = ['png', 'jpg', 'jpeg', 'webp'];
+
+    public const LOGO_MAX_KB = 2048;
+
     public function index(Request $request)
     {
         $user = $request->user();
@@ -27,6 +33,7 @@ class SettingController extends Controller
                 'end_hour' => (int) Setting::get('end_hour', '18'),
             ],
             'statuses' => $statuses,
+            'checklistTemplates' => ChecklistTemplate::ordered()->get(['id', 'name', 'kind', 'items']),
         ]);
     }
 
@@ -35,8 +42,10 @@ class SettingController extends Controller
         $user = $request->user();
         abort_unless($user->hasPermission('settings.edit'), 403);
 
+        // `sometimes` so the branding card can submit a logo on its own without
+        // having to echo back every profile field.
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
             'street' => ['nullable', 'string', 'max:255'],
             'zip' => ['nullable', 'string', 'max:20'],
             'city' => ['nullable', 'string', 'max:255'],
@@ -45,7 +54,7 @@ class SettingController extends Controller
             'place_id' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'string', 'email', 'max:255'],
-            'logo' => ['nullable', 'image', 'max:2048'],
+            'logo' => ['nullable', 'file', 'mimes:'.implode(',', self::LOGO_FORMATS), 'max:'.self::LOGO_MAX_KB],
         ]);
 
         $company = Company::findOrFail($user->company_id);

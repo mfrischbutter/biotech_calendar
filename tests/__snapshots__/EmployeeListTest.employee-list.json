@@ -1,0 +1,35 @@
+{
+    "data": [
+        {
+            "id": "<id>",
+            "first_name": "Markus",
+            "last_name": "Weber",
+            "name": "Markus Weber",
+            "email": "markus@wilhelmsen-biotec.de",
+            "permissions": [
+                "appointments.edit",
+                "appointments.view",
+                "clients.view",
+                "contracts.view",
+                "dashboard.view",
+                "treatments.create",
+                "treatments.edit",
+                "treatments.view"
+            ],
+            "staff_role": {
+                "id": "<id>",
+                "slug": "techniker",
+                "name": "Techniker"
+            },
+            "has_custom_permissions": false,
+            "appointments_this_week": 1,
+            "utilisation": 10
+        }
+    ],
+    "filters": {
+        "search": null,
+        "sort": "name",
+        "dir": "asc",
+        "role": null
+    }
+}

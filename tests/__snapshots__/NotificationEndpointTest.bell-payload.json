@@ -1,0 +1,117 @@
+{
+    "notifications": [
+        {
+            "id": "<id>",
+            "type": "comment_mention",
+            "severity": "info",
+            "actor": "Bjoern Wilhelmsen",
+            "appointment_id": "<appointment_id>",
+            "appointment_title": "Routinekontrolle Bergmann",
+            "appointment_start_at": "2026-04-09T09:00:00+00:00",
+            "url": "http://localhost/calendar?appointment=<id>",
+            "data": {
+                "title": "Routinekontrolle Bergmann",
+                "excerpt": "Zugang war heute verschlossen."
+            },
+            "read_at": null,
+            "created_at": "2026-04-08T11:00:00+00:00"
+        },
+        {
+            "id": "<id>",
+            "type": "comment_added",
+            "severity": "info",
+            "actor": "Bjoern Wilhelmsen",
+            "appointment_id": "<appointment_id>",
+            "appointment_title": "Routinekontrolle Bergmann",
+            "appointment_start_at": "2026-04-09T09:00:00+00:00",
+            "url": "http://localhost/calendar?appointment=<id>",
+            "data": {
+                "title": "Routinekontrolle Bergmann",
+                "excerpt": "Zugang war heute verschlossen."
+            },
+            "read_at": null,
+            "created_at": "2026-04-08T10:59:00+00:00"
+        },
+        {
+            "id": "<id>",
+            "type": "appointment_assigned",
+            "severity": "info",
+            "actor": "Bjoern Wilhelmsen",
+            "appointment_id": "<appointment_id>",
+            "appointment_title": "Routinekontrolle Bergmann",
+            "appointment_start_at": "2026-04-09T09:00:00+00:00",
+            "url": "http://localhost/calendar?appointment=<id>",
+            "data": {
+                "title": "Routinekontrolle Bergmann",
+                "excerpt": "Zugang war heute verschlossen."
+            },
+            "read_at": null,
+            "created_at": "2026-04-08T10:58:00+00:00"
+        },
+        {
+            "id": "<id>",
+            "type": "appointment_unassigned",
+            "severity": "warning",
+            "actor": "Bjoern Wilhelmsen",
+            "appointment_id": "<appointment_id>",
+            "appointment_title": "Routinekontrolle Bergmann",
+            "appointment_start_at": "2026-04-09T09:00:00+00:00",
+            "url": "http://localhost/calendar?appointment=<id>",
+            "data": {
+                "title": "Routinekontrolle Bergmann",
+                "excerpt": "Zugang war heute verschlossen."
+            },
+            "read_at": null,
+            "created_at": "2026-04-08T10:57:00+00:00"
+        },
+        {
+            "id": "<id>",
+            "type": "schedule_conflict",
+            "severity": "critical",
+            "actor": "Bjoern Wilhelmsen",
+            "appointment_id": "<appointment_id>",
+            "appointment_title": "Routinekontrolle Bergmann",
+            "appointment_start_at": "2026-04-09T09:00:00+00:00",
+            "url": "http://localhost/calendar?appointment=<id>",
+            "data": {
+                "title": "Routinekontrolle Bergmann",
+                "excerpt": "Zugang war heute verschlossen."
+            },
+            "read_at": null,
+            "created_at": "2026-04-08T10:56:00+00:00"
+        },
+        {
+            "id": "<id>",
+            "type": "series_ending",
+            "severity": "warning",
+            "actor": "Bjoern Wilhelmsen",
+            "appointment_id": "<appointment_id>",
+            "appointment_title": "Routinekontrolle Bergmann",
+            "appointment_start_at": "2026-04-09T09:00:00+00:00",
+            "url": "http://localhost/calendar?appointment=<id>",
+            "data": {
+                "title": "Routinekontrolle Bergmann",
+                "excerpt": "Zugang war heute verschlossen."
+            },
+            "read_at": null,
+            "created_at": "2026-04-08T10:55:00+00:00"
+        },
+        {
+            "id": "<id>",
+            "type": "attachment_added",
+            "severity": "success",
+            "actor": "Bjoern Wilhelmsen",
+            "appointment_id": "<appointment_id>",
+            "appointment_title": "Routinekontrolle Bergmann",
+            "appointment_start_at": "2026-04-09T09:00:00+00:00",
+            "url": "http://localhost/calendar?appointment=<id>",
+            "data": {
+                "title": "Routinekontrolle Bergmann",
+                "excerpt": "Zugang war heute verschlossen."
+            },
+            "read_at": null,
+            "created_at": "2026-04-08T10:54:00+00:00"
+        }
+    ],
+    "unread": 7
+}

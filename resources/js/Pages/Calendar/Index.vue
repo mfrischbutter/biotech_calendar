@@ -1,16 +1,37 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
-import type { FormDataConvertible } from '@inertiajs/core';
-import { format, parseISO, addWeeks, subWeeks, addDays, subDays, addMonths, subMonths, startOfWeek } from 'date-fns';
+import { format, parseISO, addDays, startOfWeek } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { Button } from '@/Components/ui/button';
-import { Switch } from '@/Components/ui/switch';
-import { getStatusDotStyle } from '@/lib/status-colors';
-import { localToISO } from '@/lib/date-utils';
 import { useTrans } from '@/lib/use-trans';
-import type { Appointment, Contract, Status } from '@/types';
+import {
+    useCalendarQuery,
+    CALENDAR_DENSITY_STORAGE_KEY,
+    CALENDAR_VIEW_STORAGE_KEY,
+} from '@/lib/use-calendar-query';
+import { useAppointmentDialogs } from '@/lib/use-appointment-dialogs';
+import { useCalendarAppointments } from '@/lib/use-calendar-appointments';
+import { useCalendarShortcuts } from '@/lib/use-calendar-shortcuts';
+import { usePageLoading } from '@/lib/use-page-loading';
+import { dismissPendingUndos } from '@/lib/use-toast';
+import type {
+    Appointment,
+    CalendarDensity,
+    CalendarEmployee,
+    CalendarFilters,
+    CalendarTotals,
+    CalendarView,
+    ChecklistTemplate,
+    ClientOption,
+    ConflictMap,
+    Contract,
+    Status,
+} from '@/types';
+import CalendarToolbar from './partials/CalendarToolbar.vue';
+import CalendarFilterRail from './partials/CalendarFilterRail.vue';
+import CalendarSkeleton from './partials/CalendarSkeleton.vue';
+import ShortcutHelpDialog from './partials/ShortcutHelpDialog.vue';
 import TimeGrid from './partials/TimeGrid.vue';
 import MonthGrid from './partials/MonthGrid.vue';
 import TeamGrid from './partials/TeamGrid.vue';
@@ -19,46 +40,81 @@ import AppointmentFormDialog from './partials/AppointmentFormDialog.vue';
 
 const { t } = useTrans();
 
-type CalendarView = 'day' | 'week' | 'month' | 'team-day' | 'team-week';
-
 const props = defineProps<{
     appointments: Appointment[];
     contracts: Contract[];
-    clients: { id: number; first_name: string; last_name: string; company_name: string | null; name: string }[];
-    employees: { id: number; first_name: string; last_name: string; name: string }[];
+    clients: ClientOption[];
+    checklistTemplates: ChecklistTemplate[];
+    employees: CalendarEmployee[];
     statuses: Status[];
     currentDate: string;
     view: CalendarView;
+    density: CalendarDensity | null;
     showWeekends: boolean;
     startHour: number;
     endHour: number;
     openAppointmentId?: number | null;
+    filters: CalendarFilters;
+    conflicts: ConflictMap;
+    conflictCount: number;
+    totals: CalendarTotals;
 }>();
 
-const createDialogOpen = ref(false);
-const editDialogOpen = ref(false);
-const selectedAppointmentId = ref<number | null>(null);
-const selectedAppointment = computed<Appointment | undefined>(() =>
-    selectedAppointmentId.value
-        ? props.appointments.find(a => a.id === selectedAppointmentId.value)
-        : undefined,
+// The URL wins when it says something; otherwise this user's last choice does.
+const density = ref<CalendarDensity>(
+    props.density ?? (localStorage.getItem(CALENDAR_DENSITY_STORAGE_KEY) === 'true' ? 'detailed' : 'compact'),
 );
-const defaultDate = ref('');
-const defaultStartTime = ref('');
-const defaultEndTime = ref('');
+watch(() => props.density, (value) => {
+    if (value) density.value = value;
+});
 
-let drawerCloseGuard = false;
-watch(editDialogOpen, (val) => {
-    if (!val) {
-        drawerCloseGuard = true;
-        setTimeout(() => { drawerCloseGuard = false; }, 300);
-    }
-}, { flush: 'sync' });
+const query = useCalendarQuery({
+    view: () => props.view,
+    date: () => props.currentDate,
+    filters: () => props.filters,
+    density: () => density.value,
+});
+const mutations = useCalendarAppointments({
+    appointments: () => props.appointments,
+    employees: () => props.employees,
+});
+const loading = usePageLoading();
 
+/** What the grids draw: server truth, plus any drag the server has not answered yet. */
+const shownAppointments = computed(() => props.appointments.map(mutations.effective));
+
+// ---------------------------------------------------------------------------
+// Dialogs and keyboard — every shortcut mirrors a button visible on screen
+// ---------------------------------------------------------------------------
+const helpOpen = ref(false);
+const dialogs = useAppointmentDialogs({
+    appointments: () => props.appointments,
+    fallbackDate: () => props.currentDate,
+});
+
+useCalendarShortcuts(
+    {
+        today: () => query.goToToday(),
+        navigate: (direction) => query.navigate(direction),
+        switchView: (view) => query.switchView(view),
+        create: () => dialogs.openCreate(),
+        toggleHelp: () => { helpOpen.value = !helpOpen.value; },
+    },
+    () => !dialogs.anyOpen.value && !helpOpen.value,
+);
+
+// An undo offer only means anything on the board it was raised from.
+onUnmounted(() => dismissPendingUndos());
+
+// ---------------------------------------------------------------------------
+// Grid geometry
+// ---------------------------------------------------------------------------
 const currentDateObj = computed(() => parseISO(props.currentDate));
+const isTeamView = computed(() => props.view === 'team-week');
+const isDetailed = computed(() => density.value === 'detailed');
 
 const gridDates = computed(() => {
-    if (props.view === 'day' || props.view === 'team-day') {
+    if (props.view === 'day') {
         return [props.currentDate];
     }
     const monday = startOfWeek(currentDateObj.value, { weekStartsOn: 1 });
@@ -68,7 +124,7 @@ const gridDates = computed(() => {
 
 const headerTitle = computed(() => {
     const d = currentDateObj.value;
-    if (props.view === 'day' || props.view === 'team-day') {
+    if (props.view === 'day') {
         return format(d, 'EEEE, d. MMMM yyyy', { locale: de });
     }
     if (props.view === 'month') {
@@ -76,152 +132,44 @@ const headerTitle = computed(() => {
     }
     const weekStart = startOfWeek(d, { weekStartsOn: 1 });
     const weekEnd = addDays(weekStart, props.showWeekends ? 6 : 4);
-    const startStr = format(weekStart, 'd. MMM', { locale: de });
-    const endStr = format(weekEnd, 'd. MMM yyyy', { locale: de });
-    return `${startStr} – ${endStr}`;
+    return `${format(weekStart, 'd. MMM', { locale: de })} – ${format(weekEnd, 'd. MMM yyyy', { locale: de })}`;
 });
 
-function navigate(direction: number) {
-    const d = currentDateObj.value;
-    let newDate: Date;
-    if (props.view === 'day' || props.view === 'team-day') {
-        newDate = direction > 0 ? addDays(d, 1) : subDays(d, 1);
-    } else if (props.view === 'month') {
-        newDate = direction > 0 ? addMonths(d, 1) : subMonths(d, 1);
-    } else {
-        newDate = direction > 0 ? addWeeks(d, 1) : subWeeks(d, 1);
-    }
-    router.get(route('calendar.index'), {
-        view: props.view,
-        date: format(newDate, 'yyyy-MM-dd'),
-    }, { preserveState: true, preserveScroll: true });
+function toggleDetailed() {
+    density.value = isDetailed.value ? 'compact' : 'detailed';
+    query.setDensity(density.value);
 }
 
-function goToToday() {
-    router.get(route('calendar.index'), {
-        view: props.view,
-    }, { preserveState: true, preserveScroll: true });
-}
-
-const STORAGE_KEY = 'biotech-calendar-view';
-
-function switchView(view: CalendarView) {
-    localStorage.setItem(STORAGE_KEY, view);
-    router.get(route('calendar.index'), {
-        view,
-        date: props.currentDate,
-    }, { preserveState: true, preserveScroll: true });
-}
+const KNOWN_VIEWS: CalendarView[] = ['day', 'week', 'month', 'team-week'];
 
 onMounted(() => {
-    // Restore saved view on initial load (no explicit ?view= in URL)
+    // The team board is the default, but a deliberate choice outlives it.
     const params = new URLSearchParams(window.location.search);
     if (!params.has('view')) {
-        const saved = localStorage.getItem(STORAGE_KEY) as CalendarView | null;
-        if (saved && saved !== props.view) {
-            router.get(route('calendar.index'), {
-                view: saved,
-                date: props.currentDate,
-            }, { preserveState: true, preserveScroll: true, replace: true });
+        const saved = localStorage.getItem(CALENDAR_VIEW_STORAGE_KEY) as CalendarView | null;
+        if (saved && saved !== props.view && KNOWN_VIEWS.includes(saved)) {
+            router.get(route('calendar.index'), { view: saved, date: props.currentDate }, {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+            });
         }
+    }
+
+    if (props.openAppointmentId) {
+        const appt = props.appointments.find(a => a.id === props.openAppointmentId);
+        if (appt) dialogs.openEdit(appt);
+    }
+
+    // "Termin planen" on a detail page (and the global search action) links here
+    // with ?new=1 and expects the create form to be waiting.
+    if (params.get('new') === '1') {
+        dialogs.openCreate();
     }
 });
 
 function handleDayClick(date: string) {
-    router.get(route('calendar.index'), {
-        view: 'day',
-        date,
-    }, { preserveState: true, preserveScroll: true });
-}
-
-function openCreateDialog(date?: string, startTime?: string, endTime?: string) {
-    defaultDate.value = date || props.currentDate;
-    defaultStartTime.value = startTime || '09:00';
-    defaultEndTime.value = endTime || '10:00';
-    selectedAppointmentId.value = null;
-    createDialogOpen.value = true;
-}
-
-function openEditDialog(appointment: Appointment) {
-    if (drawerCloseGuard) return;
-    selectedAppointmentId.value = appointment.id;
-    editDialogOpen.value = true;
-}
-
-const defaultWorkerIds = ref<number[]>([]);
-
-onMounted(() => {
-    if (props.openAppointmentId) {
-        const appt = props.appointments.find(a => a.id === props.openAppointmentId);
-        if (appt) {
-            openEditDialog(appt);
-        }
-    }
-});
-
-function handleCreateAppointment(date: string, startTime: string, endTime: string, employeeId?: number | null) {
-    defaultWorkerIds.value = employeeId ? [employeeId] : [];
-    openCreateDialog(date, startTime, endTime);
-}
-
-function buildAppointmentPayload(appointment: Appointment, overrides: Record<string, unknown>) {
-    return {
-        contract_id: appointment.contract?.id ?? null,
-        worker_ids: appointment.workers.map(w => w.id),
-        status_id: appointment.status?.id ?? null,
-        notes: appointment.notes,
-        checklist: appointment.checklist,
-        ...overrides,
-    } as Record<string, FormDataConvertible>;
-}
-
-function handleMoveAppointment(appointment: Appointment, date: string, startTime: string, endTime: string) {
-    router.put(route('appointments.update', appointment.id), buildAppointmentPayload(appointment, {
-        start_at: localToISO(date, startTime),
-        end_at: localToISO(date, endTime),
-    }), { preserveScroll: true });
-}
-
-function handleResizeAppointment(appointment: Appointment, endTime: string) {
-    const date = new Date(appointment.start_at);
-    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    router.put(route('appointments.update', appointment.id), buildAppointmentPayload(appointment, {
-        start_at: appointment.start_at,
-        end_at: localToISO(dateStr, endTime),
-    }), { preserveScroll: true });
-}
-
-function handleTeamMoveAppointment(appointment: Appointment, date: string, startTime: string, endTime: string, employeeId: number | null) {
-    const workerIds = employeeId ? [employeeId] : [];
-    router.put(route('appointments.update', appointment.id), buildAppointmentPayload(appointment, {
-        start_at: localToISO(date, startTime),
-        end_at: localToISO(date, endTime),
-        worker_ids: workerIds,
-    }), { preserveScroll: true });
-}
-
-const isTeamView = computed(() => props.view === 'team-day' || props.view === 'team-week');
-const teamSubView = computed(() => props.view === 'team-day' ? 'day' : 'week');
-
-const DETAIL_STORAGE_KEY = 'biotech-team-week-detailed';
-const teamWeekDetailed = ref(localStorage.getItem(DETAIL_STORAGE_KEY) === 'true');
-function toggleDetailed(val: boolean) {
-    teamWeekDetailed.value = val;
-    localStorage.setItem(DETAIL_STORAGE_KEY, String(val));
-}
-
-const mainViews: { key: CalendarView; label: string }[] = [
-    { key: 'day', label: t('Day') },
-    { key: 'week', label: t('Week') },
-    { key: 'month', label: t('Month') },
-];
-
-function switchToTeam() {
-    switchView(isTeamView.value ? 'week' : 'team-week');
-}
-
-function switchTeamSub(sub: 'day' | 'week') {
-    switchView(sub === 'day' ? 'team-day' : 'team-week');
+    query.switchView('day', date);
 }
 </script>
 
@@ -230,170 +178,117 @@ function switchTeamSub(sub: 'day' | 'week') {
 
     <AuthenticatedLayout>
         <template #header>
-            <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <!-- Row 1: nav + title -->
-                <div class="flex items-center gap-2 md:gap-4">
-                    <div class="flex items-center gap-1">
-                        <Button variant="outline" size="icon" class="h-8 w-8" @click="navigate(-1)">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
-                        </Button>
-                        <Button variant="outline" size="icon" class="h-8 w-8" @click="navigate(1)">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
-                        </Button>
-                    </div>
-                    <Button variant="outline" size="sm" @click="goToToday">{{ t('Today') }}</Button>
-                    <h2 class="text-sm font-semibold text-foreground md:text-lg">
-                        {{ headerTitle }}
-                    </h2>
-                </div>
-
-                <!-- Row 2: view switcher + actions -->
-                <div class="flex items-center gap-2 md:gap-3">
-                    <!-- View switcher -->
-                    <div class="flex rounded-md border overflow-hidden">
-                        <button
-                            v-for="v in mainViews"
-                            :key="v.key"
-                            class="px-2 py-1 text-xs font-medium transition-colors md:px-3 md:py-1.5 md:text-sm"
-                            :class="view === v.key
-                                ? 'bg-primary text-primary-foreground'
-                                : 'text-muted-foreground hover:bg-muted'"
-                            @click="switchView(v.key)"
-                        >
-                            {{ v.label }}
-                        </button>
-                    </div>
-
-                    <!-- Team view toggle -->
-                    <button
-                        class="rounded-md border px-2 py-1 text-xs font-medium transition-colors md:px-3 md:py-1.5 md:text-sm"
-                        :class="isTeamView
-                            ? 'bg-primary text-primary-foreground'
-                            : 'text-muted-foreground hover:bg-muted'"
-                        @click="switchToTeam"
-                    >
-                        {{ t('Team') }}
-                    </button>
-
-                    <!-- Team sub-toggle (day/week) -->
-                    <div v-if="isTeamView" class="flex rounded-md border overflow-hidden">
-                        <button
-                            class="px-2 py-1 text-xs font-medium transition-colors md:px-2.5 md:py-1.5"
-                            :class="teamSubView === 'day' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'"
-                            @click="switchTeamSub('day')"
-                        >
-                            {{ t('Day') }}
-                        </button>
-                        <button
-                            class="px-2 py-1 text-xs font-medium transition-colors md:px-2.5 md:py-1.5"
-                            :class="teamSubView === 'week' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'"
-                            @click="switchTeamSub('week')"
-                        >
-                            {{ t('Week') }}
-                        </button>
-                    </div>
-
-                    <!-- Detailed view toggle (team-week only) -->
-                    <label v-if="view === 'team-week'" class="flex items-center gap-1.5 text-xs text-muted-foreground md:text-sm">
-                        <Switch :checked="teamWeekDetailed" @update:checked="toggleDetailed" />
-                        {{ t('Detailed') }}
-                    </label>
-
-                    <Button size="sm" class="ml-auto md:ml-0 md:size-default" @click="openCreateDialog()">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        <span class="hidden md:inline">{{ t('New Appointment') }}</span>
-                    </Button>
-                </div>
-            </div>
+            <CalendarToolbar
+                :view="view"
+                :title="headerTitle"
+                :conflict-count="conflictCount"
+                :conflicts-active="filters.conflicts"
+                :detailed="isDetailed"
+                @navigate="query.navigate"
+                @today="query.goToToday"
+                @switch-view="query.switchView"
+                @toggle-detailed="toggleDetailed"
+                @toggle-conflicts="query.toggleConflicts"
+                @create="dialogs.openCreate()"
+                @help="helpOpen = true"
+            />
         </template>
 
-        <!-- Legend (only on time grid / team views) -->
-        <div v-if="view !== 'month' && statuses.length > 0" class="mb-2 flex flex-wrap items-center gap-2 md:mb-3 md:gap-4">
-            <div
-                v-for="status in statuses"
-                :key="status.id"
-                class="flex items-center gap-1.5 text-xs text-muted-foreground"
-            >
-                <span class="h-2 w-2 rounded-full" :style="getStatusDotStyle(status.color)" />
-                {{ status.name }}
-            </div>
-        </div>
+        <CalendarFilterRail
+            :employees="employees"
+            :statuses="statuses"
+            :filters="query.filters.value"
+            :has-filters="query.hasFilters.value"
+            @toggle-employee="query.toggleEmployee"
+            @toggle-status="query.toggleStatus"
+            @toggle-unassigned="query.toggleUnassigned"
+            @reset="query.resetFilters"
+        />
 
-        <!-- Calendar content -->
-        <div class="h-[calc(100vh-260px)] md:h-[calc(100vh-200px)]">
-            <!-- Team week detailed view -->
+        <div class="relative h-[calc(100vh-300px)] md:h-[calc(100vh-240px)]">
+            <!-- Laid over the board rather than replacing it, so the grid keeps
+                 its scroll position across a week step. -->
+            <CalendarSkeleton
+                v-if="loading"
+                class="absolute inset-0 z-40"
+                :columns="gridDates.length"
+            />
+
             <TeamWeekDetailGrid
-                v-if="view === 'team-week' && teamWeekDetailed"
-                :appointments="appointments"
+                v-if="isTeamView && isDetailed"
+                :appointments="shownAppointments"
                 :employees="employees"
                 :dates="gridDates"
                 :start-hour="startHour"
                 :end-hour="endHour"
-                @appointment-click="openEditDialog"
-                @create-appointment="handleCreateAppointment"
-                @move-appointment="handleTeamMoveAppointment"
+                :conflicts="conflicts"
+                @appointment-click="dialogs.openEdit"
+                @create-appointment="dialogs.openCreateForSlot"
+                @move-appointment="mutations.teamMove"
             />
 
-            <!-- Team view (normal) -->
             <TeamGrid
                 v-else-if="isTeamView"
-                :appointments="appointments"
+                :appointments="shownAppointments"
                 :employees="employees"
                 :dates="gridDates"
-                :view="view as 'team-day' | 'team-week'"
-                :start-hour="startHour"
-                :end-hour="endHour"
-                @appointment-click="openEditDialog"
-                @create-appointment="handleCreateAppointment"
-                @move-appointment="handleTeamMoveAppointment"
+                :totals="totals"
+                :conflicts="conflicts"
+                @appointment-click="dialogs.openEdit"
+                @create-appointment="dialogs.openCreateForSlot"
+                @move-appointment="mutations.teamMove"
             />
 
-            <!-- Day / Week view -->
             <TimeGrid
                 v-else-if="view === 'day' || view === 'week'"
-                :appointments="appointments"
+                :appointments="shownAppointments"
                 :dates="gridDates"
-                :show-day-header="view === 'week' || view === 'day'"
                 :start-hour="startHour"
                 :end-hour="endHour"
-                @appointment-click="openEditDialog"
-                @create-appointment="handleCreateAppointment"
-                @move-appointment="handleMoveAppointment"
-                @resize-appointment="handleResizeAppointment"
+                :conflicts="conflicts"
+                @appointment-click="dialogs.openEdit"
+                @create-appointment="dialogs.openCreateForSlot"
+                @move-appointment="mutations.move"
+                @resize-appointment="mutations.resize"
+                @expand-day="handleDayClick"
             />
 
-            <!-- Month view -->
             <MonthGrid
                 v-else
-                :appointments="appointments"
+                :appointments="shownAppointments"
                 :current-date="currentDate"
-                @appointment-click="openEditDialog"
+                :show-weekends="showWeekends"
+                :day-totals="totals.perDay"
+                :conflicts="conflicts"
+                @appointment-click="dialogs.openEdit"
                 @day-click="handleDayClick"
             />
         </div>
 
-        <!-- Create dialog -->
+        <ShortcutHelpDialog v-model:open="helpOpen" />
+
         <AppointmentFormDialog
-            v-model:open="createDialogOpen"
+            v-model:open="dialogs.createOpen.value"
             :contracts="contracts"
             :clients="clients"
             :employees="employees"
             :statuses="statuses"
-            :default-date="defaultDate"
-            :default-start-time="defaultStartTime"
-            :default-end-time="defaultEndTime"
-            :default-worker-ids="defaultWorkerIds"
+            :checklist-templates="checklistTemplates"
+            :default-date="dialogs.defaults.value.date"
+            :default-start-time="dialogs.defaults.value.startTime"
+            :default-end-time="dialogs.defaults.value.endTime"
+            :default-worker-ids="dialogs.defaults.value.workerIds"
         />
 
-        <!-- Edit dialog -->
         <AppointmentFormDialog
-            v-if="selectedAppointment"
-            v-model:open="editDialogOpen"
+            v-if="dialogs.selected.value"
+            v-model:open="dialogs.editOpen.value"
             :contracts="contracts"
             :clients="clients"
             :employees="employees"
             :statuses="statuses"
-            :appointment="selectedAppointment"
+            :checklist-templates="checklistTemplates"
+            :appointment="dialogs.selected.value"
         />
     </AuthenticatedLayout>
 </template>

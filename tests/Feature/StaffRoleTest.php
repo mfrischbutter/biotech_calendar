@@ -179,7 +179,86 @@ class StaffRoleTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_the_employees_screen_exposes_roles_and_workload(): void
+    /* ---------------- tenant isolation ---------------- */
+
+    /**
+     * `User` has no company global scope, so route-model binding will happily
+     * resolve an account from another tenant. Every endpoint that writes to a
+     * bound user has to check the company itself — otherwise an owner could
+     * rewrite a stranger's permissions using their own role ids.
+     */
+    /**
+     * Permission carries a company global scope, so reading a stranger's rows
+     * back while acting as our own owner would return nothing no matter what
+     * the endpoint did. Ask the table directly.
+     *
+     * @return array<int, string>
+     */
+    private function rawPermissions(User $user): array
+    {
+        return Permission::withoutGlobalScope('company')
+            ->where('user_id', $user->id)
+            ->orderBy('permission')
+            ->pluck('permission')
+            ->all();
+    }
+
+    private function employeeOfAnotherCompany(): User
+    {
+        $otherCompany = Company::factory()->create();
+        StaffRole::seedForCompany($otherCompany->id);
+
+        return User::factory()->create([
+            'company_id' => $otherCompany->id, 'role' => User::ROLE_EMPLOYEE,
+        ]);
+    }
+
+    public function test_a_role_cannot_be_pushed_onto_another_companys_employee(): void
+    {
+        $stranger = $this->employeeOfAnotherCompany();
+        $stranger->syncPermissions(['appointments.view']);
+
+        $this->actingAs($this->owner)
+            ->put("/employees/{$stranger->id}/role", [
+                'staff_role_id' => $this->role(StaffRole::SLUG_ADMIN)->id,
+            ])
+            ->assertForbidden();
+
+        $stranger->refresh();
+        $this->assertNull($stranger->staff_role_id);
+        $this->assertSame(['appointments.view'], $this->rawPermissions($stranger));
+    }
+
+    public function test_permissions_cannot_be_rewritten_on_another_companys_employee(): void
+    {
+        $stranger = $this->employeeOfAnotherCompany();
+        $stranger->syncPermissions(['appointments.view']);
+
+        $this->actingAs($this->owner)
+            ->put("/employees/{$stranger->id}/permissions", [
+                'permissions' => array_keys(Permission::ALL),
+            ])
+            ->assertForbidden();
+
+        $this->assertSame(['appointments.view'], $this->rawPermissions($stranger));
+    }
+
+    public function test_another_companys_employee_cannot_be_deleted(): void
+    {
+        $stranger = $this->employeeOfAnotherCompany();
+
+        $this->actingAs($this->owner)
+            ->delete("/employees/{$stranger->id}")
+            ->assertForbidden();
+
+        $this->assertNotNull($stranger->fresh());
+    }
+
+    /**
+     * Workload figures are asserted by value, against a frozen clock, in
+     * EmployeeListTest. This test owns the role vocabulary the picker renders.
+     */
+    public function test_the_employees_screen_offers_every_role_preset_the_picker_needs(): void
     {
         $this->employee->applyStaffRole($this->role(StaffRole::SLUG_TECHNICIAN));
 
@@ -188,12 +267,21 @@ class StaffRoleTest extends TestCase
             ->assertOk()
             ->viewData('page')['props'];
 
-        $this->assertCount(4, $props['roles']);
+        // The picker lists them in sort order, least to most privileged.
+        $this->assertSame(
+            [StaffRole::SLUG_TECHNICIAN, StaffRole::SLUG_LEAD, StaffRole::SLUG_OFFICE, StaffRole::SLUG_ADMIN],
+            collect($props['roles'])->pluck('slug')->all()
+        );
+
+        $technician = collect($props['roles'])->firstWhere('slug', StaffRole::SLUG_TECHNICIAN);
+        $this->assertSame('Techniker', $technician['name']);
+        $this->assertNotEmpty($technician['description']);
+        $this->assertContains('appointments.view', $technician['permissions']);
+        $this->assertNotContains('appointments.delete', $technician['permissions']);
 
         $row = collect($props['employees']['data'])->firstWhere('id', $this->employee->id);
         $this->assertSame('Techniker', $row['staff_role']['name']);
+        $this->assertSame(StaffRole::SLUG_TECHNICIAN, $row['staff_role']['slug']);
         $this->assertFalse($row['has_custom_permissions']);
-        $this->assertArrayHasKey('appointments_this_week', $row);
-        $this->assertArrayHasKey('utilisation', $row);
     }
 }

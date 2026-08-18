@@ -2,47 +2,37 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Appointment;
 use App\Models\Client;
 use App\Models\Contract;
-use Carbon\Carbon;
+use App\Queries\ContractDetailQuery;
+use App\Queries\ContractListQuery;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class ContractController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, ContractListQuery $list)
     {
         $user = $request->user();
         abort_unless($user->hasPermission('contracts.view'), 403);
 
-        $search = $request->input('search');
-
-        $contracts = Contract::with('clients:id,first_name,last_name,company_name')
-            ->when($search, function ($q) use ($search) {
-                $q->where(function ($q) use ($search) {
-                    $q->where('contract_number', 'like', "%{$search}%")
-                        ->orWhere('title', 'like', "%{$search}%")
-                        ->orWhereHas('clients', function ($q) use ($search) {
-                            $q->where('first_name', 'like', "%{$search}%")
-                                ->orWhere('last_name', 'like', "%{$search}%")
-                                ->orWhere('company_name', 'like', "%{$search}%");
-                        });
-                });
-            })
-            ->orderByDesc('created_at')
-            ->paginate(20)
-            ->withQueryString();
+        $filters = $request->validate(ContractListQuery::rules());
 
         $clients = Client::orderBy('last_name')
             ->orderBy('first_name')
             ->get(['id', 'first_name', 'last_name', 'company_name']);
 
         return Inertia::render('Contracts/Index', [
-            'contracts' => $contracts,
+            'contracts' => $list->paginate($filters),
+            'stageCounts' => $list->stageCounts($filters),
             'clients' => $clients,
-            'filters' => ['search' => $search],
+            'filters' => [
+                'search' => $filters['search'] ?? null,
+                'sort' => $filters['sort'] ?? ContractListQuery::DEFAULT_SORT,
+                'dir' => $filters['dir'] ?? 'asc',
+                'view' => $filters['view'] ?? ContractListQuery::VIEW_ALL,
+            ],
         ]);
     }
 
@@ -59,6 +49,7 @@ class ContractController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'kind' => ['nullable', 'string', 'in:'.implode(',', Contract::KINDS)],
             'description' => ['nullable', 'string'],
+            'access_notes' => ['nullable', 'string', 'max:2000'],
             'street' => ['nullable', 'string', 'max:255'],
             'zip' => ['nullable', 'string', 'max:20'],
             'city' => ['nullable', 'string', 'max:255'],
@@ -78,40 +69,14 @@ class ContractController extends Controller
         return redirect()->route('contracts.show', $contract->id);
     }
 
-    public function show(Request $request, Contract $contract)
+    public function show(Request $request, Contract $contract, ContractDetailQuery $detail)
     {
-        abort_unless($request->user()->hasPermission('contracts.view'), 403);
+        $user = $request->user();
+        abort_unless($user->hasPermission('contracts.view'), 403);
 
         $contract->load('clients:id,first_name,last_name,company_name');
 
-        $now = Carbon::now();
-
-        $upcomingAppointments = Appointment::where('contract_id', $contract->id)
-            ->where('start_at', '>=', $now)
-            ->with(['workers:id,first_name,last_name', 'status:id,name,color'])
-            ->orderBy('start_at')
-            ->limit(20)
-            ->get();
-
-        $pastAppointments = Appointment::where('contract_id', $contract->id)
-            ->where('start_at', '<', $now)
-            ->with(['workers:id,first_name,last_name', 'status:id,name,color'])
-            ->orderByDesc('start_at')
-            ->limit(20)
-            ->get();
-
-        $totalAppointments = Appointment::where('contract_id', $contract->id)->count();
-        $upcomingCount = Appointment::where('contract_id', $contract->id)
-            ->where('start_at', '>=', $now)
-            ->count();
-        $lastAppointment = Appointment::where('contract_id', $contract->id)
-            ->where('start_at', '<', $now)
-            ->orderByDesc('start_at')
-            ->value('start_at');
-        $nextAppointment = Appointment::where('contract_id', $contract->id)
-            ->where('start_at', '>=', $now)
-            ->orderBy('start_at')
-            ->value('start_at');
+        $detailed = $detail->forContract($contract, $user->hasPermission('appointments.view'));
 
         $clients = Client::orderBy('last_name')
             ->orderBy('first_name')
@@ -120,14 +85,10 @@ class ContractController extends Controller
         return Inertia::render('Contracts/Show', [
             'contract' => $contract,
             'clients' => $clients,
-            'upcomingAppointments' => $upcomingAppointments,
-            'pastAppointments' => $pastAppointments,
-            'stats' => [
-                'totalAppointments' => $totalAppointments,
-                'upcomingAppointments' => $upcomingCount,
-                'lastAppointment' => $lastAppointment?->toISOString(),
-                'nextAppointment' => $nextAppointment?->toISOString(),
-            ],
+            'upcomingAppointments' => $detailed['upcomingAppointments'],
+            'pastAppointments' => $detailed['pastAppointments'],
+            'timeline' => $detailed['timeline'],
+            'facts' => $detailed['facts'],
         ]);
     }
 
@@ -144,6 +105,7 @@ class ContractController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'kind' => ['nullable', 'string', 'in:'.implode(',', Contract::KINDS)],
             'description' => ['nullable', 'string'],
+            'access_notes' => ['nullable', 'string', 'max:2000'],
             'street' => ['nullable', 'string', 'max:255'],
             'zip' => ['nullable', 'string', 'max:20'],
             'city' => ['nullable', 'string', 'max:255'],
@@ -164,8 +126,15 @@ class ContractController extends Controller
     {
         abort_unless($request->user()->hasPermission('contracts.delete'), 403);
 
+        // Deleting from the detail page cannot go "back" — that page is gone.
+        $validated = $request->validate([
+            'redirect' => ['nullable', 'string', 'in:index'],
+        ]);
+
         $contract->delete();
 
-        return back();
+        return ($validated['redirect'] ?? null) === 'index'
+            ? redirect()->route('contracts.index')
+            : back();
     }
 }

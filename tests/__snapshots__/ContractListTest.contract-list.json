@@ -1,0 +1,61 @@
+{
+    "data": [
+        {
+            "id": "<id>",
+            "contract_number": "A-1000",
+            "title": "Erstbegehung",
+            "kind": "kundentermin",
+            "description": "Quartalsweise Kontrolle",
+            "street": "Hauptstrasse 1",
+            "zip": "80331",
+            "city": "München",
+            "clients": [
+                {
+                    "id": "<id>",
+                    "name": "Klaus Bergmann",
+                    "company_name": "Baeckerei Bergmann"
+                }
+            ],
+            "team": [
+                {
+                    "id": "<id>",
+                    "name": "Markus Weber"
+                }
+            ],
+            "stage": "active",
+            "progress": {
+                "done": 0,
+                "total": 1,
+                "percent": 0
+            }
+        }
+    ],
+    "stageCounts": [
+        {
+            "stage": "all",
+            "count": 1
+        },
+        {
+            "stage": "unconfirmed",
+            "count": 0
+        },
+        {
+            "stage": "active",
+            "count": 1
+        },
+        {
+            "stage": "ready_to_invoice",
+            "count": 0
+        },
+        {
+            "stage": "invoiced",
+            "count": 0
+        }
+    ],
+    "filters": {
+        "search": null,
+        "sort": "contract_number",
+        "dir": "asc",
+        "view": "all"
+    }
+}

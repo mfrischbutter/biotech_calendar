@@ -3,12 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Models\ChecklistTemplate;
 use App\Models\Client;
 use App\Models\Contract;
 use App\Models\Setting;
 use App\Models\Status;
 use App\Models\User;
+use App\Queries\CalendarQuery;
+use App\Services\AppointmentSeriesUpdater;
 use App\Services\NotificationService;
+use App\Services\ScheduleConflictService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -20,13 +24,9 @@ class AppointmentController extends Controller
 
     public function __construct(private NotificationService $notifications) {}
 
-    public function index(Request $request)
+    public function index(Request $request, ScheduleConflictService $conflictService)
     {
-        $request->validate([
-            'date' => ['nullable', 'date'],
-            'view' => ['nullable', 'in:day,week,month,team-day,team-week'],
-            'appointment' => ['nullable', 'integer'],
-        ]);
+        $request->validate(CalendarQuery::rules());
 
         $user = $request->user();
         abort_unless($user->hasPermission('appointments.view'), 403);
@@ -34,7 +34,7 @@ class AppointmentController extends Controller
         $openAppointmentId = $request->integer('appointment') ?: null;
         $openAppointment = $openAppointmentId ? Appointment::find($openAppointmentId) : null;
 
-        $view = $request->input('view', 'week');
+        $view = $request->input('view', CalendarQuery::DEFAULT_VIEW);
         $date = $openAppointment
             ? $openAppointment->start_at->copy()
             : ($request->input('date')
@@ -45,22 +45,14 @@ class AppointmentController extends Controller
         $startHour = (int) Setting::get('start_hour', '0');
         $endHour = (int) Setting::get('end_hour', '24');
 
-        [$rangeStart, $rangeEnd] = match ($view) {
-            'day', 'team-day' => [
-                $date->copy()->startOfDay(),
-                $date->copy()->endOfDay(),
-            ],
-            'month' => [
-                $date->copy()->startOfMonth()->startOfWeek(Carbon::MONDAY),
-                $date->copy()->endOfMonth()->endOfWeek(Carbon::SUNDAY),
-            ],
-            default => [
-                $date->copy()->startOfWeek(Carbon::MONDAY),
-                $date->copy()->endOfWeek(Carbon::SUNDAY),
-            ],
-        };
+        [$rangeStart, $rangeEnd] = CalendarQuery::range($view, $date);
 
-        $appointments = Appointment::with([
+        // Conflicts are detected on the *unfiltered* window: hiding a status must
+        // not make a double-booking disappear from the count.
+        $conflicts = $conflictService->detectInRange($rangeStart, $rangeEnd);
+        $filters = CalendarQuery::filtersFrom($request);
+
+        $query = Appointment::with([
             'contract:id,contract_number,title,kind,street,zip,city',
             'contract.clients:id,first_name,last_name,company_name',
             'workers:id,first_name,last_name',
@@ -68,17 +60,12 @@ class AppointmentController extends Controller
             'comments.user:id,first_name,last_name',
             'comments.attachments',
             'attachments.user:id,first_name,last_name',
-        ])
-            ->where(function ($q) use ($rangeStart, $rangeEnd) {
-                $q->whereBetween('start_at', [$rangeStart, $rangeEnd])
-                    ->orWhereBetween('end_at', [$rangeStart, $rangeEnd])
-                    ->orWhere(function ($q) use ($rangeStart, $rangeEnd) {
-                        $q->where('start_at', '<', $rangeStart)
-                            ->where('end_at', '>', $rangeEnd);
-                    });
-            })
-            ->orderBy('start_at')
-            ->get();
+        ]);
+
+        CalendarQuery::inRange($query, $rangeStart, $rangeEnd);
+        CalendarQuery::applyFilters($query, $filters, array_keys($conflicts));
+
+        $appointments = $query->orderBy('start_at')->get();
 
         $contracts = Contract::with('clients:id,first_name,last_name,company_name')
             ->orderBy('title')
@@ -100,12 +87,18 @@ class AppointmentController extends Controller
             'employees' => $employees,
             'statuses' => $statuses,
             'clients' => $clients,
+            'checklistTemplates' => ChecklistTemplate::ordered()->get(['id', 'name', 'kind', 'items']),
             'currentDate' => $date->toDateString(),
             'view' => $view,
+            'density' => CalendarQuery::densityFrom($request),
             'showWeekends' => $showWeekends,
             'startHour' => $startHour,
             'endHour' => $endHour,
             'openAppointmentId' => $openAppointmentId,
+            'filters' => $filters,
+            'conflicts' => (object) $conflicts,
+            'conflictCount' => count($conflicts),
+            'totals' => CalendarQuery::totals($appointments, $rangeStart, $rangeEnd),
         ]);
     }
 
@@ -165,7 +158,7 @@ class AppointmentController extends Controller
         return back();
     }
 
-    public function update(Request $request, Appointment $appointment)
+    public function update(Request $request, Appointment $appointment, AppointmentSeriesUpdater $series)
     {
         abort_unless($request->user()->hasPermission('appointments.edit'), 403);
 
@@ -180,18 +173,16 @@ class AppointmentController extends Controller
             'checklist' => ['nullable', 'array', 'max:50'],
             'checklist.*.text' => ['required', 'string', 'max:500'],
             'checklist.*.checked' => ['required', 'boolean'],
+            'scope' => ['nullable', Rule::in(AppointmentSeriesUpdater::SCOPES)],
         ]);
 
         $workerIds = $validated['worker_ids'] ?? null;
-        $updateData = collect($validated)->except('worker_ids')->toArray();
+        $scope = $validated['scope'] ?? AppointmentSeriesUpdater::SCOPE_SINGLE;
+        $updateData = collect($validated)->except(['worker_ids', 'scope'])->toArray();
 
         $before = $appointment->workers()->pluck('users.id')->all();
 
-        $appointment->update($updateData);
-
-        if ($workerIds !== null) {
-            $appointment->workers()->sync($workerIds);
-        }
+        $series->apply($appointment, $updateData, $workerIds, $scope);
 
         $this->announce(
             $appointment->fresh(['workers', 'contract']),

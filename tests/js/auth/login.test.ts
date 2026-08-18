@@ -1,11 +1,21 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Login from '@/Pages/Auth/Login.vue';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import { mountComponent, setPageProps } from '../helpers';
 
+// GuestLayout stamps the current year into its footer, so the committed markup
+// would go stale on 1 January. Freeze the clock for every test in this file.
+const FROZEN_NOW = new Date('2026-04-08T12:00:00');
+
 describe('Login screen', () => {
     beforeEach(() => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(FROZEN_NOW);
         setPageProps({ translations: {} });
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
     });
 
     it('renders email and password fields with correct autocomplete hints', () => {
@@ -71,7 +81,13 @@ describe('Login screen', () => {
 
 describe('GuestLayout', () => {
     beforeEach(() => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(FROZEN_NOW);
         setPageProps({ translations: {} });
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
     });
 
     it('renders the navy brand panel alongside the form', () => {

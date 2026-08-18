@@ -28,6 +28,7 @@ class Client extends Model
         'phone',
         'email',
         'notes',
+        'access_notes',
         'user_id',
         'latitude',
         'longitude',

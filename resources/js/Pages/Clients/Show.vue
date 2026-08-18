@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/Components/ui/tabs';
+import { Head } from '@inertiajs/vue3';
 import { Badge } from '@/Components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/Components/ui/tabs';
+import { AccessNotesCard, NextAppointmentCard, RecordTimeline, SeriesCard } from '@/Components/record';
 import { useTrans } from '@/lib/use-trans';
-import type { Client, Contract, Appointment, ActivityLog, ClientStats, ClientComment } from '@/types';
+import type { Appointment, Client, ClientFacts, Contract, TimelineEvent } from '@/types';
+import ClientIdentityHeader from './partials/ClientIdentityHeader.vue';
 import ClientOverview from './partials/ClientOverview.vue';
 import ClientContracts from './partials/ClientContracts.vue';
 import ClientAppointments from './partials/ClientAppointments.vue';
-import ClientActivity from './partials/ClientActivity.vue';
 
 const { t } = useTrans();
 
@@ -17,9 +18,8 @@ defineProps<{
     contracts: Contract[];
     upcomingAppointments: Appointment[];
     pastAppointments: Appointment[];
-    recentActivity: ActivityLog[];
-    recentComments: ClientComment[];
-    stats: ClientStats;
+    timeline: TimelineEvent[];
+    facts: ClientFacts;
 }>();
 </script>
 
@@ -27,58 +27,57 @@ defineProps<{
     <Head :title="client.name" />
 
     <AuthenticatedLayout>
-        <template #header>
-            <div class="flex items-center gap-3">
-                <Link :href="route('clients.index')" class="text-muted-foreground hover:text-foreground">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                </Link>
-                <div>
-                    <h2 class="text-xl font-semibold leading-tight text-foreground">
-                        {{ client.name }}
-                    </h2>
-                    <p v-if="client.company_name" class="mt-0.5 text-sm text-muted-foreground">
-                        {{ client.company_name }}
-                    </p>
+        <div class="space-y-4">
+            <ClientIdentityHeader :client="client" :facts="facts" />
+
+            <div class="grid gap-4 lg:grid-cols-3">
+                <div class="lg:col-span-2">
+                    <Tabs default-value="timeline">
+                        <TabsList class="mb-4">
+                            <TabsTrigger value="timeline">{{ t('History') }}</TabsTrigger>
+                            <TabsTrigger value="overview">{{ t('Overview') }}</TabsTrigger>
+                            <TabsTrigger value="contracts">
+                                {{ t('Contracts') }}
+                                <Badge v-if="facts.stats.contracts > 0" variant="secondary" class="ml-1.5">
+                                    {{ facts.stats.contracts }}
+                                </Badge>
+                            </TabsTrigger>
+                            <TabsTrigger value="appointments">
+                                {{ t('Appointments') }}
+                                <Badge v-if="facts.stats.appointments > 0" variant="secondary" class="ml-1.5">
+                                    {{ facts.stats.appointments }}
+                                </Badge>
+                            </TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="timeline">
+                            <RecordTimeline
+                                :events="timeline"
+                                :empty-title="t('Nothing has happened yet')"
+                                :empty-description="t('Appointments, comments and documents for this client appear here.')"
+                            />
+                        </TabsContent>
+
+                        <TabsContent value="overview">
+                            <ClientOverview :client="client" />
+                        </TabsContent>
+
+                        <TabsContent value="contracts">
+                            <ClientContracts :contracts="contracts" />
+                        </TabsContent>
+
+                        <TabsContent value="appointments">
+                            <ClientAppointments :upcoming="upcomingAppointments" :past="pastAppointments" />
+                        </TabsContent>
+                    </Tabs>
+                </div>
+
+                <div class="space-y-4">
+                    <NextAppointmentCard :appointment="facts.next_appointment" />
+                    <SeriesCard :series="facts.series" />
+                    <AccessNotesCard :notes="facts.access_notes" />
                 </div>
             </div>
-        </template>
-
-        <Tabs default-value="overview">
-            <TabsList class="mb-4">
-                <TabsTrigger value="overview">{{ t('Overview') }}</TabsTrigger>
-                <TabsTrigger value="contracts">
-                    {{ t('Contracts') }}
-                    <Badge v-if="stats.totalContracts > 0" variant="secondary" class="ml-1.5">
-                        {{ stats.totalContracts }}
-                    </Badge>
-                </TabsTrigger>
-                <TabsTrigger value="appointments">
-                    {{ t('Appointments') }}
-                    <Badge v-if="stats.totalAppointments > 0" variant="secondary" class="ml-1.5">
-                        {{ stats.totalAppointments }}
-                    </Badge>
-                </TabsTrigger>
-                <TabsTrigger value="activity">{{ t('Activity') }}</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="overview">
-                <ClientOverview :client="client" :stats="stats" />
-            </TabsContent>
-
-            <TabsContent value="contracts">
-                <ClientContracts :contracts="contracts" />
-            </TabsContent>
-
-            <TabsContent value="appointments">
-                <ClientAppointments
-                    :upcoming="upcomingAppointments"
-                    :past="pastAppointments"
-                />
-            </TabsContent>
-
-            <TabsContent value="activity">
-                <ClientActivity :activities="recentActivity" :comments="recentComments" />
-            </TabsContent>
-        </Tabs>
+        </div>
     </AuthenticatedLayout>
 </template>

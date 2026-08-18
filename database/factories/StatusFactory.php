@@ -32,7 +32,7 @@ class StatusFactory extends Factory
     public function readyToInvoice(): static
     {
         return $this->state(fn () => [
-            'name' => 'Für Fakturierung bereit',
+            'name' => 'Bereit zur Abrechnung',
             'color' => '#22C55E',
             'stage' => Status::STAGE_READY_TO_INVOICE,
             'sort_order' => 5,

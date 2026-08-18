@@ -2,62 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Appointment;
 use App\Models\Permission;
 use App\Models\StaffRole;
 use App\Models\User;
-use Carbon\Carbon;
+use App\Queries\EmployeeListQuery;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 
 class EmployeeController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, EmployeeListQuery $list)
     {
-        $request->validate([
-            'search' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        $companyId = $request->user()->company_id;
-        $search = $request->input('search');
-
-        $paginated = User::where('role', User::ROLE_EMPLOYEE)
-            ->where('company_id', $companyId)
-            ->when($search, function ($q) use ($search) {
-                $q->where(function ($q) use ($search) {
-                    $q->where('first_name', 'like', "%{$search}%")
-                        ->orWhere('last_name', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%");
-                });
-            })
-            ->with(['permissions', 'staffRole'])
-            ->orderBy('last_name')
-            ->orderBy('first_name')
-            ->paginate(20)
-            ->withQueryString();
-
-        $workload = $this->weeklyWorkload($companyId);
-
-        $paginated->getCollection()->transform(fn (User $user) => [
-            'id' => $user->id,
-            'first_name' => $user->first_name,
-            'last_name' => $user->last_name,
-            'name' => $user->name,
-            'email' => $user->email,
-            'permissions' => $user->permissionKeys(),
-            'staff_role' => $user->staffRole ? [
-                'id' => $user->staffRole->id,
-                'slug' => $user->staffRole->slug,
-                'name' => $user->staffRole->name,
-            ] : null,
-            'has_custom_permissions' => $user->hasCustomPermissions(),
-            'appointments_this_week' => $workload[$user->id]['count'] ?? 0,
-            'utilisation' => $workload[$user->id]['utilisation'] ?? 0,
-        ]);
+        $filters = $request->validate(EmployeeListQuery::rules());
 
         return Inertia::render('Employees/Index', [
-            'employees' => $paginated,
+            'employees' => $list->paginate($filters, $request->user()->company_id),
             'availablePermissions' => Permission::ALL,
             'roles' => StaffRole::ordered()->get()->map(fn (StaffRole $r) => [
                 'id' => $r->id,
@@ -66,7 +26,12 @@ class EmployeeController extends Controller
                 'description' => $r->description,
                 'permissions' => $r->permissions,
             ]),
-            'filters' => ['search' => $search],
+            'filters' => [
+                'search' => $filters['search'] ?? null,
+                'sort' => $filters['sort'] ?? EmployeeListQuery::DEFAULT_SORT,
+                'dir' => $filters['dir'] ?? 'asc',
+                'role' => $filters['role'] ?? null,
+            ],
         ]);
     }
 
@@ -95,12 +60,24 @@ class EmployeeController extends Controller
         return back();
     }
 
+    /**
+     * User has no company global scope, so route-model binding happily resolves
+     * an account from another tenant. Every endpoint that writes to a bound user
+     * must confirm it belongs to the caller's company first.
+     */
+    private function guardSameCompany(Request $request, User $user): void
+    {
+        abort_unless($user->company_id === $request->user()->company_id, 403);
+    }
+
     public function updatePermissions(Request $request, User $user)
     {
         $validated = $request->validate([
             'permissions' => ['present', 'array'],
             'permissions.*' => ['string', 'in:'.implode(',', array_keys(Permission::ALL))],
         ]);
+
+        $this->guardSameCompany($request, $user);
 
         if ($user->isOwner()) {
             abort(403, 'Cannot modify owner permissions.');
@@ -118,6 +95,8 @@ class EmployeeController extends Controller
             'staff_role_id' => ['required', 'integer', 'exists:staff_roles,id'],
         ]);
 
+        $this->guardSameCompany($request, $user);
+
         if ($user->isOwner()) {
             abort(403, 'Cannot modify owner permissions.');
         }
@@ -130,37 +109,10 @@ class EmployeeController extends Controller
         return back();
     }
 
-    /**
-     * Appointments per employee in the current week, plus a rough utilisation
-     * figure against a 40 hour week. Answers "who has room on Thursday?".
-     *
-     * @return array<int, array{count: int, utilisation: int}>
-     */
-    private function weeklyWorkload(int $companyId): array
+    public function destroy(Request $request, User $user)
     {
-        $start = Carbon::now()->startOfWeek(Carbon::MONDAY);
-        $end = Carbon::now()->endOfWeek(Carbon::SUNDAY);
+        $this->guardSameCompany($request, $user);
 
-        $rows = Appointment::query()
-            ->where('company_id', $companyId)
-            ->whereBetween('start_at', [$start, $end])
-            ->join('appointment_user', 'appointment_user.appointment_id', '=', 'appointments.id')
-            ->groupBy('appointment_user.user_id')
-            ->selectRaw('appointment_user.user_id as uid, count(*) as total, sum(timestampdiff(minute, start_at, end_at)) as minutes')
-            ->get();
-
-        $capacityMinutes = 40 * 60;
-
-        return $rows->mapWithKeys(fn ($row) => [
-            (int) $row->uid => [
-                'count' => (int) $row->total,
-                'utilisation' => (int) min(100, round(((int) $row->minutes / $capacityMinutes) * 100)),
-            ],
-        ])->all();
-    }
-
-    public function destroy(User $user)
-    {
         if ($user->isOwner()) {
             abort(403, 'Cannot delete owner accounts.');
         }

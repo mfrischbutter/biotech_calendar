@@ -58,9 +58,14 @@ class User extends Authenticatable
         return $this->belongsTo(Company::class);
     }
 
+    /**
+     * Ordered by key so the set is deterministic regardless of storage engine —
+     * insertion order differs between MySQL and SQLite and would otherwise leak
+     * into golden files.
+     */
     public function permissions(): HasMany
     {
-        return $this->hasMany(Permission::class);
+        return $this->hasMany(Permission::class)->orderBy('permission');
     }
 
     public function clients(): HasMany

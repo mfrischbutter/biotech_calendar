@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
-import { Button } from '@/Components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Label } from '@/Components/ui/label';
 import { Switch } from '@/Components/ui/switch';
 import {
@@ -10,6 +10,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/Components/ui/select';
+import StickySaveBar from '@/Components/StickySaveBar.vue';
 import { useTrans } from '@/lib/use-trans';
 import type { CalendarSettings } from '@/types';
 
@@ -37,67 +38,73 @@ function submit() {
         end_hour: parseInt(data.end_hour),
     })).put(route('settings.calendar.update'), {
         preserveScroll: true,
+        onSuccess: () => form.defaults(),
     });
 }
 </script>
 
 <template>
-    <form @submit.prevent="submit" class="space-y-6">
-        <div>
-            <h3 class="text-base font-medium text-foreground">{{ t('Calendar Settings') }}</h3>
-            <p class="text-sm text-muted-foreground mt-1">{{ t('Configure your calendar display preferences.') }}</p>
-        </div>
+    <form id="calendar-settings-form" class="space-y-6" @submit.prevent="submit">
+        <Card>
+            <CardHeader>
+                <CardTitle class="text-base">{{ t('Calendar Settings') }}</CardTitle>
+                <CardDescription>{{ t('Configure your calendar display preferences.') }}</CardDescription>
+            </CardHeader>
+            <CardContent class="space-y-6">
+                <div class="flex items-center justify-between gap-4">
+                    <div>
+                        <Label>{{ t('Show Weekends') }}</Label>
+                        <p class="text-sm text-muted-foreground">{{ t('Display Saturday and Sunday in the calendar.') }}</p>
+                    </div>
+                    <Switch :checked="form.show_weekends" @update:checked="(v: boolean) => form.show_weekends = v" />
+                </div>
 
-        <div class="flex items-center justify-between">
-            <div>
-                <Label>{{ t('Show Weekends') }}</Label>
-                <p class="text-sm text-muted-foreground">{{ t('Display Saturday and Sunday in the calendar.') }}</p>
-            </div>
-            <Switch v-model:checked="form.show_weekends" />
-        </div>
+                <div class="grid gap-4 sm:grid-cols-[10rem_10rem]">
+                    <div class="space-y-2">
+                        <Label>{{ t('Start Hour') }}</Label>
+                        <Select v-model="form.start_hour">
+                            <SelectTrigger>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem
+                                    v-for="opt in hourOptions.filter(o => parseInt(o.value) < parseInt(form.end_hour))"
+                                    :key="opt.value"
+                                    :value="opt.value"
+                                >
+                                    {{ opt.label }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div class="space-y-2">
+                        <Label>{{ t('End Hour') }}</Label>
+                        <Select v-model="form.end_hour">
+                            <SelectTrigger>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem
+                                    v-for="opt in hourOptions.filter(o => parseInt(o.value) > parseInt(form.start_hour))"
+                                    :key="opt.value"
+                                    :value="opt.value"
+                                >
+                                    {{ opt.label }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <p v-if="form.errors.end_hour" class="text-sm text-destructive">{{ form.errors.end_hour }}</p>
+            </CardContent>
+        </Card>
 
-        <div class="grid grid-cols-2 gap-4">
-            <div class="space-y-2">
-                <Label>{{ t('Start Hour') }}</Label>
-                <Select v-model="form.start_hour">
-                    <SelectTrigger>
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem
-                            v-for="opt in hourOptions.filter(o => parseInt(o.value) < parseInt(form.end_hour))"
-                            :key="opt.value"
-                            :value="opt.value"
-                        >
-                            {{ opt.label }}
-                        </SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-            <div class="space-y-2">
-                <Label>{{ t('End Hour') }}</Label>
-                <Select v-model="form.end_hour">
-                    <SelectTrigger>
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem
-                            v-for="opt in hourOptions.filter(o => parseInt(o.value) > parseInt(form.start_hour))"
-                            :key="opt.value"
-                            :value="opt.value"
-                        >
-                            {{ opt.label }}
-                        </SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-        </div>
-
-        <div class="flex items-center gap-3">
-            <Button type="submit" :disabled="form.processing">
-                {{ form.processing ? t('Saving...') : t('Save') }}
-            </Button>
-            <span v-if="form.recentlySuccessful" class="text-sm text-muted-foreground">{{ t('Saved.') }}</span>
-        </div>
+        <StickySaveBar
+            form="calendar-settings-form"
+            :dirty="form.isDirty"
+            :processing="form.processing"
+            :saved="form.recentlySuccessful"
+            @discard="form.reset()"
+        />
     </form>
 </template>

@@ -4,6 +4,10 @@ import NotificationBell from '@/Components/NotificationBell.vue';
 import { mountComponent, setPageProps } from '../helpers';
 import { inertiaRouterMock } from '../setup';
 
+// The bell renders relative timestamps, so both the assertions and the committed
+// markup depend on "now". Freeze it — only Date, so promises still flush.
+const FROZEN_NOW = new Date('2026-04-08T12:00:00');
+
 function notification(overrides: Record<string, unknown> = {}) {
     return {
         id: 1,
@@ -38,12 +42,15 @@ async function mountBell() {
 
 describe('NotificationBell', () => {
     beforeEach(() => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(FROZEN_NOW);
         setPageProps({ translations: {} });
         inertiaRouterMock.visit.mockClear();
         inertiaRouterMock.post.mockClear();
     });
 
     afterEach(() => {
+        vi.useRealTimers();
         vi.unstubAllGlobals();
     });
 
@@ -153,8 +160,9 @@ describe('NotificationBell', () => {
         await wrapper.find('button').trigger('click');
         await flushPromises();
 
-        // Relative timestamps drift; freeze the rendered value before snapshotting.
-        const html = wrapper.html().replace(/>vor [^<]+</g, '>RELATIVE_TIME<');
-        expect(html).toMatchSnapshot();
+        // The clock is frozen for this file, so the relative timestamp the bell
+        // renders is itself part of the committed markup.
+        expect(wrapper.html()).toContain('vor etwa 4 Stunden');
+        expect(wrapper.html()).toMatchSnapshot();
     });
 });

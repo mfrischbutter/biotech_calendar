@@ -33,6 +33,10 @@ class UserFactory extends Factory
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
             'company_id' => Company::factory(),
+            // The column defaults to 'de', but the factory's in-memory model is
+            // never refreshed — leaving it null let SetLocale fall through to
+            // browser detection and render English copy no user ever sees.
+            'locale' => 'de',
         ];
     }
 

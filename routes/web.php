@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\ChecklistTemplateController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\ContractController;
@@ -69,6 +70,14 @@ Route::middleware('auth')->group(function () {
     Route::put('/statuses/{status}', [StatusController::class, 'update'])->name('statuses.update');
     Route::delete('/statuses/{status}', [StatusController::class, 'destroy'])->name('statuses.destroy');
     Route::put('/statuses-reorder', [StatusController::class, 'reorder'])->name('statuses.reorder');
+
+    // Checklist templates (per service type, applied from the appointment form)
+    Route::post('/checklist-templates', [ChecklistTemplateController::class, 'store'])
+        ->name('checklist-templates.store');
+    Route::put('/checklist-templates/{template}', [ChecklistTemplateController::class, 'update'])
+        ->name('checklist-templates.update');
+    Route::delete('/checklist-templates/{template}', [ChecklistTemplateController::class, 'destroy'])
+        ->name('checklist-templates.destroy');
 });
 
 Route::middleware(['auth', 'owner'])->group(function () {

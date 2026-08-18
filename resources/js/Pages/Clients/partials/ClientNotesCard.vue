@@ -4,6 +4,7 @@ import { useForm } from '@inertiajs/vue3';
 import { Pencil, X } from 'lucide-vue-next';
 import { Button } from '@/Components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
+import { Label } from '@/Components/ui/label';
 import { Textarea } from '@/Components/ui/textarea';
 import { useTrans } from '@/lib/use-trans';
 import type { Client } from '@/types';
@@ -18,10 +19,12 @@ const editing = ref(false);
 
 const form = useForm({
     notes: props.client.notes ?? '',
+    access_notes: props.client.access_notes ?? '',
 });
 
 function resetForm() {
     form.notes = props.client.notes ?? '';
+    form.access_notes = props.client.access_notes ?? '';
     form.clearErrors();
 }
 
@@ -53,6 +56,7 @@ function submit() {
         longitude: props.client.longitude,
         place_id: props.client.place_id,
         notes: form.notes || null,
+        access_notes: form.access_notes || null,
     };
 
     form.transform(() => payload).put(route('clients.update', props.client.id), {
@@ -67,7 +71,7 @@ function submit() {
 <template>
     <Card>
         <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-4">
-            <CardTitle class="text-base">{{ t('Notes') }}</CardTitle>
+            <CardTitle class="text-base">{{ t('Notes & access') }}</CardTitle>
             <div class="flex items-center gap-2">
                 <template v-if="!editing">
                     <Button variant="ghost" size="sm" @click="startEdit">
@@ -86,18 +90,41 @@ function submit() {
                 </template>
             </div>
         </CardHeader>
-        <CardContent>
+        <CardContent class="space-y-4">
             <template v-if="!editing">
-                <p v-if="client.notes" class="whitespace-pre-wrap text-sm text-muted-foreground">{{ client.notes }}</p>
-                <p v-else class="text-sm text-muted-foreground">{{ t('No notes yet') }}</p>
+                <div>
+                    <p class="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">{{ t('Notes') }}</p>
+                    <p v-if="client.notes" class="whitespace-pre-wrap text-sm text-muted-foreground">{{ client.notes }}</p>
+                    <p v-else class="text-sm text-muted-foreground">{{ t('No notes yet') }}</p>
+                </div>
+                <div>
+                    <p class="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">{{ t('Site access') }}</p>
+                    <p v-if="client.access_notes" class="whitespace-pre-wrap text-sm text-muted-foreground">
+                        {{ client.access_notes }}
+                    </p>
+                    <p v-else class="text-sm text-muted-foreground">{{ t('No access notes yet') }}</p>
+                </div>
             </template>
-            <form v-else @submit.prevent="submit">
-                <Textarea
-                    id="notes-textarea"
-                    v-model="form.notes"
-                    :placeholder="t('Additional information...')"
-                    rows="4"
-                />
+            <form v-else class="space-y-4" @submit.prevent="submit">
+                <div class="space-y-1.5">
+                    <Label for="notes-textarea">{{ t('Notes') }}</Label>
+                    <Textarea
+                        id="notes-textarea"
+                        v-model="form.notes"
+                        :placeholder="t('Additional information...')"
+                        rows="4"
+                    />
+                </div>
+                <div class="space-y-1.5">
+                    <Label for="access-notes-textarea">{{ t('Site access') }}</Label>
+                    <Textarea
+                        id="access-notes-textarea"
+                        v-model="form.access_notes"
+                        :placeholder="t('Key safe, gate code, where to report on arrival...')"
+                        rows="3"
+                    />
+                    <p class="text-xs text-muted-foreground">{{ t('Shown to the technician on the detail page.') }}</p>
+                </div>
             </form>
         </CardContent>
     </Card>

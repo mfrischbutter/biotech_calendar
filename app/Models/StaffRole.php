@@ -82,7 +82,7 @@ class StaffRole extends Model
             [
                 'slug' => self::SLUG_OFFICE,
                 'name' => 'Büro',
-                'description' => 'Pflegt Kunden und Aufträge und kümmert sich um die Fakturierung.',
+                'description' => 'Pflegt Kunden und Aufträge und kümmert sich um die Abrechnung.',
                 'permissions' => [
                     'dashboard.view',
                     'appointments.view', 'appointments.create', 'appointments.edit',

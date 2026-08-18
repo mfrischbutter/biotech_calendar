@@ -1,0 +1,26 @@
+{
+    "data": [
+        {
+            "id": "<id>",
+            "name": "Klaus Bergmann",
+            "first_name": "Klaus",
+            "last_name": "Bergmann",
+            "salutation": "Herr",
+            "company_name": "Baeckerei Bergmann",
+            "billing_name": "Bergmann GmbH",
+            "street": "Hauptstrasse 1",
+            "zip": "80331",
+            "city": "München",
+            "phone": "089 123456",
+            "email": "klaus@bergmann.de",
+            "open_contracts": 1,
+            "next_appointment": "2026-04-09T09:00:00.000000Z"
+        }
+    ],
+    "filters": {
+        "search": null,
+        "sort": "name",
+        "dir": "asc",
+        "view": "all"
+    }
+}

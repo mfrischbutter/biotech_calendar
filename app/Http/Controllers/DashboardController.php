@@ -7,6 +7,7 @@ use App\Models\Appointment;
 use App\Models\Notification;
 use App\Models\Status;
 use App\Models\User;
+use App\Queries\DashboardQuery;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -21,6 +22,8 @@ use Inertia\Inertia;
  */
 class DashboardController extends Controller
 {
+    public function __construct(private DashboardQuery $dashboard) {}
+
     public function __invoke(Request $request)
     {
         $user = $request->user();
@@ -31,8 +34,8 @@ class DashboardController extends Controller
             'greetingName' => $user->first_name,
             'attention' => $this->attention($user, $now),
             'schedule' => $this->todaysSchedule($now),
-            'pipeline' => $this->pipeline(),
-            'workload' => $this->workload($now),
+            'pipeline' => $this->dashboard->pipeline($user->company_id),
+            'workload' => $this->dashboard->workload($user->company_id, $now),
             'notifications' => $this->attentionNotifications($user),
             'recentActivity' => $this->recentActivity(),
         ]);
@@ -74,7 +77,7 @@ class DashboardController extends Controller
             'unassigned' => $unassigned,
             'overdue' => $overdue,
             'readyToInvoice' => $readyToInvoice,
-            'utilisation' => $this->averageUtilisation($now),
+            'utilisation' => $this->dashboard->averageUtilisation($user->company_id, $now),
             'conflicts' => Notification::forUser($user->id)
                 ->where('type', Notification::TYPE_CONFLICT)
                 ->unread()
@@ -155,72 +158,6 @@ class DashboardController extends Controller
         }
 
         return $appointment->end_at?->lt($now) ? 'past' : 'upcoming';
-    }
-
-    /**
-     * Counts per pipeline stage — the same data the board view uses.
-     *
-     * @return array<int, array{stage: string, count: int}>
-     */
-    private function pipeline(): array
-    {
-        $counts = Appointment::query()
-            ->join('statuses', 'statuses.id', '=', 'appointments.status_id')
-            ->groupBy('statuses.stage')
-            ->selectRaw('statuses.stage as stage, count(*) as total')
-            ->pluck('total', 'stage');
-
-        return collect(Status::PIPELINE_STAGES)
-            ->map(fn (string $stage) => [
-                'stage' => $stage,
-                'count' => (int) ($counts[$stage] ?? 0),
-            ])
-            ->all();
-    }
-
-    /**
-     * Utilisation per technician for the current week, against a 40h week.
-     *
-     * @return array<int, array{id: int, name: string, appointments: int, percent: int}>
-     */
-    private function workload(Carbon $now): array
-    {
-        $start = $now->copy()->startOfWeek(Carbon::MONDAY);
-        $end = $now->copy()->endOfWeek(Carbon::SUNDAY);
-        $capacity = 40 * 60;
-
-        $rows = Appointment::query()
-            ->whereBetween('start_at', [$start, $end])
-            ->join('appointment_user', 'appointment_user.appointment_id', '=', 'appointments.id')
-            ->groupBy('appointment_user.user_id')
-            ->selectRaw('appointment_user.user_id as uid, count(*) as total, sum(timestampdiff(minute, start_at, end_at)) as minutes')
-            ->get()
-            ->keyBy('uid');
-
-        return User::query()
-            ->where('company_id', auth()->user()->company_id)
-            ->orderBy('first_name')
-            ->get()
-            ->map(fn (User $u) => [
-                'id' => $u->id,
-                'name' => $u->name,
-                'appointments' => (int) ($rows[$u->id]->total ?? 0),
-                'percent' => (int) min(100, round((((int) ($rows[$u->id]->minutes ?? 0)) / $capacity) * 100)),
-            ])
-            ->filter(fn (array $row) => $row['appointments'] > 0)
-            ->values()
-            ->all();
-    }
-
-    private function averageUtilisation(Carbon $now): int
-    {
-        $rows = $this->workload($now);
-
-        if ($rows === []) {
-            return 0;
-        }
-
-        return (int) round(collect($rows)->avg('percent'));
     }
 
     /** @return array<int, array<string, mixed>> */
