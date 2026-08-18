@@ -7,7 +7,10 @@ use App\Models\Appointment;
 use App\Models\Notification;
 use App\Models\Status;
 use App\Models\User;
+use App\Queries\CalendarQuery;
+use App\Queries\ContractListQuery;
 use App\Queries\DashboardQuery;
+use App\Services\ScheduleConflictService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -22,7 +25,10 @@ use Inertia\Inertia;
  */
 class DashboardController extends Controller
 {
-    public function __construct(private DashboardQuery $dashboard) {}
+    public function __construct(
+        private DashboardQuery $dashboard,
+        private ScheduleConflictService $conflicts,
+    ) {}
 
     public function __invoke(Request $request)
     {
@@ -34,7 +40,7 @@ class DashboardController extends Controller
             'greetingName' => $user->first_name,
             'attention' => $this->attention($user, $now),
             'schedule' => $this->todaysSchedule($now),
-            'pipeline' => $this->dashboard->pipeline($user->company_id),
+            'pipeline' => $this->dashboard->pipeline(),
             'workload' => $this->dashboard->workload($user->company_id, $now),
             'notifications' => $this->attentionNotifications($user),
             'recentActivity' => $this->recentActivity(),
@@ -42,46 +48,31 @@ class DashboardController extends Controller
     }
 
     /**
-     * The four numbers worth acting on, each with a link to the filtered list.
+     * The five numbers worth acting on. Each one is counted the way the screen
+     * it links to counts: the two job tiles against the contract list's tabs,
+     * the conflict tile against the calendar week the link actually opens.
+     * A tile whose number does not survive the click is worse than no tile.
      *
      * @return array<string, mixed>
      */
     private function attention(User $user, Carbon $now): array
     {
-        $todayStart = $now->copy()->startOfDay();
-        $weekEnd = $now->copy()->endOfWeek(Carbon::SUNDAY);
+        $jobs = $this->dashboard->jobCounts();
 
         $unassigned = Appointment::query()
-            ->whereBetween('start_at', [$todayStart, $weekEnd])
+            ->whereBetween('start_at', [$now->copy()->startOfDay(), $now->copy()->endOfWeek(Carbon::SUNDAY)])
             ->whereDoesntHave('workers')
             ->count();
 
-        // Work that has already happened but never reached a finished status.
-        $overdue = Appointment::query()
-            ->where('end_at', '<', $now)
-            ->where('start_at', '>', $now->copy()->subMonths(3))
-            ->where(fn ($q) => $q
-                ->whereNull('status_id')
-                ->orWhereHas('status', fn ($s) => $s->whereNotIn('stage', [
-                    Status::STAGE_READY_TO_INVOICE,
-                    Status::STAGE_INVOICED,
-                    Status::STAGE_CANCELLED,
-                ])))
-            ->count();
-
-        $readyToInvoice = Appointment::query()
-            ->whereHas('status', fn ($s) => $s->where('stage', Status::STAGE_READY_TO_INVOICE))
-            ->count();
+        // The calendar link lands on its default view, so count that same window.
+        [$from, $to] = CalendarQuery::range(CalendarQuery::DEFAULT_VIEW, $now);
 
         return [
             'unassigned' => $unassigned,
-            'overdue' => $overdue,
-            'readyToInvoice' => $readyToInvoice,
+            'overdue' => $jobs[ContractListQuery::VIEW_OVERDUE] ?? 0,
+            'readyToInvoice' => $jobs[Status::STAGE_READY_TO_INVOICE] ?? 0,
             'utilisation' => $this->dashboard->averageUtilisation($user->company_id, $now),
-            'conflicts' => Notification::forUser($user->id)
-                ->where('type', Notification::TYPE_CONFLICT)
-                ->unread()
-                ->count(),
+            'conflicts' => count($this->conflicts->detectInRange($from, $to)),
         ];
     }
 

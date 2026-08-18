@@ -14,19 +14,34 @@ export const pageState: { props: Record<string, unknown> } = {
     },
 };
 
-// Ziggy's global `route()` helper is installed as a Vue plugin at runtime;
-// in tests we stub it to a predictable string so assertions stay readable.
+/*
+ * Ziggy's global `route()` helper is installed as a Vue plugin at runtime; in
+ * tests we stub it to a predictable string so assertions stay readable.
+ *
+ * Named parameters keep their names. The stub used to join the values alone,
+ * so `{ stage: 'ready_to_invoice' }` and `{ view: 'ready_to_invoice' }` — one
+ * of which the target screen ignores — produced the same href, and a whole
+ * dashboard of dead links could not be caught by a test.
+ */
 const routeStub = (name?: string, params?: unknown) => {
     if (name === undefined) {
         return { current: (_pattern?: string) => false };
     }
-    const suffix =
-        params === undefined || params === null
-            ? ''
-            : typeof params === 'object'
-              ? `/${Object.values(params as Record<string, unknown>).join('/')}`
-              : `/${String(params)}`;
-    return `/${name.replace(/\./g, '/')}${suffix}`;
+    const path = `/${name.replace(/\./g, '/')}`;
+
+    if (params === undefined || params === null) {
+        return path;
+    }
+
+    if (typeof params !== 'object') {
+        return `${path}/${String(params)}`;
+    }
+
+    const query = Object.entries(params as Record<string, unknown>)
+        .map(([key, value]) => `${key}=${encodeURIComponent(String(value))}`)
+        .join('&');
+
+    return query === '' ? path : `${path}?${query}`;
 };
 
 // `route()` is called both as `route('x')` and as `route().current('x')`.

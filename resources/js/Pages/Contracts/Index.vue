@@ -17,7 +17,7 @@ import ConfirmDeleteDialog from '@/Components/ConfirmDeleteDialog.vue';
 import { DataTable, DataTableRowActions, DataTableToolbar } from '@/Components/DataTable';
 import ContractFormDrawer from './partials/ContractFormDrawer.vue';
 import ContractPeek from './partials/ContractPeek.vue';
-import { STAGE_LABELS, STAGE_PILL } from '@/lib/pipeline-stages';
+import { CONTRACT_VIEW_LABELS, STAGE_LABELS, STAGE_PILL } from '@/lib/pipeline-stages';
 import { useBulkDelete } from '@/lib/use-bulk-delete';
 import { useColumnVisibility } from '@/lib/use-column-visibility';
 import { useListQuery } from '@/lib/use-list-query';
@@ -56,7 +56,7 @@ const columns: DataTableColumn[] = [
 const views = computed<SavedView[]>(() =>
     props.stageCounts.map((entry) => ({
         key: entry.stage,
-        label: entry.stage === 'all' ? t('All contracts') : t(STAGE_LABELS[entry.stage as keyof typeof STAGE_LABELS]),
+        label: t(CONTRACT_VIEW_LABELS[entry.stage] ?? entry.stage),
         count: entry.count,
     })),
 );

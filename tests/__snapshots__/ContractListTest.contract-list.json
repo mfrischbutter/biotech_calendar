@@ -50,6 +50,10 @@
         {
             "stage": "invoiced",
             "count": 0
+        },
+        {
+            "stage": "overdue",
+            "count": 0
         }
     ],
     "filters": {

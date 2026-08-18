@@ -2,36 +2,51 @@
 
 namespace App\Queries;
 
-use App\Models\Appointment;
 use App\Models\Status;
 use App\Models\User;
 use Carbon\Carbon;
 
 /**
- * The dashboard's two aggregate strips: appointments per pipeline stage, and
- * booked hours per technician this week.
+ * The dashboard's two aggregate strips: jobs per pipeline stage, and booked
+ * hours per technician this week.
  *
  * Both live here rather than in the controller so the controller stays a
  * validate → delegate → respond shell, matching the list screens.
  */
 class DashboardQuery
 {
-    public function __construct(private WorkloadQuery $workload) {}
+    /** @var array<string, int>|null */
+    private ?array $jobCounts = null;
+
+    public function __construct(
+        private WorkloadQuery $workload,
+        private ContractListQuery $contracts,
+    ) {}
 
     /**
-     * Counts per pipeline stage — the same data the board view uses.
+     * How many jobs sit in each tab of the contract list, keyed by view.
+     *
+     * The strip counted appointments while the list it links to counts
+     * contracts, so a stage reading "47" opened a list of 40 rows. Both numbers
+     * now come from the one query the list itself uses, and cannot drift.
+     *
+     * @return array<string, int>
+     */
+    public function jobCounts(): array
+    {
+        return $this->jobCounts ??= collect($this->contracts->stageCounts([]))
+            ->pluck('count', 'stage')
+            ->all();
+    }
+
+    /**
+     * Jobs per pipeline stage, in pipeline order.
      *
      * @return array<int, array{stage: string, count: int}>
      */
-    public function pipeline(int $companyId): array
+    public function pipeline(): array
     {
-        $counts = Appointment::query()
-            ->where('appointments.company_id', $companyId)
-            ->join('statuses', 'statuses.id', '=', 'appointments.status_id')
-            ->groupBy('statuses.stage')
-            ->select('statuses.stage')
-            ->selectRaw('count(*) as total')
-            ->pluck('total', 'stage');
+        $counts = $this->jobCounts();
 
         return collect(Status::PIPELINE_STAGES)
             ->map(fn (string $stage) => [

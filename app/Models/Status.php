@@ -56,6 +56,16 @@ class Status extends Model
         self::STAGE_INVOICED,
     ];
 
+    /**
+     * Stages nobody has to come back to: finished, or called off. Everything
+     * else still owes somebody an action once the appointment is over.
+     */
+    public const SETTLED_STAGES = [
+        self::STAGE_READY_TO_INVOICE,
+        self::STAGE_INVOICED,
+        self::STAGE_CANCELLED,
+    ];
+
     public function appointments(): HasMany
     {
         return $this->hasMany(Appointment::class);

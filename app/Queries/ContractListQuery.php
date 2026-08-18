@@ -22,6 +22,13 @@ class ContractListQuery
 {
     public const VIEW_ALL = 'all';
 
+    /**
+     * Not a stage but a saved view: jobs with a visit that is over and still
+     * unsettled. It is the one exception the dashboard can hand somebody, and a
+     * calendar week is the wrong container for a three-month backlog.
+     */
+    public const VIEW_OVERDUE = 'overdue';
+
     /** Sort key accepted from the URL → the column it maps to. */
     public const SORTS = [
         'contract_number' => 'contract_number',
@@ -34,13 +41,13 @@ class ContractListQuery
     public const DEFAULT_SORT = 'contract_number';
 
     /**
-     * Stage tabs available on the list: "all" plus every pipeline stage.
+     * The tabs on the list: "all", the pipeline in order, then the exception.
      *
      * @return array<int, string>
      */
     public static function views(): array
     {
-        return [self::VIEW_ALL, ...Status::PIPELINE_STAGES];
+        return [self::VIEW_ALL, ...Status::PIPELINE_STAGES, self::VIEW_OVERDUE];
     }
 
     /**
@@ -213,6 +220,14 @@ class ContractListQuery
 
     private function applyView(Builder $query, string $view): void
     {
+        if ($view === self::VIEW_OVERDUE) {
+            // One contract, however many of its visits are hanging: the tab
+            // counts jobs to chase, not appointments.
+            $query->whereHas('appointments', fn (Builder $q) => $q->overdue());
+
+            return;
+        }
+
         if ($view === self::VIEW_ALL || ! in_array($view, Status::PIPELINE_STAGES, true)) {
             return;
         }

@@ -3,6 +3,9 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToCompany;
+use Carbon\Carbon;
+use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -40,6 +43,30 @@ class Appointment extends Model
     }
 
     public const RECURRENCE_TYPES = ['weekly', 'biweekly', 'monthly', 'custom'];
+
+    /** How far back an unfinished appointment still counts as actionable. */
+    public const OVERDUE_LOOKBACK_MONTHS = 3;
+
+    /**
+     * Work that has already happened but never reached a settled status.
+     *
+     * The dashboard tile and the contract list's "Überfällig" view are the same
+     * question asked twice, so the predicate lives here rather than in both.
+     *
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    public function scopeOverdue(Builder $query, ?CarbonInterface $now = null): Builder
+    {
+        $now = $now ? $now->copy() : Carbon::now();
+
+        return $query
+            ->where('appointments.end_at', '<', $now)
+            ->where('appointments.start_at', '>', $now->copy()->subMonths(self::OVERDUE_LOOKBACK_MONTHS))
+            ->where(fn (Builder $q) => $q
+                ->whereNull('appointments.status_id')
+                ->orWhereHas('status', fn (Builder $s) => $s->whereNotIn('stage', Status::SETTLED_STAGES)));
+    }
 
     public function contract(): BelongsTo
     {

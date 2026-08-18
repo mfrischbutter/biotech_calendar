@@ -8,6 +8,7 @@ use App\Models\Company;
 use App\Models\Contract;
 use App\Models\Status;
 use App\Models\User;
+use App\Queries\ContractListQuery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -58,9 +59,9 @@ class ContractListTest extends TestCase
         return Status::factory()->stage($stage)->create(['company_id' => $this->company->id]);
     }
 
-    private function appointment(Contract $contract, ?Status $status = null, array $workers = []): Appointment
+    private function appointment(Contract $contract, ?Status $status = null, array $workers = [], string $at = '2026-04-09 09:00'): Appointment
     {
-        $appointment = Appointment::factory()->at('2026-04-09 09:00')->create([
+        $appointment = Appointment::factory()->at($at)->create([
             'company_id' => $this->company->id,
             'contract_id' => $contract->id,
             'created_by' => $this->owner->id,
@@ -127,6 +128,32 @@ class ContractListTest extends TestCase
 
         $this->assertSame(['A-1000'], $this->numbers(['view' => Status::STAGE_READY_TO_INVOICE]));
         $this->assertSame(['A-2000'], $this->numbers(['view' => Status::STAGE_ACTIVE]));
+    }
+
+    public function test_the_overdue_view_lists_jobs_whose_visit_is_over_and_still_open(): void
+    {
+        $hanging = $this->contract('A-1000', 'Erstbegehung');
+        $this->appointment($hanging, $this->makeStatus(Status::STAGE_ACTIVE), [], '2026-04-01 09:00');
+
+        $closed = $this->contract('A-2000', 'Nachkontrolle');
+        $this->appointment($closed, $this->makeStatus(Status::STAGE_INVOICED), [], '2026-04-01 09:00');
+
+        $upcoming = $this->contract('A-3000', 'Abschluss');
+        $this->appointment($upcoming, $this->makeStatus(Status::STAGE_ACTIVE), [], '2026-04-20 09:00');
+
+        $this->assertSame(['A-1000'], $this->numbers(['view' => ContractListQuery::VIEW_OVERDUE]));
+    }
+
+    public function test_a_job_with_two_hanging_visits_is_listed_once(): void
+    {
+        $contract = $this->contract('A-1000', 'Erstbegehung');
+        $this->appointment($contract, null, [], '2026-04-01 09:00');
+        $this->appointment($contract, null, [], '2026-04-02 09:00');
+
+        $props = $this->props(['view' => ContractListQuery::VIEW_OVERDUE]);
+
+        $this->assertSame(['A-1000'], collect($props['contracts']['data'])->pluck('contract_number')->all());
+        $this->assertSame(1, $props['contracts']['total']);
     }
 
     public function test_it_reports_a_count_for_every_stage_tab(): void

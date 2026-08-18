@@ -17,7 +17,7 @@ defineProps<{
             <Link
                 v-for="(stage, index) in stages"
                 :key="stage.stage"
-                :href="route('contracts.index', { stage: stage.stage })"
+                :href="route('contracts.index', { view: stage.stage })"
                 class="flex min-w-[10rem] flex-1 items-center gap-3 rounded-lg border bg-card px-4 py-3 transition-shadow hover:shadow-sm"
             >
                 <span class="h-2.5 w-2.5 shrink-0 rounded-full" :class="STAGE_DOT[stage.stage]" />

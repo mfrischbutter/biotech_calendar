@@ -8,6 +8,7 @@ use App\Models\Contract;
 use App\Models\Notification;
 use App\Models\Status;
 use App\Models\User;
+use App\Queries\ContractListQuery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Tests\Concerns\MatchesJsonSnapshots;
@@ -47,9 +48,9 @@ class DashboardTest extends TestCase
         parent::tearDown();
     }
 
-    private function appointment(string $start, int $minutes = 60, ?Status $status = null, array $workers = []): Appointment
+    private function appointment(string $start, int $minutes = 60, ?Status $status = null, array $workers = [], ?Contract $contract = null): Appointment
     {
-        $contract = Contract::factory()->create(['company_id' => $this->company->id]);
+        $contract ??= Contract::factory()->create(['company_id' => $this->company->id]);
 
         $appointment = Appointment::factory()->at($start, $minutes)->create([
             'company_id' => $this->company->id,
@@ -239,38 +240,35 @@ class DashboardTest extends TestCase
         $this->assertSame(1, $this->props()['attention']['overdue']);
     }
 
-    public function test_unread_conflict_notifications_are_counted_as_attention(): void
+    /*
+     * The tile used to count unread conflict *notifications*, which is a
+     * different number from the one the calendar shows when you click it — a
+     * notification survives the clash being resolved, and a clash nobody was
+     * notified about never appeared. It now counts the clashes themselves, in
+     * the same week the link opens.
+     */
+    public function test_conflicts_are_counted_the_way_the_calendar_counts_them(): void
     {
-        $appointment = $this->appointment('2026-04-08 09:00', 60, null, [$this->markus->id]);
+        $this->appointment('2026-04-08 09:00', 60, null, [$this->markus->id]);
+        $this->appointment('2026-04-08 09:30', 60, null, [$this->markus->id]);
 
-        $conflict = Notification::withoutGlobalScope('company')->create([
-            'company_id' => $this->company->id,
-            'user_id' => $this->owner->id,
-            'type' => Notification::TYPE_CONFLICT,
-            'appointment_id' => $appointment->id,
-            'data' => [],
-        ]);
-        // A different type, and someone else's conflict, must not be counted.
-        Notification::withoutGlobalScope('company')->create([
-            'company_id' => $this->company->id,
-            'user_id' => $this->owner->id,
-            'type' => Notification::TYPE_ASSIGNED,
-            'appointment_id' => $appointment->id,
-            'data' => [],
-        ]);
-        Notification::withoutGlobalScope('company')->create([
-            'company_id' => $this->company->id,
-            'user_id' => $this->markus->id,
-            'type' => Notification::TYPE_CONFLICT,
-            'appointment_id' => $appointment->id,
-            'data' => [],
-        ]);
+        $this->assertSame(2, $this->props()['attention']['conflicts'], 'Both sides of the clash.');
+    }
 
-        $this->assertSame(1, $this->props()['attention']['conflicts']);
+    public function test_a_clash_outside_this_week_is_next_weeks_problem(): void
+    {
+        $this->appointment('2026-04-15 09:00', 60, null, [$this->markus->id]);
+        $this->appointment('2026-04-15 09:30', 60, null, [$this->markus->id]);
 
-        $conflict->forceFill(['read_at' => now()])->save();
+        $this->assertSame(0, $this->props()['attention']['conflicts']);
+    }
 
-        $this->assertSame(0, $this->props()['attention']['conflicts'], 'Reading it clears it.');
+    public function test_two_people_booked_back_to_back_is_not_a_conflict(): void
+    {
+        $this->appointment('2026-04-08 09:00', 60, null, [$this->markus->id]);
+        $this->appointment('2026-04-08 10:00', 60, null, [$this->markus->id]);
+
+        $this->assertSame(0, $this->props()['attention']['conflicts']);
     }
 
     public function test_average_utilisation_is_the_mean_across_everyone_carrying_work(): void
@@ -377,6 +375,85 @@ class DashboardTest extends TestCase
             [0, 0, 0, 0],
             collect($props['pipeline'])->pluck('count')->all(),
         );
+    }
+
+    public function test_overdue_counts_the_job_once_however_many_visits_are_hanging(): void
+    {
+        $contract = Contract::factory()->create(['company_id' => $this->company->id]);
+        $this->appointment('2026-04-01 09:00', 60, null, [], $contract);
+        $this->appointment('2026-04-02 09:00', 60, null, [], $contract);
+
+        $this->assertSame(1, $this->props()['attention']['overdue'], 'One job to chase, not two.');
+    }
+
+    public function test_the_pipeline_counts_jobs_rather_than_visits(): void
+    {
+        $active = $this->makeStatus(Status::STAGE_ACTIVE);
+        $contract = Contract::factory()->create(['company_id' => $this->company->id]);
+        $this->appointment('2026-04-08 09:00', 60, $active, [], $contract);
+        $this->appointment('2026-04-09 09:00', 60, $active, [], $contract);
+
+        $pipeline = collect($this->props()['pipeline']);
+
+        $this->assertSame(1, $pipeline->firstWhere('stage', 'active')['count']);
+    }
+
+    /*
+     * The bug this guards: every tile linked to a parameter its target screen
+     * did not read (`filter=unassigned`, `stage=ready_to_invoice`), so they all
+     * opened the same unfiltered list. A tile is only worth a click if the
+     * screen behind it shows exactly the number printed on the tile.
+     */
+    public function test_every_tile_matches_what_its_link_opens(): void
+    {
+        $ready = $this->makeStatus(Status::STAGE_READY_TO_INVOICE);
+        $this->appointment('2026-04-01 09:00', 60, $ready);
+        $this->appointment('2026-04-02 09:00');                                     // overdue
+        $this->appointment('2026-04-08 09:00', 60, null, [$this->markus->id]);      // clashes below
+        $this->appointment('2026-04-08 09:30', 60, null, [$this->markus->id]);
+
+        $attention = $this->props()['attention'];
+
+        $this->assertSame(
+            $attention['overdue'],
+            $this->contractRowCount(ContractListQuery::VIEW_OVERDUE),
+            'The overdue tile opens /contracts?view=overdue.',
+        );
+        $this->assertSame(
+            $attention['readyToInvoice'],
+            $this->contractRowCount(Status::STAGE_READY_TO_INVOICE),
+            'The invoice tile opens /contracts?view=ready_to_invoice.',
+        );
+        $this->assertSame(
+            $attention['conflicts'],
+            $this->actingAs($this->owner)->get('/calendar?conflicts=1')->viewData('page')['props']['conflictCount'],
+            'The conflict tile opens the calendar with its conflict chip on.',
+        );
+    }
+
+    public function test_each_pipeline_card_matches_the_tab_it_opens(): void
+    {
+        $this->appointment('2026-04-08 09:00', 60, $this->makeStatus(Status::STAGE_ACTIVE));
+        $this->appointment('2026-04-09 09:00', 60, $this->makeStatus(Status::STAGE_UNCONFIRMED));
+
+        foreach ($this->props()['pipeline'] as $card) {
+            $this->assertSame(
+                $card['count'],
+                $this->contractRowCount($card['stage']),
+                "The '{$card['stage']}' card opens /contracts?view={$card['stage']}.",
+            );
+        }
+    }
+
+    /** How many rows the contract list actually shows for one of its tabs. */
+    private function contractRowCount(string $view): int
+    {
+        $props = $this->actingAs($this->owner)
+            ->get('/contracts?view='.$view)
+            ->assertOk()
+            ->viewData('page')['props'];
+
+        return $props['contracts']['total'];
     }
 
     public function test_the_payload_shape_matches_the_golden_file(): void

@@ -34,6 +34,17 @@ export const STAGE_PILL: Record<Stage, string> = {
     cancelled: 'bg-muted text-muted-foreground',
 };
 
+/**
+ * Labels for the contract list's saved views. Mirrors `ContractListQuery::views()`:
+ * "all", the pipeline stages, then "overdue" — which is a time question rather
+ * than a stage, and so has no entry in the maps above.
+ */
+export const CONTRACT_VIEW_LABELS: Record<string, string> = {
+    all: 'All contracts',
+    ...STAGE_LABELS,
+    overdue: 'Overdue',
+};
+
 export const PIPELINE_ORDER: Stage[] = [
     'unconfirmed',
     'active',
