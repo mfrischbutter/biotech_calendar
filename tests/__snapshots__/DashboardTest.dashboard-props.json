@@ -1,0 +1,71 @@
+{
+    "attention": {
+        "unassigned": 1,
+        "overdue": 0,
+        "readyToInvoice": 1,
+        "utilisation": 4,
+        "conflicts": 0
+    },
+    "schedule": [
+        {
+            "worker_id": null,
+            "worker_name": null,
+            "items": [
+                {
+                    "id": "<id>",
+                    "title": "<title>",
+                    "start_at": "2026-04-08T13:00:00+00:00",
+                    "end_at": "2026-04-08T14:00:00+00:00",
+                    "address": "<address>",
+                    "status": null,
+                    "state": "upcoming"
+                }
+            ]
+        },
+        {
+            "worker_id": "<worker_id>",
+            "worker_name": "Markus Weber",
+            "items": [
+                {
+                    "id": "<id>",
+                    "title": "<title>",
+                    "start_at": "2026-04-08T09:00:00+00:00",
+                    "end_at": "2026-04-08T10:30:00+00:00",
+                    "address": "<address>",
+                    "status": {
+                        "name": "Erste Maßnahme",
+                        "color": "#F59E0B",
+                        "stage": "ready_to_invoice"
+                    },
+                    "state": "done"
+                }
+            ]
+        }
+    ],
+    "pipeline": [
+        {
+            "stage": "unconfirmed",
+            "count": 0
+        },
+        {
+            "stage": "active",
+            "count": 0
+        },
+        {
+            "stage": "ready_to_invoice",
+            "count": 1
+        },
+        {
+            "stage": "invoiced",
+            "count": 0
+        }
+    ],
+    "workload": [
+        {
+            "id": "<id>",
+            "name": "Markus Weber",
+            "appointments": 1,
+            "percent": 4
+        }
+    ]
+}

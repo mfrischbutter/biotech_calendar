@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import Checkbox from '@/Components/Checkbox.vue';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
+import FieldError from '@/Components/FieldError.vue';
+import { Button } from '@/Components/ui/button';
+import { Input } from '@/Components/ui/input';
+import { Label } from '@/Components/ui/label';
+import { Checkbox } from '@/Components/ui/checkbox';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { useTrans } from '@/lib/use-trans';
 
@@ -21,79 +21,75 @@ const form = useForm({
     remember: false,
 });
 
-const submit = () => {
+function submit() {
     form.post(route('login'), {
-        onFinish: () => {
-            form.reset('password');
-        },
+        onFinish: () => form.reset('password'),
     });
-};
+}
 </script>
 
 <template>
-    <GuestLayout>
-        <Head :title="t('Log in')" />
+    <Head :title="t('Log in')" />
 
-        <div v-if="status" class="mb-4 text-sm font-medium text-green-600">
+    <GuestLayout :title="t('Log in')" :description="t('Welcome back.')">
+        <p
+            v-if="status"
+            class="mb-5 rounded-md border border-success/30 bg-success-wash px-3 py-2 text-sm font-medium text-success-foreground"
+        >
             {{ status }}
-        </div>
+        </p>
 
-        <form @submit.prevent="submit">
+        <form class="space-y-5" @submit.prevent="submit">
             <div>
-                <InputLabel for="email" :value="t('Email')" />
-
-                <TextInput
+                <Label for="email">{{ t('Email') }}</Label>
+                <Input
                     id="email"
-                    type="email"
-                    class="mt-1 block w-full"
                     v-model="form.email"
+                    type="email"
+                    class="mt-1.5"
+                    placeholder="name@example.com"
                     required
                     autofocus
                     autocomplete="username"
                 />
-
-                <InputError class="mt-2" :message="form.errors.email" />
+                <FieldError :message="form.errors.email" />
             </div>
 
-            <div class="mt-4">
-                <InputLabel for="password" :value="t('Password')" />
-
-                <TextInput
+            <div>
+                <Label for="password">{{ t('Password') }}</Label>
+                <Input
                     id="password"
-                    type="password"
-                    class="mt-1 block w-full"
                     v-model="form.password"
+                    type="password"
+                    class="mt-1.5"
                     required
                     autocomplete="current-password"
                 />
-
-                <InputError class="mt-2" :message="form.errors.password" />
+                <FieldError :message="form.errors.password" />
             </div>
 
-            <div class="mt-4 block">
-                <label class="flex items-center">
-                    <Checkbox name="remember" v-model:checked="form.remember" />
-                    <span class="ms-2 text-sm text-gray-600">{{ t('Remember me') }}</span>
+            <div class="flex items-center justify-between">
+                <label class="flex cursor-pointer items-center gap-2 text-sm text-foreground">
+                    <Checkbox
+                        id="remember"
+                        :model-value="form.remember"
+                        @update:model-value="(v) => (form.remember = v === true)"
+                    />
+                    {{ t('Remember me') }}
                 </label>
-            </div>
 
-            <div class="mt-4 flex items-center justify-end">
                 <Link
                     v-if="canResetPassword"
                     :href="route('password.request')"
-                    class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                    class="text-sm font-medium text-navy hover:underline"
                 >
                     {{ t('Forgot your password?') }}
                 </Link>
-
-                <PrimaryButton
-                    class="ms-4"
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                >
-                    {{ t('Log in') }}
-                </PrimaryButton>
             </div>
+
+            <Button type="submit" class="w-full" :disabled="form.processing">
+                {{ t('Log in') }}
+            </Button>
         </form>
     </GuestLayout>
 </template>

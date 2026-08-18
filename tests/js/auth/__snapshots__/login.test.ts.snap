@@ -1,0 +1,40 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Login screen > matches the committed markup 1`] = `
+"<div class="min-h-screen bg-background md:grid md:grid-cols-2">
+  <!-- Brand panel -->
+  <aside class="flex flex-col justify-between bg-navy px-6 py-8 text-navy-foreground md:px-12 md:py-14">
+    <p class="font-semibold tracking-tight md:text-lg">Wilhelmsen BioTec</p>
+    <div class="hidden md:block">
+      <h1 class="max-w-sm text-3xl font-semibold leading-tight tracking-tight">Appointments, clients and contracts in one place.</h1>
+      <p class="mt-4 max-w-sm text-sm leading-relaxed text-navy-foreground/70">Plan the week, assign your team, and keep every job documented.</p>
+    </div>
+    <p class="hidden text-xs text-navy-foreground/60 md:block"> © 2026 Wilhelmsen BioTec</p>
+  </aside><!-- Form panel -->
+  <main class="flex items-center justify-center px-6 py-12 md:px-12">
+    <div class="w-full max-w-sm">
+      <header class="mb-6">
+        <h2 class="text-2xl font-semibold tracking-tight text-foreground">Log in</h2>
+        <p class="mt-1.5 text-sm text-muted-foreground">Welcome back.</p>
+      </header>
+      <!--v-if-->
+      <form class="space-y-5">
+        <div><label for="email" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Email</label><input class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 mt-1.5" id="email" type="email" placeholder="name@example.com" required="" autofocus="" autocomplete="username">
+          <transition-stub enteractiveclass="transition-opacity duration-150" leaveactiveclass="transition-opacity duration-150" enterfromclass="opacity-0" leavetoclass="opacity-0" appear="false" persisted="false" css="true">
+            <!--v-if-->
+          </transition-stub>
+        </div>
+        <div><label for="password" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Password</label><input class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 mt-1.5" id="password" type="password" required="" autocomplete="current-password">
+          <transition-stub enteractiveclass="transition-opacity duration-150" leaveactiveclass="transition-opacity duration-150" enterfromclass="opacity-0" leavetoclass="opacity-0" appear="false" persisted="false" css="true">
+            <!--v-if-->
+          </transition-stub>
+        </div>
+        <div class="flex items-center justify-between"><label class="flex cursor-pointer items-center gap-2 text-sm text-foreground"><button class="grid place-content-center peer h-4 w-4 shrink-0 rounded-sm border border-primary shadow focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground" id="remember" role="checkbox" type="button" aria-checked="false" aria-required="false" data-state="unchecked">
+              <!---->
+              <!--v-if-->
+            </button> Remember me</label><a href="/password/request" class="text-sm font-medium text-navy hover:underline">Forgot your password?</a></div><button class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg]:size-4 [&amp;_svg]:shrink-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 w-full" type="submit">Log in</button>
+      </form>
+    </div>
+  </main>
+</div>"
+`;

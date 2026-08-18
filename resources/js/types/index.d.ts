@@ -198,6 +198,132 @@ export interface Paginated<T> {
     links: { url: string | null; label: string; active: boolean }[];
 }
 
+/* ---------------- global search ---------------- */
+
+export type SearchItemType = 'client' | 'contract' | 'appointment' | 'action';
+
+export interface SearchItem {
+    id: number | string;
+    type: SearchItemType;
+    title: string;
+    subtitle: string | null;
+    url: string;
+    icon?: string;
+}
+
+export interface SearchGroup {
+    key: 'clients' | 'contracts' | 'appointments' | 'actions';
+    label: string;
+    items: SearchItem[];
+}
+
+export interface SearchResponse {
+    query: string;
+    groups: SearchGroup[];
+}
+
+/* ---------------- notifications ---------------- */
+
+export type NotificationType =
+    | 'comment_mention'
+    | 'comment_added'
+    | 'appointment_assigned'
+    | 'appointment_unassigned'
+    | 'schedule_conflict'
+    | 'series_ending'
+    | 'attachment_added';
+
+export type NotificationSeverity = 'critical' | 'warning' | 'success' | 'info';
+
+export interface AppNotification {
+    id: number;
+    type: NotificationType;
+    severity: NotificationSeverity;
+    actor: string | null;
+    appointment_id: number | null;
+    appointment_title: string | null;
+    appointment_start_at: string | null;
+    url: string | null;
+    data: { title?: string; excerpt?: string; start_at?: string; conflicts_with?: { id: number; title: string | null }[] };
+    read_at: string | null;
+    created_at: string;
+}
+
+export interface NotificationResponse {
+    notifications: AppNotification[];
+    unread: number;
+}
+
+/* ---------------- staff roles ---------------- */
+
+export interface StaffRole {
+    id: number;
+    slug: string;
+    name: string;
+    description: string | null;
+    permissions: string[];
+}
+
+/* ---------------- dashboard ---------------- */
+
+export type ScheduleState = 'done' | 'now' | 'upcoming' | 'past';
+
+export interface ScheduleItem {
+    id: number;
+    title: string | null;
+    start_at: string;
+    end_at: string;
+    address: string;
+    status: { name: string; color: string; stage: string } | null;
+    state: ScheduleState;
+}
+
+export interface ScheduleGroup {
+    worker_id: number | null;
+    worker_name: string | null;
+    items: ScheduleItem[];
+}
+
+export interface AttentionCounts {
+    unassigned: number;
+    overdue: number;
+    readyToInvoice: number;
+    utilisation: number;
+    conflicts: number;
+}
+
+export interface PipelineStage {
+    stage: 'unconfirmed' | 'active' | 'ready_to_invoice' | 'invoiced';
+    count: number;
+}
+
+export interface WorkloadRow {
+    id: number;
+    name: string;
+    appointments: number;
+    percent: number;
+}
+
+export interface AttentionNotification {
+    id: number;
+    type: NotificationType;
+    severity: NotificationSeverity;
+    actor: string | null;
+    title: string | null;
+    excerpt: string | null;
+    url: string | null;
+    created_at: string;
+}
+
+export interface DashboardActivity {
+    id: number;
+    action: 'created' | 'updated' | 'deleted' | 'comment_added';
+    user: string | null;
+    title: string | null;
+    url: string | null;
+    created_at: string;
+}
+
 export type PageProps<
     T extends Record<string, unknown> = Record<string, unknown>,
 > = T & {

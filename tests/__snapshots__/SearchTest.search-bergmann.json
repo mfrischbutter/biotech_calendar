@@ -1,0 +1,58 @@
+{
+    "query": "Bergmann",
+    "groups": [
+        {
+            "key": "clients",
+            "label": "Clients",
+            "items": [
+                {
+                    "id": "<id>",
+                    "type": "client",
+                    "title": "Klaus Bergmann",
+                    "subtitle": "Baeckerei Bergmann · Muenchen",
+                    "url": "http://localhost/clients/<id>"
+                }
+            ]
+        },
+        {
+            "key": "contracts",
+            "label": "Contracts",
+            "items": [
+                {
+                    "id": "<id>",
+                    "type": "contract",
+                    "title": "Routinekontrolle Bergmann",
+                    "subtitle": "A-0042",
+                    "url": "http://localhost/contracts/<id>"
+                }
+            ]
+        },
+        {
+            "key": "appointments",
+            "label": "Appointments",
+            "items": [
+                {
+                    "id": "<id>",
+                    "type": "appointment",
+                    "title": "Routinekontrolle Bergmann",
+                    "subtitle": "Wed, 8. Apr 2026 · 09:00",
+                    "url": "http://localhost/calendar?appointment=<id>"
+                }
+            ]
+        },
+        {
+            "key": "actions",
+            "label": "Actions",
+            "items": [
+                {
+                    "id": "new-appointment-client-<id>",
+                    "type": "action",
+                    "title": "New appointment for Klaus Bergmann",
+                    "subtitle": "Opens the calendar with this client preselected",
+                    "url": "http://localhost/calendar?new=<id>&client=<id>",
+                    "icon": "calendar-plus"
+                }
+            ]
+        }
+    ]
+}

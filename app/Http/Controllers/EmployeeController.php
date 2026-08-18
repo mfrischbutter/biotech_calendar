@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Appointment;
 use App\Models\Permission;
+use App\Models\StaffRole;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
@@ -28,11 +31,13 @@ class EmployeeController extends Controller
                         ->orWhere('email', 'like', "%{$search}%");
                 });
             })
-            ->with('permissions')
+            ->with(['permissions', 'staffRole'])
             ->orderBy('last_name')
             ->orderBy('first_name')
             ->paginate(20)
             ->withQueryString();
+
+        $workload = $this->weeklyWorkload($companyId);
 
         $paginated->getCollection()->transform(fn (User $user) => [
             'id' => $user->id,
@@ -40,12 +45,27 @@ class EmployeeController extends Controller
             'last_name' => $user->last_name,
             'name' => $user->name,
             'email' => $user->email,
-            'permissions' => $user->permissions->pluck('permission')->toArray(),
+            'permissions' => $user->permissionKeys(),
+            'staff_role' => $user->staffRole ? [
+                'id' => $user->staffRole->id,
+                'slug' => $user->staffRole->slug,
+                'name' => $user->staffRole->name,
+            ] : null,
+            'has_custom_permissions' => $user->hasCustomPermissions(),
+            'appointments_this_week' => $workload[$user->id]['count'] ?? 0,
+            'utilisation' => $workload[$user->id]['utilisation'] ?? 0,
         ]);
 
         return Inertia::render('Employees/Index', [
             'employees' => $paginated,
             'availablePermissions' => Permission::ALL,
+            'roles' => StaffRole::ordered()->get()->map(fn (StaffRole $r) => [
+                'id' => $r->id,
+                'slug' => $r->slug,
+                'name' => $r->name,
+                'description' => $r->description,
+                'permissions' => $r->permissions,
+            ]),
             'filters' => ['search' => $search],
         ]);
     }
@@ -89,6 +109,54 @@ class EmployeeController extends Controller
         $user->syncPermissions($validated['permissions']);
 
         return back();
+    }
+
+    /** Apply a named role preset, replacing the user's individual permissions. */
+    public function assignRole(Request $request, User $user)
+    {
+        $validated = $request->validate([
+            'staff_role_id' => ['required', 'integer', 'exists:staff_roles,id'],
+        ]);
+
+        if ($user->isOwner()) {
+            abort(403, 'Cannot modify owner permissions.');
+        }
+
+        $role = StaffRole::findOrFail($validated['staff_role_id']);
+        abort_unless($role->company_id === $request->user()->company_id, 403);
+
+        $user->applyStaffRole($role);
+
+        return back();
+    }
+
+    /**
+     * Appointments per employee in the current week, plus a rough utilisation
+     * figure against a 40 hour week. Answers "who has room on Thursday?".
+     *
+     * @return array<int, array{count: int, utilisation: int}>
+     */
+    private function weeklyWorkload(int $companyId): array
+    {
+        $start = Carbon::now()->startOfWeek(Carbon::MONDAY);
+        $end = Carbon::now()->endOfWeek(Carbon::SUNDAY);
+
+        $rows = Appointment::query()
+            ->where('company_id', $companyId)
+            ->whereBetween('start_at', [$start, $end])
+            ->join('appointment_user', 'appointment_user.appointment_id', '=', 'appointments.id')
+            ->groupBy('appointment_user.user_id')
+            ->selectRaw('appointment_user.user_id as uid, count(*) as total, sum(timestampdiff(minute, start_at, end_at)) as minutes')
+            ->get();
+
+        $capacityMinutes = 40 * 60;
+
+        return $rows->mapWithKeys(fn ($row) => [
+            (int) $row->uid => [
+                'count' => (int) $row->total,
+                'utilisation' => (int) min(100, round(((int) $row->minutes / $capacityMinutes) * 100)),
+            ],
+        ])->all();
     }
 
     public function destroy(User $user)

@@ -6,10 +6,13 @@ use App\Models\ActivityLog;
 use App\Models\Appointment;
 use App\Models\AppointmentAttachment;
 use App\Models\Comment;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
 class CommentController extends Controller
 {
+    public function __construct(private NotificationService $notifications) {}
+
     public function store(Request $request, Appointment $appointment)
     {
         $validated = $request->validate([
@@ -51,6 +54,13 @@ class CommentController extends Controller
             'action' => 'comment_added',
             'description' => "Kommentar zu \"{$appointment->title}\" hinzugefügt",
         ]);
+
+        // @mentions notify the named person; assigned workers and the creator
+        // get the quieter "commented" notice.
+        $this->notifications->commentPosted(
+            $comment->setRelation('appointment', $appointment),
+            $request->user(),
+        );
 
         return back();
     }

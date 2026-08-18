@@ -8,6 +8,7 @@ use App\Models\Contract;
 use App\Models\Setting;
 use App\Models\Status;
 use App\Models\User;
+use App\Services\NotificationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -16,6 +17,8 @@ use Inertia\Inertia;
 class AppointmentController extends Controller
 {
     private const MAX_OCCURRENCES = 500;
+
+    public function __construct(private NotificationService $notifications) {}
 
     public function index(Request $request)
     {
@@ -150,9 +153,13 @@ class AppointmentController extends Controller
             $parent->workers()->sync($workerIds);
 
             $this->generateOccurrences($parent, $baseData, $validated, $workerIds);
+
+            $this->announce($parent, [], $workerIds, $request->user());
         } else {
             $appointment = Appointment::create($baseData);
             $appointment->workers()->sync($workerIds);
+
+            $this->announce($appointment, [], $workerIds, $request->user());
         }
 
         return back();
@@ -178,13 +185,35 @@ class AppointmentController extends Controller
         $workerIds = $validated['worker_ids'] ?? null;
         $updateData = collect($validated)->except('worker_ids')->toArray();
 
+        $before = $appointment->workers()->pluck('users.id')->all();
+
         $appointment->update($updateData);
 
         if ($workerIds !== null) {
             $appointment->workers()->sync($workerIds);
         }
 
+        $this->announce(
+            $appointment->fresh(['workers', 'contract']),
+            $before,
+            $workerIds ?? $before,
+            $request->user(),
+        );
+
         return back();
+    }
+
+    /**
+     * Tell the affected people what changed: who was added or removed, and
+     * whether the new time double-books anyone.
+     *
+     * @param  array<int, int>  $before
+     * @param  array<int, int>  $after
+     */
+    private function announce(Appointment $appointment, array $before, array $after, User $actor): void
+    {
+        $this->notifications->appointmentAssignmentsChanged($appointment, $before, $after, $actor);
+        $this->notifications->appointmentConflicts($appointment, $actor);
     }
 
     public function destroy(Request $request, Appointment $appointment)

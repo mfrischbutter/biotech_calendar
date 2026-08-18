@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['first_name', 'last_name', 'email', 'locale', 'password', 'role', 'company_id', 'dashboard_comments_read_at'])]
+#[Fillable(['first_name', 'last_name', 'email', 'locale', 'password', 'role', 'staff_role_id', 'company_id', 'dashboard_comments_read_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -91,6 +91,48 @@ class User extends Authenticatable
                 array_map(fn (string $p) => ['permission' => $p, 'company_id' => $this->company_id], $permissions)
             );
         }
+
+        $this->unsetRelation('permissions');
+    }
+
+    public function staffRole(): BelongsTo
+    {
+        return $this->belongsTo(StaffRole::class, 'staff_role_id');
+    }
+
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(Notification::class);
+    }
+
+    /**
+     * Apply a role's permission preset to this user.
+     * The role is remembered so the UI can show which preset is in effect.
+     */
+    public function applyStaffRole(StaffRole $role): void
+    {
+        $this->staff_role_id = $role->id;
+        $this->save();
+        $this->syncPermissions($role->permissions ?? []);
+    }
+
+    /** @return array<int, string> */
+    public function permissionKeys(): array
+    {
+        return $this->permissions->pluck('permission')->all();
+    }
+
+    /**
+     * True when this user's permissions have been hand-tuned away from their
+     * role preset — surfaced in the UI as an "angepasst" badge.
+     */
+    public function hasCustomPermissions(): bool
+    {
+        if (! $this->staffRole) {
+            return false;
+        }
+
+        return ! $this->staffRole->matches($this->permissionKeys());
     }
 
     public function getOwner(): self

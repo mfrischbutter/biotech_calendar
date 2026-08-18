@@ -56,6 +56,35 @@ export default {
     				DEFAULT: 'hsl(var(--destructive))',
     				foreground: 'hsl(var(--destructive-foreground))'
     			},
+    			navy: {
+    				DEFAULT: 'hsl(var(--navy))',
+    				foreground: 'hsl(var(--navy-foreground))',
+    				hover: 'hsl(var(--navy-hover))',
+    				muted: 'hsl(var(--navy-muted))',
+    				wash: 'hsl(var(--navy-wash))',
+    				edge: 'hsl(var(--navy-edge))',
+    				ink: 'hsl(var(--navy-ink))'
+    			},
+    			success: {
+    				DEFAULT: 'hsl(var(--success))',
+    				foreground: 'hsl(var(--success-foreground))',
+    				wash: 'hsl(var(--success-wash))'
+    			},
+    			warning: {
+    				DEFAULT: 'hsl(var(--warning))',
+    				foreground: 'hsl(var(--warning-foreground))',
+    				wash: 'hsl(var(--warning-wash))'
+    			},
+    			danger: {
+    				DEFAULT: 'hsl(var(--danger))',
+    				foreground: 'hsl(var(--danger-foreground))',
+    				wash: 'hsl(var(--danger-wash))'
+    			},
+    			info: {
+    				DEFAULT: 'hsl(var(--info))',
+    				foreground: 'hsl(var(--info-foreground))',
+    				wash: 'hsl(var(--info-wash))'
+    			},
     			border: 'hsl(var(--border))',
     			input: 'hsl(var(--input))',
     			ring: 'hsl(var(--ring))',

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
+import FieldError from '@/Components/FieldError.vue';
+import { Button } from '@/Components/ui/button';
+import { Input } from '@/Components/ui/input';
+import { Label } from '@/Components/ui/label';
 import { Link, useForm, usePage } from '@inertiajs/vue3';
 import { useTrans } from '@/lib/use-trans';
 
@@ -21,142 +21,112 @@ const form = useForm({
     email: user.email,
     locale: user.locale ?? 'de',
 });
+
+const locales: { value: 'de' | 'en'; label: string }[] = [
+    { value: 'de', label: 'Deutsch' },
+    { value: 'en', label: 'English' },
+];
 </script>
 
 <template>
     <section>
         <header>
-            <h2 class="text-lg font-medium text-gray-900">
+            <h2 class="text-base font-semibold text-foreground">
                 {{ t('Profile Information') }}
             </h2>
-
-            <p class="mt-1 text-sm text-gray-600">
+            <p class="mt-1 text-sm text-muted-foreground">
                 {{ t("Update your account's profile information and email address.") }}
             </p>
         </header>
 
-        <form
-            @submit.prevent="form.patch(route('profile.update'))"
-            class="mt-6 space-y-6"
-        >
-            <div class="grid grid-cols-2 gap-4">
+        <form class="mt-6 space-y-5" @submit.prevent="form.patch(route('profile.update'))">
+            <div class="grid gap-4 sm:grid-cols-2">
                 <div>
-                    <InputLabel for="first_name" :value="t('First name')" />
-
-                    <TextInput
+                    <Label for="first_name">{{ t('First name') }}</Label>
+                    <Input
                         id="first_name"
-                        type="text"
-                        class="mt-1 block w-full"
                         v-model="form.first_name"
+                        type="text"
+                        class="mt-1.5"
                         required
-                        autofocus
                         autocomplete="given-name"
                     />
-
-                    <InputError class="mt-2" :message="form.errors.first_name" />
+                    <FieldError :message="form.errors.first_name" />
                 </div>
 
                 <div>
-                    <InputLabel for="last_name" :value="t('Last name')" />
-
-                    <TextInput
+                    <Label for="last_name">{{ t('Last name') }}</Label>
+                    <Input
                         id="last_name"
-                        type="text"
-                        class="mt-1 block w-full"
                         v-model="form.last_name"
+                        type="text"
+                        class="mt-1.5"
                         required
                         autocomplete="family-name"
                     />
-
-                    <InputError class="mt-2" :message="form.errors.last_name" />
+                    <FieldError :message="form.errors.last_name" />
                 </div>
             </div>
 
             <div>
-                <InputLabel for="email" :value="t('Email')" />
-
-                <TextInput
+                <Label for="email">{{ t('Email') }}</Label>
+                <Input
                     id="email"
-                    type="email"
-                    class="mt-1 block w-full"
                     v-model="form.email"
+                    type="email"
+                    class="mt-1.5"
                     required
                     autocomplete="username"
                 />
-
-                <InputError class="mt-2" :message="form.errors.email" />
+                <FieldError :message="form.errors.email" />
             </div>
 
             <div>
-                <InputLabel :value="t('Language')" />
-
-                <div class="mt-1 flex items-center gap-2">
+                <Label>{{ t('Language') }}</Label>
+                <div class="mt-1.5 flex flex-wrap items-center gap-2">
                     <button
+                        v-for="locale in locales"
+                        :key="locale.value"
                         type="button"
-                        @click="form.locale = 'de'"
-                        class="flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors"
-                        :class="form.locale === 'de'
-                            ? 'border-primary bg-primary/5 text-foreground'
-                            : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'"
+                        class="rounded-md border px-3 py-2 text-sm transition-colors"
+                        :class="form.locale === locale.value
+                            ? 'border-navy bg-navy-wash font-medium text-navy'
+                            : 'border-input text-muted-foreground hover:bg-accent hover:text-foreground'"
+                        @click="form.locale = locale.value"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="16" viewBox="0 0 5 3" class="rounded-sm">
-                            <rect width="5" height="1" fill="#000" /><rect y="1" width="5" height="1" fill="#D00" /><rect y="2" width="5" height="1" fill="#FFCE00" />
-                        </svg>
-                        Deutsch
-                    </button>
-                    <button
-                        type="button"
-                        @click="form.locale = 'en'"
-                        class="flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors"
-                        :class="form.locale === 'en'
-                            ? 'border-primary bg-primary/5 text-foreground'
-                            : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="16" viewBox="0 0 60 30" class="rounded-sm">
-                            <clipPath id="s"><path d="M0 0v30h60V0z"/></clipPath>
-                            <g clip-path="url(#s)"><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M0 0l60 30m0-30L0 30" stroke="#C8102E" stroke-width="4" clip-path="url(#s)"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></g>
-                        </svg>
-                        English
+                        {{ locale.label }}
                     </button>
                 </div>
-
-                <InputError class="mt-2" :message="form.errors.locale" />
+                <FieldError :message="form.errors.locale" />
             </div>
 
-            <div v-if="mustVerifyEmail && user.email_verified_at === null">
-                <p class="mt-2 text-sm text-gray-800">
+            <div v-if="mustVerifyEmail && user.email_verified_at === null" class="text-sm">
+                <p class="text-foreground">
                     {{ t('Your email address is unverified.') }}
                     <Link
                         :href="route('verification.send')"
                         method="post"
                         as="button"
-                        class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                        class="font-medium text-navy hover:underline"
                     >
                         {{ t('Click here to re-send the verification email.') }}
                     </Link>
                 </p>
-
-                <div
-                    v-show="status === 'verification-link-sent'"
-                    class="mt-2 text-sm font-medium text-green-600"
-                >
+                <p v-show="status === 'verification-link-sent'" class="mt-2 font-medium text-success-foreground">
                     {{ t('A new verification link has been sent to your email address.') }}
-                </div>
+                </p>
             </div>
 
             <div class="flex items-center gap-4">
-                <PrimaryButton :disabled="form.processing">{{ t('Save') }}</PrimaryButton>
+                <Button type="submit" :disabled="form.processing">{{ t('Save') }}</Button>
 
                 <Transition
-                    enter-active-class="transition ease-in-out"
+                    enter-active-class="transition-opacity"
                     enter-from-class="opacity-0"
-                    leave-active-class="transition ease-in-out"
+                    leave-active-class="transition-opacity"
                     leave-to-class="opacity-0"
                 >
-                    <p
-                        v-if="form.recentlySuccessful"
-                        class="text-sm text-gray-600"
-                    >
+                    <p v-if="form.recentlySuccessful" class="text-sm text-muted-foreground">
                         {{ t('Saved.') }}
                     </p>
                 </Transition>

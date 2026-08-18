@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import GuestLayout from '@/Layouts/GuestLayout.vue';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
+import FieldError from '@/Components/FieldError.vue';
+import { Button } from '@/Components/ui/button';
+import { Input } from '@/Components/ui/input';
+import { Label } from '@/Components/ui/label';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { useTrans } from '@/lib/use-trans';
 
@@ -17,119 +17,98 @@ const form = useForm({
     password_confirmation: '',
 });
 
-const submit = () => {
+function submit() {
     form.post(route('register'), {
-        onFinish: () => {
-            form.reset('password', 'password_confirmation');
-        },
+        onFinish: () => form.reset('password', 'password_confirmation'),
     });
-};
+}
 </script>
 
 <template>
-    <GuestLayout>
-        <Head :title="t('Register')" />
+    <Head :title="t('Register')" />
 
-        <form @submit.prevent="submit">
+    <GuestLayout :title="t('Register')" :description="t('Create your account to get started.')">
+        <form class="space-y-5" @submit.prevent="submit">
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <InputLabel for="first_name" :value="t('First name')" />
-
-                    <TextInput
+                    <Label for="first_name">{{ t('First name') }}</Label>
+                    <Input
                         id="first_name"
-                        type="text"
-                        class="mt-1 block w-full"
                         v-model="form.first_name"
+                        type="text"
+                        class="mt-1.5"
                         required
                         autofocus
                         autocomplete="given-name"
                     />
-
-                    <InputError class="mt-2" :message="form.errors.first_name" />
+                    <FieldError :message="form.errors.first_name" />
                 </div>
 
                 <div>
-                    <InputLabel for="last_name" :value="t('Last name')" />
-
-                    <TextInput
+                    <Label for="last_name">{{ t('Last name') }}</Label>
+                    <Input
                         id="last_name"
-                        type="text"
-                        class="mt-1 block w-full"
                         v-model="form.last_name"
+                        type="text"
+                        class="mt-1.5"
                         required
                         autocomplete="family-name"
                     />
-
-                    <InputError class="mt-2" :message="form.errors.last_name" />
+                    <FieldError :message="form.errors.last_name" />
                 </div>
             </div>
 
-            <div class="mt-4">
-                <InputLabel for="email" :value="t('Email')" />
-
-                <TextInput
+            <div>
+                <Label for="email">{{ t('Email') }}</Label>
+                <Input
                     id="email"
-                    type="email"
-                    class="mt-1 block w-full"
                     v-model="form.email"
+                    type="email"
+                    class="mt-1.5"
+                    placeholder="name@example.com"
                     required
                     autocomplete="username"
                 />
-
-                <InputError class="mt-2" :message="form.errors.email" />
+                <FieldError :message="form.errors.email" />
             </div>
 
-            <div class="mt-4">
-                <InputLabel for="password" :value="t('Password')" />
-
-                <TextInput
+            <div>
+                <Label for="password">{{ t('Password') }}</Label>
+                <Input
                     id="password"
-                    type="password"
-                    class="mt-1 block w-full"
                     v-model="form.password"
-                    required
-                    autocomplete="new-password"
-                />
-
-                <InputError class="mt-2" :message="form.errors.password" />
-            </div>
-
-            <div class="mt-4">
-                <InputLabel
-                    for="password_confirmation"
-                    :value="t('Confirm Password')"
-                />
-
-                <TextInput
-                    id="password_confirmation"
                     type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password_confirmation"
+                    class="mt-1.5"
                     required
                     autocomplete="new-password"
                 />
-
-                <InputError
-                    class="mt-2"
-                    :message="form.errors.password_confirmation"
-                />
+                <FieldError :message="form.errors.password" />
             </div>
 
-            <div class="mt-4 flex items-center justify-end">
+            <div>
+                <Label for="password_confirmation">{{ t('Confirm Password') }}</Label>
+                <Input
+                    id="password_confirmation"
+                    v-model="form.password_confirmation"
+                    type="password"
+                    class="mt-1.5"
+                    required
+                    autocomplete="new-password"
+                />
+                <FieldError :message="form.errors.password_confirmation" />
+            </div>
+
+            <div class="flex items-center justify-between gap-4">
                 <Link
                     :href="route('login')"
-                    class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                    class="text-sm font-medium text-navy hover:underline"
                 >
                     {{ t('Already registered?') }}
                 </Link>
 
-                <PrimaryButton
-                    class="ms-4"
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                >
+                <Button type="submit" :disabled="form.processing">
                     {{ t('Register') }}
-                </PrimaryButton>
+                </Button>
             </div>
         </form>
     </GuestLayout>

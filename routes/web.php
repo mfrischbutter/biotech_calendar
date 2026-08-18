@@ -7,7 +7,9 @@ use App\Http\Controllers\CommentController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\StatusController;
 use Illuminate\Support\Facades\Route;
@@ -47,6 +49,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/attachments/{attachment}', [AttachmentController::class, 'show'])->name('attachments.show');
     Route::delete('/attachments/{attachment}', [AttachmentController::class, 'destroy'])->name('attachments.destroy');
 
+    // Global search (powers the search field in the top bar)
+    Route::get('/search', SearchController::class)->name('search');
+
+    // Notifications & assignments
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])
+        ->name('notifications.read');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])
+        ->name('notifications.readAll');
+
     // Settings
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::put('/settings/company', [SettingController::class, 'updateCompany'])->name('settings.company.update');
@@ -63,6 +75,7 @@ Route::middleware(['auth', 'owner'])->group(function () {
     Route::get('/employees', [EmployeeController::class, 'index'])->name('employees.index');
     Route::post('/employees', [EmployeeController::class, 'store'])->name('employees.store');
     Route::put('/employees/{user}/permissions', [EmployeeController::class, 'updatePermissions'])->name('employees.permissions.update');
+    Route::put('/employees/{user}/role', [EmployeeController::class, 'assignRole'])->name('employees.role.update');
     Route::delete('/employees/{user}', [EmployeeController::class, 'destroy'])->name('employees.destroy');
 });
 

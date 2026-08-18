@@ -4,7 +4,11 @@
     "type": "module",
     "scripts": {
         "build": "vue-tsc && vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:update": "vitest run -u",
+        "typecheck": "vue-tsc --noEmit"
     },
     "devDependencies": {
         "@inertiajs/vue3": "^2.0.0",
@@ -13,14 +17,17 @@
         "@tailwindcss/vite": "^4.0.0",
         "@types/google.maps": "^3.58.1",
         "@vitejs/plugin-vue": "^6.0.0",
+        "@vue/test-utils": "^2.4.11",
         "autoprefixer": "^10.4.12",
         "axios": ">=1.11.0 <=1.14.0",
         "concurrently": "^9.0.1",
+        "jsdom": "^25.0.1",
         "laravel-vite-plugin": "^3.0.0",
         "postcss": "^8.4.31",
         "tailwindcss": "^3.2.1",
         "typescript": "^5.6.3",
         "vite": "^8.0.0",
+        "vitest": "^3.2.7",
         "vue": "^3.4.0",
         "vue-tsc": "^2.0.24"
     },
