@@ -24,6 +24,7 @@ import { useColumnVisibility } from '@/lib/use-column-visibility';
 import { useListQuery } from '@/lib/use-list-query';
 import { useSidePeek } from '@/lib/use-side-peek';
 import { useTrans } from '@/lib/use-trans';
+import { wantsCreateForm } from '@/lib/create-intent';
 import { initials } from '@/lib/utils';
 import type { ClientListRow, DataTableColumn, ListFilters, Paginated, SavedView } from '@/types';
 
@@ -56,6 +57,10 @@ const bulk = useBulkDelete('clients.destroy');
 
 const deleteTarget = ref<ClientListRow | null>(null);
 const bulkTarget = ref<number[]>([]);
+
+// "Neuer Kunde" in the top-bar search links here with ?new=1 and expects the
+// form to be waiting rather than another button to hunt for.
+const createOpen = ref(wantsCreateForm());
 
 const rows = computed(() => props.clients.data);
 
@@ -99,7 +104,7 @@ function confirmDelete(): void {
                         {{ t('Manage and search your client database.') }}
                     </p>
                 </div>
-                <NewClientDialog>
+                <NewClientDialog v-model:open="createOpen">
                     <Button>
                         <Plus class="mr-2 h-4 w-4" />
                         {{ t('New Client') }}

@@ -23,6 +23,7 @@ import { useColumnVisibility } from '@/lib/use-column-visibility';
 import { useListQuery } from '@/lib/use-list-query';
 import { useSidePeek } from '@/lib/use-side-peek';
 import { useTrans } from '@/lib/use-trans';
+import { wantsCreateForm } from '@/lib/create-intent';
 import { initials } from '@/lib/utils';
 import type {
     ContractListRow,
@@ -66,6 +67,10 @@ const { visible, setVisible } = useColumnVisibility('biotech-contracts-columns',
 const peek = useSidePeek<ContractListRow>(() => props.contracts.data);
 const bulk = useBulkDelete('contracts.destroy');
 
+// "Neuer Auftrag" in the top-bar search links here with ?new=1 and expects the
+// drawer to be waiting rather than another button to hunt for.
+const createOpen = ref(wantsCreateForm());
+
 const deleteTarget = ref<ContractListRow | null>(null);
 const bulkTarget = ref<number[]>([]);
 
@@ -103,7 +108,7 @@ function confirmDelete(): void {
                         {{ t('Manage your contracts and assignments.') }}
                     </p>
                 </div>
-                <ContractFormDrawer :clients="clients">
+                <ContractFormDrawer v-model:open="createOpen" :clients="clients">
                     <Button>
                         <Plus class="mr-2 h-4 w-4" />
                         {{ t('New Contract') }}
@@ -164,9 +169,16 @@ function confirmDelete(): void {
                 <span v-else class="text-muted-foreground">–</span>
             </template>
 
+            <!--
+                A bar over a single visit is not progress — it is the status
+                pill one column to the left, drawn twice. Three quarters of the
+                list is one-visit work, so the bar is kept for the jobs that
+                actually run over several appointments.
+            -->
             <template #cell-progress="{ row }">
-                <div class="flex items-center gap-2">
-                    <span class="h-2 w-24 overflow-hidden rounded-full bg-muted">
+                <span v-if="row.progress.total === 0" class="text-muted-foreground">–</span>
+                <div v-else class="flex items-center gap-2">
+                    <span v-if="row.progress.total > 1" class="h-2 w-24 overflow-hidden rounded-full bg-muted">
                         <span
                             class="block h-full rounded-full bg-primary transition-all"
                             :style="{ width: `${row.progress.percent}%` }"

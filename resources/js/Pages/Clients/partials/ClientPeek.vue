@@ -55,7 +55,14 @@ const facts = computed(() => {
         @open-record="$emit('openRecord')"
     >
         <template #actions>
-            <Button size="sm" as="a" :href="route('calendar.index')" data-testid="peek-new-appointment">
+            <!-- The customer on screen is the one the appointment is for. -->
+            <Button
+                v-if="client"
+                size="sm"
+                as="a"
+                :href="route('calendar.index', { new: 1, client: client.id })"
+                data-testid="peek-new-appointment"
+            >
                 <CalendarPlus class="mr-2 h-4 w-4" />
                 {{ t('New Appointment') }}
             </Button>

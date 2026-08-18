@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { Pencil, Plus } from 'lucide-vue-next';
 import { Button } from '@/Components/ui/button';
 import { Label } from '@/Components/ui/label';
@@ -22,6 +22,13 @@ const props = defineProps<{
     contracts: Contract[];
     clients: ClientOption[];
     modelValue: string;
+    /**
+     * Set when the user arrived from "Termin für <Kunde>". Customers here carry
+     * three to seven jobs, so the link cannot name one — it narrows the list to
+     * that customer instead, visibly and clearably, rather than opening a blank
+     * picker and dropping what the user asked for.
+     */
+    clientHint?: string;
     error?: string;
 }>();
 
@@ -30,8 +37,16 @@ const emit = defineEmits<{
 }>();
 
 const popoverOpen = ref(false);
-const search = ref('');
+const search = ref(props.clientHint ?? '');
 const createOpen = ref(false);
+
+// The hint arrives with the drawer, which mounts before the form is filled.
+watch(
+    () => props.clientHint,
+    (hint) => {
+        if (!props.modelValue) search.value = hint ?? '';
+    },
+);
 
 const filtered = computed(() => {
     if (!search.value) return props.contracts;
@@ -95,7 +110,9 @@ function keepOpen(e: Event) {
                             <span class="mr-1.5 font-mono text-xs text-muted-foreground">{{ selected.contract_number }}</span>
                             {{ selected.title }}
                         </span>
-                        <span v-else class="text-muted-foreground">{{ t('Select contract...') }}</span>
+                        <span v-else class="text-muted-foreground">
+                            {{ clientHint ? t('Select contract for :name...', { name: clientHint }) : t('Select contract...') }}
+                        </span>
                         <template v-if="selected">
                             <span v-if="selected.clients.length > 0" class="text-xs text-muted-foreground">
                                 {{ selected.clients.map(c => c.name).join(', ') }}

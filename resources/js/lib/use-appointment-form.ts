@@ -8,6 +8,8 @@ export interface AppointmentFormDefaults {
     startTime: string;
     endTime: string;
     workerIds: number[];
+    /** The job a "Termin planen" link already named, as the select's string id. */
+    contractId: string;
 }
 
 interface AppointmentFields {
@@ -34,7 +36,7 @@ function fieldsFor(
     const end = appointment ? isoToLocalParts(appointment.end_at) : null;
 
     return {
-        contract_id: appointment?.contract?.id?.toString() ?? '',
+        contract_id: appointment?.contract?.id?.toString() ?? defaults.contractId,
         worker_ids: appointment?.workers?.map(w => w.id) ?? [...defaults.workerIds],
         start_date: start?.date ?? defaults.date,
         start_time: start?.time ?? defaults.startTime,

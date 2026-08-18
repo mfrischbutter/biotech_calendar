@@ -26,6 +26,8 @@ const { t } = useTrans();
 const props = defineProps<{
     contracts: Contract[];
     clients: ClientOption[];
+    /** Customer a "Termin planen" link named, to narrow the job picker with. */
+    clientHint?: string;
     employees: { id: number; first_name: string; last_name: string; name: string }[];
     statuses: Status[];
     checklistTemplates: ChecklistTemplate[];
@@ -155,6 +157,7 @@ defineExpose({ notesRef, autoResize, hasValidationError });
         <ContractPicker
             :contracts="contracts"
             :clients="clients"
+            :client-hint="clientHint"
             :model-value="contractId"
             :error="errors.contract_id"
             @update:model-value="(val) => emit('update:contractId', val)"

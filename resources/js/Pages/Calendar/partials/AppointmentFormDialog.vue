@@ -45,6 +45,10 @@ const props = defineProps<{
     defaultStartTime?: string;
     defaultEndTime?: string;
     defaultWorkerIds?: number[];
+    /** A job the "Termin planen" link already named. */
+    defaultContractId?: string;
+    /** A customer it named instead, to narrow the job picker with. */
+    defaultClientName?: string;
 }>();
 
 const open = defineModel<boolean>('open', { default: false });
@@ -57,6 +61,7 @@ const { form, fill, snapshot, payload } = useAppointmentForm(
         startTime: props.defaultStartTime ?? '09:00',
         endTime: props.defaultEndTime ?? '10:00',
         workerIds: props.defaultWorkerIds ?? [],
+        contractId: props.defaultContractId ?? '',
     }),
 );
 
@@ -218,6 +223,7 @@ function submit() {
                                 ref="sectionsRef"
                                 :contracts="contracts"
                                 :clients="clients"
+                                :client-hint="defaultClientName"
                                 :employees="employees"
                                 :statuses="statuses"
                                 :checklist-templates="checklistTemplates ?? []"

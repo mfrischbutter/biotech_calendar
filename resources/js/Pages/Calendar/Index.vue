@@ -11,6 +11,7 @@ import {
     CALENDAR_VIEW_STORAGE_KEY,
 } from '@/lib/use-calendar-query';
 import { calendarBoardRows } from '@/lib/calendar-rows';
+import { wantsCreateForm } from '@/lib/create-intent';
 import { useAppointmentDialogs } from '@/lib/use-appointment-dialogs';
 import { useCalendarAppointments } from '@/lib/use-calendar-appointments';
 import { useCalendarShortcuts } from '@/lib/use-calendar-shortcuts';
@@ -22,6 +23,7 @@ import type {
     CalendarEmployee,
     CalendarFilters,
     CalendarTotals,
+    CalendarCreateDefaults,
     CalendarView,
     ChecklistTemplate,
     ClientOption,
@@ -55,6 +57,8 @@ const props = defineProps<{
     startHour: number;
     endHour: number;
     openAppointmentId?: number | null;
+    /** What a `?new=1` link brought along, or null when this is a plain visit. */
+    createDefaults: CalendarCreateDefaults | null;
     filters: CalendarFilters;
     conflicts: ConflictMap;
     conflictCount: number;
@@ -166,9 +170,12 @@ onMounted(() => {
     }
 
     // "Termin planen" on a detail page (and the global search action) links here
-    // with ?new=1 and expects the create form to be waiting.
-    if (params.get('new') === '1') {
-        dialogs.openCreate();
+    // with ?new=1, and names the job or at least the customer it is for.
+    if (wantsCreateForm()) {
+        dialogs.openCreateFor({
+            contractId: props.createDefaults?.contractId,
+            clientName: props.createDefaults?.clientName,
+        });
     }
 });
 
@@ -286,6 +293,8 @@ function handleDayClick(date: string) {
             :default-start-time="dialogs.defaults.value.startTime"
             :default-end-time="dialogs.defaults.value.endTime"
             :default-worker-ids="dialogs.defaults.value.workerIds"
+            :default-contract-id="dialogs.defaults.value.contractId"
+            :default-client-name="dialogs.defaults.value.clientName"
         />
 
         <AppointmentFormDialog

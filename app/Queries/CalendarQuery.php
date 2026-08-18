@@ -3,6 +3,7 @@
 namespace App\Queries;
 
 use App\Models\Appointment;
+use App\Models\Client;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -37,6 +38,10 @@ class CalendarQuery
             'date' => ['nullable', 'date'],
             'view' => ['nullable', 'in:'.implode(',', self::VIEWS)],
             'appointment' => ['nullable', 'integer'],
+            // What a link asking for a create form may bring with it.
+            'new' => ['nullable', 'boolean'],
+            'contract' => ['nullable', 'integer', 'exists:contracts,id'],
+            'client' => ['nullable', 'integer', 'exists:clients,id'],
             'density' => ['nullable', 'in:'.implode(',', self::DENSITIES)],
             'employees' => ['nullable', 'array', 'max:100'],
             'employees.*' => ['integer', 'exists:users,id'],
@@ -60,6 +65,30 @@ class CalendarQuery
             'statuses' => self::intList($request->input('statuses')),
             'unassigned' => $request->boolean('unassigned'),
             'conflicts' => $request->boolean('conflicts'),
+        ];
+    }
+
+    /**
+     * What a `?new=1` link brought along for the create form.
+     *
+     * A contract is an exact answer and gets preselected. A client is not — the
+     * customers here carry three to seven jobs each — so the client's name is
+     * handed to the contract picker, which narrows its list to that customer
+     * instead of pretending to know which job is meant.
+     *
+     * @return array{contractId: int|null, clientName: string|null}|null
+     */
+    public static function createDefaultsFrom(Request $request): ?array
+    {
+        if (! $request->boolean('new')) {
+            return null;
+        }
+
+        $clientId = $request->integer('client') ?: null;
+
+        return [
+            'contractId' => $request->integer('contract') ?: null,
+            'clientName' => $clientId ? Client::find($clientId)?->name : null,
         ];
     }
 

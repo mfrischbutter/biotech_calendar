@@ -60,7 +60,14 @@ const facts = computed(() => {
         @open-record="$emit('openRecord')"
     >
         <template #actions>
-            <Button size="sm" as="a" :href="route('calendar.index')">
+            <!-- Opening a blank calendar makes the reader start over; the job
+                 they were just looking at is the one they want to book. -->
+            <Button
+                v-if="contract"
+                size="sm"
+                as="a"
+                :href="route('calendar.index', { new: 1, contract: contract.id })"
+            >
                 <CalendarPlus class="mr-2 h-4 w-4" />
                 {{ t('New Appointment') }}
             </Button>
@@ -73,7 +80,8 @@ const facts = computed(() => {
                 :class="STAGE_PILL[contract.stage]"
             >{{ t(STAGE_LABELS[contract.stage]) }}</span>
 
-            <div class="space-y-1">
+            <!-- A job whose only visit was called off has nothing left to track. -->
+            <div v-if="contract.progress.total > 0" class="space-y-1">
                 <div class="flex items-center justify-between text-xs text-muted-foreground">
                     <span>{{ t('Progress') }}</span>
                     <span class="tabular-nums">{{ contract.progress.percent }}%</span>

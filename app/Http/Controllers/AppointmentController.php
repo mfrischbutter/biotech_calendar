@@ -98,6 +98,7 @@ class AppointmentController extends Controller
             'filters' => $filters,
             'conflicts' => (object) $conflicts,
             'conflictCount' => count($conflicts),
+            'createDefaults' => CalendarQuery::createDefaultsFrom($request),
             'totals' => CalendarQuery::totals($appointments, $rangeStart, $rangeEnd),
         ]);
     }

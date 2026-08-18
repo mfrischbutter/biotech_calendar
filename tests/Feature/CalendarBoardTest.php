@@ -181,6 +181,49 @@ class CalendarBoardTest extends TestCase
             ->assertSessionHasErrors('view');
     }
 
+    /*
+     * "Termin planen" everywhere in the app links here with ?new=1 and says
+     * which job or which customer it means. The calendar used to drop both and
+     * open a blank form, so the button was a page change and nothing more.
+     */
+    public function test_a_plain_visit_carries_no_create_defaults(): void
+    {
+        $this->assertNull($this->props($this->board())['createDefaults']);
+    }
+
+    public function test_it_hands_the_create_form_the_job_the_link_named(): void
+    {
+        $defaults = $this->props($this->board(['new' => 1, 'contract' => $this->contract->id]))['createDefaults'];
+
+        $this->assertSame($this->contract->id, $defaults['contractId']);
+        $this->assertNull($defaults['clientName']);
+    }
+
+    /*
+     * A customer is not an answer — they carry several jobs — so the link hands
+     * over the name and the job picker narrows itself to it.
+     */
+    public function test_it_hands_over_a_customer_name_rather_than_guessing_the_job(): void
+    {
+        $client = Client::factory()->create([
+            'company_id' => $this->company->id,
+            'first_name' => 'Klaus',
+            'last_name' => 'Bergmann',
+        ]);
+
+        $defaults = $this->props($this->board(['new' => 1, 'client' => $client->id]))['createDefaults'];
+
+        $this->assertNull($defaults['contractId']);
+        $this->assertSame('Klaus Bergmann', $defaults['clientName']);
+    }
+
+    public function test_it_rejects_a_create_link_pointing_at_a_job_that_does_not_exist(): void
+    {
+        $this->actingAs($this->owner)
+            ->get(route('calendar.index', ['new' => 1, 'contract' => 999999]))
+            ->assertSessionHasErrors('contract');
+    }
+
     public function test_it_rejects_a_filter_on_an_unknown_employee(): void
     {
         $this->actingAs($this->owner)

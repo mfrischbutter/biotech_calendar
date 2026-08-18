@@ -8,6 +8,7 @@ const defaults: AppointmentFormDefaults = {
     startTime: '09:00',
     endTime: '10:00',
     workerIds: [],
+    contractId: '',
 };
 
 function build(appointment?: Appointment) {

@@ -194,6 +194,44 @@ class ContractListTest extends TestCase
         $this->assertSame(['done' => 1, 'total' => 2, 'percent' => 50], $row['progress']);
     }
 
+    /*
+     * A visit that was called off is not outstanding work. Counting it in the
+     * denominator left a cancelled one-visit job reading "0/1" with an empty
+     * bar — the same picture as a job nobody has started.
+     */
+    public function test_a_cancelled_visit_leaves_the_progress_denominator(): void
+    {
+        $contract = $this->contract('A-1000', 'Erstbegehung');
+        $this->appointment($contract, $this->makeStatus(Status::STAGE_INVOICED));
+        $this->appointment($contract, $this->makeStatus(Status::STAGE_CANCELLED));
+
+        $row = $this->props()['contracts']['data'][0];
+
+        $this->assertSame(['done' => 1, 'total' => 1, 'percent' => 100], $row['progress']);
+    }
+
+    public function test_a_job_whose_only_visit_was_called_off_has_nothing_left_to_track(): void
+    {
+        $contract = $this->contract('A-1000', 'Erstbegehung');
+        $this->appointment($contract, $this->makeStatus(Status::STAGE_CANCELLED));
+
+        $this->assertSame(
+            ['done' => 0, 'total' => 0, 'percent' => 0],
+            $this->props()['contracts']['data'][0]['progress'],
+        );
+    }
+
+    // Sorting by "Termine" still means every visit ever booked, cancelled ones included.
+    public function test_the_appointment_count_column_still_counts_cancelled_visits(): void
+    {
+        $busy = $this->contract('A-1000', 'Erstbegehung');
+        $this->appointment($busy, $this->makeStatus(Status::STAGE_CANCELLED));
+        $this->appointment($busy, $this->makeStatus(Status::STAGE_CANCELLED));
+        $this->appointment($this->contract('A-2000', 'Nachkontrolle'));
+
+        $this->assertSame(['A-1000', 'A-2000'], $this->numbers(['sort' => 'appointments', 'dir' => 'desc']));
+    }
+
     public function test_the_current_stage_is_the_earliest_stage_still_open(): void
     {
         $contract = $this->contract('A-1000', 'Erstbegehung');

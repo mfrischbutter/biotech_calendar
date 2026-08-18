@@ -429,5 +429,6 @@
     "more": "weitere",
     "updated": "hat aktualisiert",
     "↑ ↓ to browse · Esc to close": "↑ ↓ zum Blättern · Esc zum Schließen",
-    "Overdue": "Überfällig"
+    "Overdue": "Überfällig",
+    "Select contract for :name...": "Auftrag von :name wählen..."
 }

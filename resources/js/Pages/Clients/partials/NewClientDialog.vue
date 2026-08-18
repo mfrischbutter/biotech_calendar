@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { Button } from '@/Components/ui/button';
 import {
@@ -16,7 +16,8 @@ import { useTrans } from '@/lib/use-trans';
 
 const { t } = useTrans();
 
-const open = ref(false);
+/** Controllable from outside so `?new=1` can open the form on arrival. */
+const open = defineModel<boolean>('open', { default: false });
 
 const form = useForm({
     first_name: '',

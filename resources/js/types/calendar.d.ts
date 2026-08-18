@@ -20,6 +20,17 @@ export interface CalendarFilters {
     conflicts: boolean;
 }
 
+/**
+ * What a `?new=1` link handed the create form. Mirrors
+ * `CalendarQuery::createDefaultsFrom()`.
+ */
+export interface CalendarCreateDefaults {
+    /** The job the link named, when it named one. */
+    contractId: number | null;
+    /** The customer it named instead, to narrow the job picker with. */
+    clientName: string | null;
+}
+
 /** How tightly the team board packs its rows. Mirrored in the query string. */
 export type CalendarDensity = 'compact' | 'detailed';
 
